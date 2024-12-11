@@ -9,30 +9,33 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import IPAKeyboard from './components/IPAKeyboard';
 import Settings from './components/Settings';
-
-const voicesByLanguage = {
-  'en-GB': [
-    { name: 'en-GB-SoniaNeural' },
-    { name: 'en-GB-LibbyNeural' },
-    // Add more voices for en-GB here...
-  ],
-  // Add more languages and their corresponding voices here...
-};
+import { voicesByLanguage } from './data/phonemes';
 
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'babble');
-  const [selectedLanguage, setSelectedLanguage] = useState('en-GB');
-  const [selectedVoice, setSelectedVoice] = useState('');
-  const [voiceType, setVoiceType] = useState('azure');
-  const [availableVoices, setAvailableVoices] = useState([]);
+  const [selectedLanguage, setSelectedLanguage] = useState(() => localStorage.getItem('selectedLanguage') || 'en-GB');
+  const [selectedVoice, setSelectedVoice] = useState(() => {
+    const saved = localStorage.getItem('selectedVoice');
+    if (saved) return saved;
+    const defaultVoices = voicesByLanguage['en-GB'] || [];
+    return defaultVoices.length > 0 ? defaultVoices[0].name : '';
+  });
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [buttonScale, setButtonScale] = useState(() => localStorage.getItem('buttonScale') || '1');
-  const [buttonSpacing, setButtonSpacing] = useState(() => localStorage.getItem('buttonSpacing') || '2');
+  const [buttonScale, setButtonScale] = useState(() => {
+    const saved = localStorage.getItem('buttonScale');
+    return saved ? parseFloat(saved) : 1;
+  });
+  const [buttonSpacing, setButtonSpacing] = useState(() => {
+    const saved = localStorage.getItem('buttonSpacing');
+    return saved ? parseInt(saved) : 2;
+  });
   const [message, setMessage] = useState('');
   const [autoScale, setAutoScale] = useState(() => {
     const saved = localStorage.getItem('autoScale');
     return saved ? JSON.parse(saved) : true;
   });
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [voicesLoading, setVoicesLoading] = useState(true);
 
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
@@ -42,42 +45,56 @@ const App = () => {
   ];
 
   useEffect(() => {
-    // Get browser voices
-    const synth = window.speechSynthesis;
-    const updateVoices = () => {
-      const voices = synth.getVoices();
-      setAvailableVoices(voices);
+    // Fetch available voices from Azure
+    const fetchVoices = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/voices');
+        if (!response.ok) {
+          throw new Error('Failed to fetch voices');
+        }
+        const voices = await response.json();
+        
+        // Group voices by locale
+        const voicesByLocale = voices.reduce((acc, voice) => {
+          const locale = voice.locale;
+          if (!acc[locale]) {
+            acc[locale] = [];
+          }
+          acc[locale].push(voice);
+          return acc;
+        }, {});
+        
+        setAvailableVoices(voicesByLocale);
+        setVoicesLoading(false);
+      } catch (error) {
+        console.error('Error fetching voices:', error);
+        setVoicesLoading(false);
+      }
     };
-    
-    synth.addEventListener('voiceschanged', updateVoices);
-    updateVoices();
 
-    return () => synth.removeEventListener('voiceschanged', updateVoices);
+    fetchVoices();
   }, []);
 
-  // Set initial voice when language changes or voice type changes
+  // Set initial voice when language changes
   useEffect(() => {
-    if (voiceType === 'azure') {
-      const azureVoices = voicesByLanguage[selectedLanguage] || [];
-      if (azureVoices.length > 0 && (!selectedVoice || !azureVoices.find(v => v.name === selectedVoice))) {
-        setSelectedVoice(azureVoices[0].name);
-      }
-    } else {
-      const browserVoices = availableVoices.filter(voice => 
-        voice.lang.toLowerCase().startsWith(selectedLanguage.toLowerCase())
-      );
-      if (browserVoices.length > 0 && (!selectedVoice || !browserVoices.find(v => v.name === selectedVoice))) {
-        setSelectedVoice(browserVoices[0].name);
+    if (!voicesLoading && availableVoices[selectedLanguage]?.length > 0) {
+      const voices = availableVoices[selectedLanguage];
+      if (!selectedVoice || !voices.find(v => v.name === selectedVoice)) {
+        setSelectedVoice(voices[0].name);
       }
     }
-  }, [selectedLanguage, voiceType, availableVoices]);
+  }, [selectedLanguage, availableVoices, voicesLoading]);
 
   useEffect(() => {
     localStorage.setItem('ipaMode', mode);
   }, [mode]);
 
   useEffect(() => {
-    localStorage.setItem('ipaVoice', selectedVoice);
+    localStorage.setItem('selectedLanguage', selectedLanguage);
+  }, [selectedLanguage]);
+
+  useEffect(() => {
+    localStorage.setItem('selectedVoice', selectedVoice);
   }, [selectedVoice]);
 
   useEffect(() => {
@@ -93,59 +110,33 @@ const App = () => {
   }, [autoScale]);
 
   const handlePhonemeSpeak = async (text) => {
-    if (!text) return;
+    if (!text || !selectedVoice) return;
 
-    if (voiceType === 'azure') {
-      try {
-        const response = await fetch('/api/tts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text,
-            voice: selectedVoice,
-            language: selectedLanguage
-          }),
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Speech synthesis failed: ${response.statusText}`);
-        }
-        
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        await audio.play();
-      } catch (error) {
-        console.error('Error in speech synthesis:', error);
-        // Show error to user
-        alert('Speech synthesis failed. Please check your Azure settings or try browser speech instead.');
+    try {
+      const response = await fetch('http://localhost:3001/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          voice: selectedVoice,
+          language: selectedLanguage
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Speech synthesis failed. Please check your Azure settings.');
       }
-    } else {
-      // Browser TTS
-      try {
-        const synth = window.speechSynthesis;
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Find the selected voice or use the first available one
-        const voice = availableVoices.find(v => v.name === selectedVoice) || availableVoices[0];
-        if (!voice) {
-          throw new Error('No voices available for speech synthesis');
-        }
-        
-        utterance.voice = voice;
-        utterance.lang = selectedLanguage;
-        
-        // Cancel any ongoing speech
-        synth.cancel();
-        
-        // Speak the new text
-        synth.speak(utterance);
-      } catch (error) {
-        console.error('Browser speech synthesis error:', error);
-        alert('Browser speech synthesis failed. Please try a different browser or use Azure speech.');
-      }
+      
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      await audio.play();
+      URL.revokeObjectURL(audioUrl); // Clean up the URL after playing
+    } catch (error) {
+      console.error('Error in speech synthesis:', error);
+      alert(error.message);
     }
   };
 
@@ -182,8 +173,13 @@ const App = () => {
               multiline
               value={message}
               placeholder="Click buttons to build message..."
+              aria-label="IPA Message"
               InputProps={{
                 readOnly: true,
+                style: {
+                  fontFamily: "'Noto Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
+                  fontSize: '1.2rem'
+                },
                 endAdornment: (
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
@@ -191,6 +187,7 @@ const App = () => {
                       color="error"
                       onClick={() => setMessage('')}
                       startIcon={<ClearIcon />}
+                      aria-label="Clear message"
                     >
                       Clear
                     </Button>
@@ -199,6 +196,7 @@ const App = () => {
                       color="primary"
                       onClick={speak}
                       startIcon={<VolumeUpIcon />}
+                      aria-label="Speak message"
                     >
                       Speak
                     </Button>
@@ -245,9 +243,7 @@ const App = () => {
         onButtonScaleChange={setButtonScale}
         buttonSpacing={buttonSpacing}
         onButtonSpacingChange={setButtonSpacing}
-        voices={availableVoices}
-        voiceType={voiceType}
-        onVoiceTypeChange={setVoiceType}
+        voices={availableVoices[selectedLanguage] || []}
         autoScale={autoScale}
         onAutoScaleChange={setAutoScale}
       />

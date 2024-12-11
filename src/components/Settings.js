@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, FormControl, InputLabel, Select, MenuItem, Slider, FormControlLabel, Switch } from '@mui/material';
-import { phoneticData, voicesByLanguage } from '../data/phonemes';
+import { phoneticData } from '../data/phonemes';
 
 const Settings = ({ 
   open, 
@@ -13,45 +13,20 @@ const Settings = ({
   onButtonScaleChange,
   buttonSpacing,
   onButtonSpacingChange,
-  voices,
-  voiceType,
-  onVoiceTypeChange,
   autoScale,
-  onAutoScaleChange
+  onAutoScaleChange,
+  voices = []
 }) => {
   const languages = Object.keys(phoneticData).map(code => ({
     code,
     name: phoneticData[code].name
   }));
 
-  const getAvailableVoices = () => {
-    if (voiceType === 'azure') {
-      return voicesByLanguage[selectedLanguage] || [];
-    } else {
-      // Filter browser voices by language code (e.g., 'en-US', 'en-GB')
-      return voices.filter(voice => {
-        const voiceLang = voice.lang.toLowerCase();
-        return voiceLang.startsWith(selectedLanguage.toLowerCase());
-      });
-    }
-  };
-
-  const availableVoices = getAvailableVoices();
-
   const handleLanguageChange = (event) => {
     onLanguageChange(event.target.value);
     // Reset selected voice when changing language
-    onVoiceChange('');
-  };
-
-  const handleVoiceTypeChange = (event) => {
-    onVoiceTypeChange(event.target.value);
-    // Reset selected voice when changing voice type
-    onVoiceChange('');
-  };
-
-  const handleVoiceChange = (event) => {
-    onVoiceChange(event.target.value);
+    const defaultVoice = voices[0]?.name || '';
+    onVoiceChange(defaultVoice);
   };
 
   return (
@@ -59,23 +34,11 @@ const Settings = ({
       <DialogTitle>Settings</DialogTitle>
       <DialogContent>
         <FormControl fullWidth sx={{ mt: 2 }}>
-          <InputLabel>Voice Type</InputLabel>
-          <Select
-            value={voiceType}
-            onChange={handleVoiceTypeChange}
-            label="Voice Type"
-          >
-            <MenuItem value="azure">Azure TTS</MenuItem>
-            <MenuItem value="browser">Browser TTS</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth sx={{ mt: 2 }}>
           <InputLabel>Language</InputLabel>
           <Select
             value={selectedLanguage}
-            onChange={handleLanguageChange}
             label="Language"
+            onChange={handleLanguageChange}
           >
             {languages.map(lang => (
               <MenuItem key={lang.code} value={lang.code}>
@@ -89,15 +52,12 @@ const Settings = ({
           <InputLabel>Voice</InputLabel>
           <Select
             value={selectedVoice}
-            onChange={handleVoiceChange}
             label="Voice"
+            onChange={(e) => onVoiceChange(e.target.value)}
           >
-            {availableVoices.map(voice => (
-              <MenuItem 
-                key={voiceType === 'azure' ? voice.name : voice.voiceURI} 
-                value={voiceType === 'azure' ? voice.name : voice.name}
-              >
-                {voiceType === 'azure' ? voice.displayName : `${voice.name} (${voice.lang})`}
+            {voices.map(voice => (
+              <MenuItem key={voice.name} value={voice.name}>
+                {voice.displayName}
               </MenuItem>
             ))}
           </Select>
@@ -116,10 +76,10 @@ const Settings = ({
 
         {!autoScale && (
           <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Button Scale</InputLabel>
+            <InputLabel shrink>Button Scale</InputLabel>
             <Slider
-              value={parseFloat(buttonScale)}
-              onChange={(_, value) => onButtonScaleChange(value.toString())}
+              value={typeof buttonScale === 'number' ? buttonScale : 1}
+              onChange={(_, value) => onButtonScaleChange(value)}
               min={0.5}
               max={3}
               step={0.1}
@@ -135,14 +95,19 @@ const Settings = ({
         )}
 
         <FormControl fullWidth sx={{ mt: 3 }}>
-          <InputLabel>Button Spacing</InputLabel>
+          <InputLabel shrink>Button Spacing</InputLabel>
           <Slider
-            value={parseInt(buttonSpacing)}
-            onChange={(_, value) => onButtonSpacingChange(value.toString())}
+            value={typeof buttonSpacing === 'number' ? buttonSpacing : 2}
+            onChange={(_, value) => onButtonSpacingChange(value)}
             min={0}
-            max={10}
+            max={20}
             step={1}
-            marks
+            marks={[
+              { value: 0, label: '0px' },
+              { value: 5, label: '5px' },
+              { value: 10, label: '10px' },
+              { value: 20, label: '20px' }
+            ]}
             valueLabelDisplay="auto"
           />
         </FormControl>

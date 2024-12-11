@@ -53,53 +53,47 @@ const IPAKeyboard = ({
       return;
     }
 
-    const calculateOptimalScale = () => {
-      if (!containerRef.current) return;
-
+    const updateScale = () => {
       const container = containerRef.current;
-      const containerWidth = container.clientWidth - 40; // Account for padding
-      const containerHeight = container.clientHeight - 40;
+      if (!container) return;
 
-      // Get the total number of visible buttons
-      const visibleButtons = Object.values(phoneticData[selectedLanguage].groups)
-        .flatMap(group => group.phonemes)
-        .filter(phoneme => {
-          const customization = customizations[phoneme] || {};
-          return !customization.hidden;
-        });
-
-      const totalButtons = visibleButtons.length;
-      const aspectRatio = containerWidth / containerHeight;
+      const padding = 32; // 2rem padding
+      const containerWidth = container.clientWidth - padding;
+      const containerHeight = container.clientHeight - padding;
       
-      // Calculate optimal number of columns based on aspect ratio
-      const optimalCols = Math.ceil(Math.sqrt(totalButtons * aspectRatio));
-      const optimalRows = Math.ceil(totalButtons / optimalCols);
+      const totalButtons = Object.values(phoneticData[selectedLanguage].groups)
+        .reduce((sum, group) => sum + group.phonemes.length, 0);
 
-      // Base button size (without scale)
-      const baseSize = 60;
+      // Start with a reasonable number of columns based on the aspect ratio
+      const containerAspectRatio = containerWidth / containerHeight;
+      const maxColumns = Math.floor(Math.sqrt(totalButtons * containerAspectRatio));
       
-      // Calculate scales based on width and height
-      const scaleX = (containerWidth - (buttonSpacing * (optimalCols - 1))) / (baseSize * optimalCols);
-      const scaleY = (containerHeight - (buttonSpacing * (optimalRows - 1))) / (baseSize * optimalRows);
-
-      // Use the smaller scale to ensure buttons fit
-      const optimalScale = Math.min(scaleX, scaleY);
+      // Calculate minimum rows needed
+      const minRows = Math.ceil(totalButtons / maxColumns);
       
-      // Set scale with reasonable limits
-      setCalculatedScale(Math.min(Math.max(optimalScale, 0.5), 3));
+      // Calculate the maximum possible scale that will fit both width and height
+      const scaleFromWidth = (containerWidth - (maxColumns - 1) * buttonSpacing) / (maxColumns * 60);
+      const scaleFromHeight = (containerHeight - (minRows - 1) * buttonSpacing) / (minRows * 60);
+      
+      // Use the smaller scale to ensure everything fits
+      const finalScale = Math.min(scaleFromWidth, scaleFromHeight);
+      
+      // Apply scale with limits
+      setCalculatedScale(Math.min(Math.max(finalScale * 0.95, 0.5), 3)); // Added 5% margin for safety
     };
 
-    // Calculate initial scale
-    calculateOptimalScale();
+    // Update on mount and window resize
+    updateScale();
+    const resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(containerRef.current);
 
-    // Recalculate on window resize
-    const handleResize = () => {
-      calculateOptimalScale();
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+      resizeObserver.disconnect();
     };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [autoScale, buttonScale, buttonSpacing, selectedLanguage, customizations]);
+  }, [autoScale, buttonScale, buttonSpacing, selectedLanguage, phoneticData]);
 
   const handleLongPress = () => {
     if (mode === 'edit') {
@@ -135,22 +129,19 @@ const IPAKeyboard = ({
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
-    
-    const items = Object.values(phoneticData[selectedLanguage].groups)
-      .flatMap(group => group.phonemes);
-    
-    const newOrder = Array.from(items);
-    const [reorderedItem] = newOrder.splice(result.source.index, 1);
-    newOrder.splice(result.destination.index, 0, reorderedItem);
-    
-    setPhonemeOrder({
-      ...phonemeOrder,
-      [selectedLanguage]: { all: newOrder }
+
+    const items = Array.from(Object.values(phoneticData[selectedLanguage].groups)
+      .flatMap(group => group.phonemes));
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Save the new order
+    const newOrder = {};
+    items.forEach((item, index) => {
+      newOrder[item] = index;
     });
-    localStorage.setItem('phonemeOrder', JSON.stringify({
-      ...phonemeOrder,
-      [selectedLanguage]: { all: newOrder }
-    }));
+    setPhonemeOrder(newOrder);
+    localStorage.setItem('phonemeOrder', JSON.stringify(newOrder));
   };
 
   const getPhonemeColor = (phoneme) => {
@@ -163,9 +154,9 @@ const IPAKeyboard = ({
     return '#808080';
   };
 
-  const renderPhonemeButton = (phoneme, index) => {
+  const renderPhonemeButton = (phoneme, index, groupColor) => {
     const customization = customizations[phoneme] || {};
-    const baseColor = customization.customColor || getPhonemeColor(phoneme);
+    const baseColor = customization.customColor || groupColor;
     
     if (customization.hidden) {
       return null;
@@ -179,15 +170,21 @@ const IPAKeyboard = ({
         style={{ 
           width: '100%', 
           height: '100%', 
-          objectFit: 'contain',
-          opacity: mode === 'edit' ? 0.7 : 1,
-          pointerEvents: 'none', // Prevent image drag
+          objectFit: 'contain' 
         }} 
       />
     ) : (
-      customization.hideLabel ? '' : (customization.label || phoneme)
+      <Box sx={{ 
+        fontSize: `${24 * calculatedScale}px`,
+        fontFamily: "'Noto Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
+      }}>
+        {customization.label || phoneme}
+      </Box>
     );
-
+    
     const button = (
       <Button
         key={phoneme}
@@ -198,13 +195,20 @@ const IPAKeyboard = ({
         onMouseDown={handleTouchStart}
         onMouseUp={handleTouchEnd}
         onMouseLeave={handleTouchEnd}
+        aria-label={`Phoneme ${phoneme}`}
+        role="button"
+        tabIndex={0}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            !isJiggling && handlePhonemeClick(phoneme);
+          }
+        }}
         sx={{
           backgroundColor: customization.image ? 'transparent' : baseColor,
           minWidth: 'unset',
           width: `${buttonSize}px`,
           height: `${buttonSize}px`,
           margin: `${buttonSpacing/2}px`,
-          fontSize: `${Math.max(16 * calculatedScale, 14)}px`,
           position: 'relative',
           padding: 0,
           overflow: 'hidden',
@@ -254,24 +258,24 @@ const IPAKeyboard = ({
       </Button>
     );
 
-    return mode === 'edit' && isJiggling ? (
-      <Draggable key={phoneme} draggableId={phoneme} index={index}>
+    return (
+      <Draggable
+        key={phoneme}
+        draggableId={phoneme}
+        index={index}
+        isDragDisabled={!isJiggling}
+      >
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            style={{
-              ...provided.draggableProps.style,
-              opacity: snapshot.isDragging ? 0.5 : 1,
-              cursor: 'grab',
-            }}
           >
             {button}
           </div>
         )}
       </Draggable>
-    ) : button;
+    );
   };
 
   const EditDialog = ({ open, onClose, phoneme }) => {
@@ -389,80 +393,91 @@ const IPAKeyboard = ({
   };
 
   return (
-    <DragDropContext onDragEnd={(result) => {
-      handleDragEnd(result);
-      // Don't disable jiggling after drag to allow for multiple moves
-    }}>
-      <Box 
-        ref={containerRef}
-        sx={{ 
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-        }}
-      >
-        {isJiggling && (
-          <Box
-            sx={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 1,
-              width: '100%',
-              backgroundColor: 'background.paper',
-              p: 1,
-              display: 'flex',
-              justifyContent: 'center',
-              borderBottom: 1,
-              borderColor: 'divider',
-            }}
-          >
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => {
-                setIsJiggling(false);
-                setDragEnabled(false);
-              }}
-            >
-              Done
-            </Button>
-          </Box>
-        )}
+    <Box 
+      ref={containerRef}
+      sx={{ 
+        padding: 2,
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}
+    >
+      <DragDropContext onDragEnd={handleDragEnd}>
         <Droppable droppableId="all-phonemes" direction="horizontal">
           {(provided) => (
             <Box
-              ref={provided.innerRef}
               {...provided.droppableProps}
+              ref={provided.innerRef}
               sx={{
                 display: 'flex',
                 flexWrap: 'wrap',
                 gap: buttonSpacing,
-                padding: 2,
-                minHeight: 80 * calculatedScale,
-                flex: 1,
                 alignContent: 'flex-start',
                 backgroundColor: mode === 'edit' && isJiggling ? 'rgba(0,0,0,0.03)' : 'transparent',
+                width: '100%',
+                height: '100%',
+                justifyContent: 'center', // Center the buttons horizontally
+                position: 'relative' // Added for absolute positioning of Done button
               }}
             >
-              {(phonemeOrder[selectedLanguage]?.all || 
-                Object.values(phoneticData[selectedLanguage].groups)
-                  .flatMap(group => group.phonemes)
-              ).map((phoneme, index) => 
-                renderPhonemeButton(phoneme, index)
-              )}
+              {Object.values(phoneticData[selectedLanguage].groups)
+                .flatMap(group => 
+                  group.phonemes.map((phoneme, groupIndex) => ({
+                    phoneme,
+                    color: group.color
+                  }))
+                )
+                .map(({ phoneme, color }, index) => (
+                  <Draggable
+                    key={phoneme}
+                    draggableId={phoneme}
+                    index={index}
+                    isDragDisabled={!isJiggling}
+                  >
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        {renderPhonemeButton(phoneme, index, color)}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
               {provided.placeholder}
+              
+              {mode === 'edit' && isJiggling && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => setIsJiggling(false)}
+                  sx={{
+                    position: 'fixed',
+                    bottom: 20,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 1000
+                  }}
+                >
+                  Done
+                </Button>
+              )}
             </Box>
           )}
         </Droppable>
+      </DragDropContext>
+      
+      {selectedPhoneme && (
         <EditDialog
-          open={editMode}
-          onClose={() => setEditMode(false)}
+          open={Boolean(selectedPhoneme)}
+          onClose={() => setSelectedPhoneme(null)}
           phoneme={selectedPhoneme}
         />
-      </Box>
-    </DragDropContext>
+      )}
+    </Box>
   );
 };
 

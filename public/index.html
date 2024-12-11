@@ -2,13 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="theme-color" content="#005580" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
     <meta name="description" content="IPA Chat - Interactive IPA Phoneme Explorer" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="IPA Chat" />
-    
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
     <!-- iOS icons -->
     <link rel="apple-touch-icon" href="AppImages/ios/180.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="AppImages/ios/152.png" />
@@ -19,30 +16,12 @@
     <link rel="icon" type="image/png" sizes="32x32" href="AppImages/android/android-launchericon-48-48.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="AppImages/android/android-launchericon-48-48.png" />
     
-    <!-- PWA manifest -->
-    <link rel="manifest" href="manifest.json" />
-    
     <title>IPA Chat</title>
     <!-- Material UI Font -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
     />
-    
-    <!-- Service Worker Registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-              console.log('ServiceWorker registration successful');
-            })
-            .catch(err => {
-              console.log('ServiceWorker registration failed: ', err);
-            });
-        });
-      }
-    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
