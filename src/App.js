@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl } from '@mui/material';
+import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -214,87 +214,111 @@ const App = () => {
     setAutoScale(autoScale);
   };
 
-  return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', bgcolor: '#f5f5f5' }}>
-      <Box sx={{ p: 2, flexGrow: 1, overflow: 'hidden' }}>
-        {mode === 'game' ? (
-          <GameMode 
-            onPhonemeClick={handlePhonemeClick}
-            onSpeakRequest={handleSpeakRequest}
-            selectedLanguage={selectedLanguage}
-            voices={availableVoices}
-            onLanguageChange={handleLanguageChange}
-            onVoiceChange={handleVoiceChange}
-            selectedVoice={selectedVoice}
-            buttonScale={buttonScale}
-            buttonSpacing={buttonSpacing}
-            autoScale={autoScale}
-            touchDwellEnabled={touchDwellEnabled}
-            touchDwellTime={touchDwellTime}
-            dwellIndicatorType={dwellIndicatorType}
-            dwellIndicatorColor={dwellIndicatorColor}
-            hapticFeedback={hapticFeedback}
+  const renderMessageBar = () => {
+    if (mode === 'build' || mode === 'babble') {
+      return (
+        <Box sx={{ 
+          p: 2, 
+          display: 'flex', 
+          gap: 2,
+          borderBottom: 1,
+          borderColor: 'divider',
+          backgroundColor: 'background.paper'
+        }}>
+          <TextField
+            fullWidth
+            value={message}
+            onChange={(e) => mode === 'build' && setMessage(e.target.value)}
+            placeholder="Type or click IPA symbols..."
+            disabled={mode === 'babble'}
+            sx={{
+              '& .MuiInputBase-input.Mui-disabled': {
+                WebkitTextFillColor: 'text.primary',
+                opacity: 0.7,
+              }
+            }}
           />
-        ) : mode === 'edit' ? (
-          <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Button 
+            variant="contained" 
+            onClick={speak}
+            disabled={!message || mode === 'babble'}
+          >
+            <VolumeUpIcon />
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={() => setMessage('')}
+            disabled={!message || mode === 'babble'}
+          >
+            <ClearIcon />
+          </Button>
+        </Box>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <Box sx={{ 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      {/* Mode selector and settings */}
+      <Box sx={{ 
+        p: 1, 
+        display: 'flex', 
+        justifyContent: 'flex-end',
+        borderBottom: 1,
+        borderColor: 'divider',
+        backgroundColor: 'background.paper'
+      }}>
+        <SpeedDial
+          ariaLabel="Mode selector"
+          sx={{ 
+            position: 'relative',
+            '& .MuiSpeedDial-fab': { width: 40, height: 40 }
+          }}
+          icon={<SpeedDialIcon icon={<MoreVertIcon />} />}
+          direction="left"
+        >
+          {actions.map((action) => (
+            <SpeedDialAction
+              key={action.name}
+              icon={action.icon}
+              tooltipTitle={action.name}
+              onClick={action.onClick}
+            />
+          ))}
+        </SpeedDial>
+      </Box>
+
+      {/* Message bar */}
+      {renderMessageBar()}
+
+      {/* Main content area */}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        {mode === 'edit' ? (
+          <Box sx={{ height: '100%' }}>
+            <Box sx={{ 
+              p: 2, 
+              borderBottom: 1,
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+              display: 'flex',
+              gap: 2,
+              alignItems: 'center'
+            }}>
+              <Typography variant="body1" color="text.secondary">
+                Edit Mode: Click and drag buttons to reorder, or click a button to customize it
+              </Typography>
+            </Box>
             <IPAKeyboard
               mode="edit"
               selectedLanguage={selectedLanguage}
               buttonScale={buttonScale}
               buttonSpacing={buttonSpacing}
-              autoScale={autoScale}
-              onAutoScaleChange={handleAutoScaleChange}
-            />
-          </Box>
-        ) : (
-          <>
-            {mode === 'build' && (
-              <Box sx={{ mb: 2 }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  value={message}
-                  placeholder="Click buttons to build message..."
-                  aria-label="IPA Message"
-                  InputProps={{
-                    readOnly: true,
-                    style: {
-                      fontFamily: "'Noto Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
-                      fontSize: '1.2rem'
-                    },
-                    endAdornment: (
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          variant="contained"
-                          color="error"
-                          onClick={() => setMessage('')}
-                          startIcon={<ClearIcon />}
-                          aria-label="Clear message"
-                        >
-                          Clear
-                        </Button>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={speak}
-                          startIcon={<VolumeUpIcon />}
-                          aria-label="Speak message"
-                        >
-                          Speak
-                        </Button>
-                      </Box>
-                    ),
-                  }}
-                />
-              </Box>
-            )}
-            
-            <IPAKeyboard
-              mode={mode}
-              onPhonemeClick={handlePhonemeClick}
-              buttonScale={buttonScale}
-              buttonSpacing={buttonSpacing}
-              selectedLanguage={selectedLanguage}
               autoScale={autoScale}
               touchDwellEnabled={touchDwellEnabled}
               touchDwellTime={touchDwellTime}
@@ -302,25 +326,35 @@ const App = () => {
               dwellIndicatorColor={dwellIndicatorColor}
               hapticFeedback={hapticFeedback}
             />
-          </>
+          </Box>
+        ) : mode === 'game' ? (
+          <GameMode
+            onPhonemeClick={handlePhonemeClick}
+            onSpeakRequest={handleSpeakRequest}
+            selectedLanguage={selectedLanguage}
+            voices={availableVoices}
+            onLanguageChange={handleLanguageChange}
+            onVoiceChange={setSelectedVoice}
+            selectedVoice={selectedVoice}
+          />
+        ) : (
+          <IPAKeyboard
+            mode={mode}
+            onPhonemeClick={handlePhonemeClick}
+            buttonScale={buttonScale}
+            buttonSpacing={buttonSpacing}
+            selectedLanguage={selectedLanguage}
+            autoScale={autoScale}
+            touchDwellEnabled={touchDwellEnabled}
+            touchDwellTime={touchDwellTime}
+            dwellIndicatorType={dwellIndicatorType}
+            dwellIndicatorColor={dwellIndicatorColor}
+            hapticFeedback={hapticFeedback}
+          />
         )}
       </Box>
 
-      <SpeedDial
-        ariaLabel="Menu"
-        sx={{ position: 'absolute', bottom: 16, right: 16 }}
-        icon={<SpeedDialIcon openIcon={<MoreVertIcon />} />}
-      >
-        {actions.map((action) => (
-          <SpeedDialAction
-            key={action.name}
-            icon={action.icon}
-            tooltipTitle={action.name}
-            onClick={action.onClick}
-          />
-        ))}
-      </SpeedDial>
-
+      {/* Settings dialog */}
       <Settings
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

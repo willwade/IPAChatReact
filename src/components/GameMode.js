@@ -50,6 +50,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
   const [showWordCue, setShowWordCue] = useState(false);
   const [showCue, setShowCue] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [difficulty, setDifficulty] = useState(() => {
     const saved = localStorage.getItem('gameDifficulty');
     return saved ? JSON.parse(saved) : DIFFICULTY_LEVELS.LEVEL1;
@@ -263,174 +264,129 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       height: '100%', 
       display: 'flex', 
       flexDirection: 'column',
-      position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Progress bar */}
-      <Box sx={{ width: '100%', height: '4px', bgcolor: '#e3f2fd' }}>
-        <Box
-          sx={{
-            width: `${(currentWordIndex / (wordList?.length || 1)) * 100}%`,
-            height: '100%',
-            bgcolor: '#2196f3',
-            transition: 'width 0.3s ease'
-          }}
-        />
-      </Box>
-
-      {/* Help button in top left */}
-      <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2 }}>
-        <IconButton 
-          onClick={() => setShowWordCue(true)}
-          size="small"
-          sx={{ 
-            bgcolor: 'background.paper', 
-            boxShadow: 1,
-            '&:hover': {
-              bgcolor: 'background.paper',
-              opacity: 0.9
-            }
-          }}
-        >
-          <HelpOutlineIcon fontSize="small" />
-        </IconButton>
-      </Box>
-
-      {/* Difficulty button in top right */}
-      <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}>
-        <IconButton 
-          onClick={() => setShowSettings(true)}
-          size="small"
-          sx={{ 
-            bgcolor: 'background.paper', 
-            boxShadow: 1,
-            '&:hover': {
-              bgcolor: 'background.paper',
-              opacity: 0.9
-            }
-          }}
-          aria-label="Difficulty Settings"
-        >
-          <SchoolIcon fontSize="small" />
-        </IconButton>
-      </Box>
-
-      {/* Main content area */}
+      {/* Game controls and status */}
       <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        height: '100%',
-        p: 1,
-        position: 'relative'
+        flexShrink: 0,
+        maxHeight: '120px', 
+        p: 2,
+        backgroundColor: 'background.paper',
+        borderBottom: 1,
+        borderColor: 'divider'
       }}>
-        {/* Game content */}
+        {/* Game controls content */}
         <Box sx={{ 
-          flexGrow: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0 // Important for proper flex behavior
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 1
         }}>
-          {error ? (
-            <Alert severity="error">{error}</Alert>
-          ) : (
-            <>
-              {/* Word display area */}
-              <Box sx={{ mb: 1, textAlign: 'center', flexShrink: 0 }}>
-                {showWordCue && currentWord && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                    {(difficulty.id !== DIFFICULTY_LEVELS.LEVEL5.id) && (
-                      <>
-                        <Typography variant="h5" component="span">
-                          {currentWord.word}
-                        </Typography>
-                        <IconButton 
-                          onClick={() => playSound(currentWord.word)}
-                          size="small"
-                          aria-label="Play word"
-                        >
-                          <VolumeUpIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    )}
-                  </Box>
-                )}
-                {showIPACue && (
-                  <Typography variant="body2" color="text.secondary">
-                    Target IPA: {currentWord?.ipa}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setShowSettings(true)}
+              startIcon={<SchoolIcon />}
+              size="small"
+            >
+              {difficulty.name}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setShowHelp(true)}
+              startIcon={<HelpOutlineIcon />}
+              size="small"
+            >
+              Help
+            </Button>
+          </Box>
+          {currentWord && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {(difficulty.id !== DIFFICULTY_LEVELS.LEVEL5.id) && (
+                <>
+                  <Typography variant="h6" component="span">
+                    {currentWord.word}
                   </Typography>
-                )}
-                <Typography variant="h6" color="primary" sx={{ mt: 0.5 }}>
-                  {userInput}
-                </Typography>
-              </Box>
-
-              {/* IPA Keyboard */}
-              <Box sx={{ 
-                flexGrow: 1,
-                minHeight: 0,
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                <IPAKeyboard
-                  mode="game"
-                  onPhonemeClick={handlePhonemeClick}
-                  buttonScale={buttonScale}
-                  buttonSpacing={buttonSpacing}
-                  selectedLanguage={selectedLanguage}
-                  autoScale={autoScale}
-                  disabledPhonemes={shouldDisablePhoneme}
-                />
-                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={handleBackspace}
-                    disabled={!userInput}
+                  <IconButton 
+                    onClick={() => playSound(currentWord.word)}
                     size="small"
-                    sx={{ minWidth: 100 }}
                   >
-                    Backspace
-                  </Button>
-                </Box>
-              </Box>
-
-              {/* Feedback Alert - Positioned absolutely */}
-              {showFeedback && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 1000,
-                    minWidth: '200px',
-                    animation: 'fadeInOut 1.5s ease-in-out',
-                    '@keyframes fadeInOut': {
-                      '0%': { opacity: 0, transform: 'translate(-50%, -40%)' },
-                      '15%': { opacity: 1, transform: 'translate(-50%, -50%)' },
-                      '85%': { opacity: 1, transform: 'translate(-50%, -50%)' },
-                      '100%': { opacity: 0, transform: 'translate(-50%, -60%)' }
-                    }
-                  }}
-                >
-                  <Alert 
-                    severity={feedbackType === 'success' ? 'success' : 'error'}
-                    sx={{
-                      boxShadow: 3,
-                      '& .MuiAlert-message': {
-                        fontSize: '1.1rem',
-                        fontWeight: 500
-                      }
-                    }}
-                  >
-                    {feedbackType === 'success' ? 'Correct! Well done!' : 'Try again!'}
-                  </Alert>
-                </Box>
+                    <VolumeUpIcon fontSize="small" />
+                  </IconButton>
+                </>
               )}
-            </>
+            </Box>
           )}
         </Box>
+        
+        {/* User input display */}
+        <Typography 
+          variant="h6" 
+          color="primary" 
+          align="center"
+          sx={{ 
+            minHeight: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {userInput}
+        </Typography>
       </Box>
 
+      {/* IPA Keyboard area */}
+      <Box sx={{ 
+        flex: 1,
+        minHeight: 0,
+        position: 'relative'
+      }}>
+        <IPAKeyboard
+          mode="game"
+          onPhonemeClick={handlePhonemeClick}
+          buttonScale={buttonScale}
+          buttonSpacing={buttonSpacing}
+          selectedLanguage={selectedLanguage}
+          autoScale={autoScale}
+          disabledPhonemes={shouldDisablePhoneme}
+        />
+        
+        {/* Feedback overlay */}
+        {showFeedback && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1000,
+              minWidth: '200px',
+              animation: 'fadeInOut 1.5s ease-in-out',
+              '@keyframes fadeInOut': {
+                '0%': { opacity: 0, transform: 'translate(-50%, -40%)' },
+                '15%': { opacity: 1, transform: 'translate(-50%, -50%)' },
+                '85%': { opacity: 1, transform: 'translate(-50%, -50%)' },
+                '100%': { opacity: 0, transform: 'translate(-50%, -60%)' }
+              }
+            }}
+          >
+            <Alert 
+              severity={feedbackType === 'success' ? 'success' : 'error'}
+              sx={{
+                boxShadow: 3,
+                '& .MuiAlert-message': {
+                  fontSize: '1.1rem',
+                  fontWeight: 500
+                }
+              }}
+            >
+              {feedbackType === 'success' ? 'Correct! Well done!' : 'Try again!'}
+            </Alert>
+          </Box>
+        )}
+      </Box>
+
+      {/* Dialogs */}
       {/* Word Cue Modal */}
       <Dialog open={showCue} onClose={() => setShowCue(false)}>
         <DialogTitle>New Word</DialogTitle>
@@ -474,6 +430,46 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCue(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Help Dialog */}
+      <Dialog 
+        open={showHelp} 
+        onClose={() => setShowHelp(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HelpOutlineIcon />
+            How to Play
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography paragraph>
+            Welcome to the IPA Game! Here's how to play:
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemIcon><StarIcon /></ListItemIcon>
+              <ListItemText primary="Listen to or read the target word" />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon><StarIcon /></ListItemIcon>
+              <ListItemText primary="Click the IPA symbols to spell out the word's pronunciation" />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon><StarIcon /></ListItemIcon>
+              <ListItemText primary="Use the difficulty settings to adjust the challenge level" />
+            </ListItem>
+          </List>
+          <Typography>
+            Tip: You can click on any IPA symbol to hear how it sounds!
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowHelp(false)}>Got it!</Button>
         </DialogActions>
       </Dialog>
 
