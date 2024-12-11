@@ -37,11 +37,11 @@ import IPAKeyboard from './IPAKeyboard';
 import { config } from '../config';
 
 const DIFFICULTY_LEVELS = {
-  LEVEL1: { id: 1, name: "All Cues", description: "Written model, Spoken model, Greyed-out incorrect buttons" },
-  LEVEL2: { id: 2, name: "Written & Spoken", description: "Written and Spoken models only" },
-  LEVEL3: { id: 3, name: "Written & Hints", description: "Written model and Greyed-out incorrect buttons" },
-  LEVEL4: { id: 4, name: "Written Only", description: "Written model only" },
-  LEVEL5: { id: 5, name: "No Cues", description: "Free construction" }
+  LEVEL1: { id: 1, name: "All Cues", description: "Written word, IPA model, Audio, and Hints" },
+  LEVEL2: { id: 2, name: "Word & Audio", description: "Written word and Audio only" },
+  LEVEL3: { id: 3, name: "Audio & Hints", description: "Audio and Greyed-out buttons" },
+  LEVEL4: { id: 4, name: "Word Only", description: "Written word only" },
+  LEVEL5: { id: 5, name: "Audio Only", description: "Audio cues only" }
 };
 
 const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, onLanguageChange, onVoiceChange, selectedVoice }) => {
@@ -79,8 +79,11 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
   const errorSound = new Audio('/error.mp3'); // We'll need to add this sound file
 
   // Handle phoneme click in game mode
-  const handlePhonemeClick = (phoneme) => {
+  const handlePhonemeClick = async (phoneme) => {
     if (!currentWord) return;
+
+    // Always speak the phoneme when clicked
+    await playSound(phoneme);
 
     const newInput = userInput + phoneme;
     setUserInput(newInput);
@@ -100,9 +103,13 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     if (inputIPA === targetIPA) {
       setShowFeedback(true);
       setFeedbackType('success');
+      
+      // Play the complete word
+      await playSound(currentWord.word);
+      
       setTimeout(() => {
         handleNextWord();
-      }, 1000);
+      }, 1500); // Increased delay to allow for word playback
     }
 
     if (onPhonemeClick) {
@@ -167,8 +174,13 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     if (!gameStarted && currentWord) {
       setShowWordCue(true);
       setGameStarted(true);
+      
+      // Play the word audio based on difficulty level
+      if (difficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
+        playSound(currentWord.word);
+      }
     }
-  }, [gameStarted, currentWord]);
+  }, [gameStarted, currentWord, difficulty]);
 
   // Check if a phoneme should be disabled based on current word and difficulty
   const shouldDisablePhoneme = (phoneme) => {
@@ -200,8 +212,17 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
   const handleDifficultyChange = (newDifficulty) => {
     setDifficulty(newDifficulty);
     localStorage.setItem('gameDifficulty', JSON.stringify(newDifficulty));
+    
+    // Show/hide IPA cue based on difficulty
+    setShowIPACue(newDifficulty.id === DIFFICULTY_LEVELS.LEVEL1.id);
+    
     // Show word cue when difficulty changes
     setShowWordCue(true);
+    
+    // Play the word audio for audio-enabled difficulty levels
+    if (currentWord && newDifficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
+      playSound(currentWord.word);
+    }
   };
 
   const playSound = async (text) => {
@@ -258,9 +279,10 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       </Box>
 
       {/* Help button in top left */}
-      <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 2 }}>
+      <Box sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2 }}>
         <IconButton 
           onClick={() => setShowWordCue(true)}
+          size="small"
           sx={{ 
             bgcolor: 'background.paper', 
             boxShadow: 1,
@@ -270,14 +292,15 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
             }
           }}
         >
-          <HelpOutlineIcon />
+          <HelpOutlineIcon fontSize="small" />
         </IconButton>
       </Box>
 
       {/* Difficulty button in top right */}
-      <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 2 }}>
+      <Box sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}>
         <IconButton 
           onClick={() => setShowSettings(true)}
+          size="small"
           sx={{ 
             bgcolor: 'background.paper', 
             boxShadow: 1,
@@ -288,7 +311,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
           }}
           aria-label="Difficulty Settings"
         >
-          <SchoolIcon />
+          <SchoolIcon fontSize="small" />
         </IconButton>
       </Box>
 
@@ -296,9 +319,9 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       <Box sx={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        height: '100%', 
-        gap: 2,
-        p: 2 
+        height: '100%',
+        p: 1,
+        position: 'relative' // Add position relative for absolute positioning context
       }}>
         {/* Game content */}
         <Box sx={{ flexGrow: 1 }}>
@@ -307,34 +330,37 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
           ) : (
             <>
               {/* Word display area */}
-              <Box sx={{ mb: 2, textAlign: 'center' }}>
+              <Box sx={{ mb: 1, textAlign: 'center' }}>
                 {showWordCue && currentWord && (
-                  <>
-                    <Typography variant="h4" gutterBottom>
-                      {currentWord.word}
-                    </Typography>
-                    {showIPACue && (
-                      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                        Target IPA: {currentWord.ipa}
-                      </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                    {(difficulty.id !== DIFFICULTY_LEVELS.LEVEL5.id) && (
+                      <>
+                        <Typography variant="h5" component="span">
+                          {currentWord.word}
+                        </Typography>
+                        <IconButton 
+                          onClick={() => playSound(currentWord.word)}
+                          size="small"
+                          aria-label="Play word"
+                        >
+                          <VolumeUpIcon fontSize="small" />
+                        </IconButton>
+                      </>
                     )}
-                  </>
+                  </Box>
                 )}
-                <Typography variant="h5" color="primary">
+                {showIPACue && (
+                  <Typography variant="body2" color="text.secondary">
+                    Target IPA: {currentWord?.ipa}
+                  </Typography>
+                )}
+                <Typography variant="h6" color="primary" sx={{ mt: 0.5 }}>
                   {userInput}
                 </Typography>
-                {showFeedback && (
-                  <Alert 
-                    severity={feedbackType === 'success' ? 'success' : 'error'}
-                    sx={{ mt: 2 }}
-                  >
-                    {feedbackType === 'success' ? 'Correct! Well done!' : 'Try again!'}
-                  </Alert>
-                )}
               </Box>
 
               {/* IPA Keyboard */}
-              <Box sx={{ mt: 2 }}>
+              <Box>
                 <IPAKeyboard
                   mode="game"
                   onPhonemeClick={handlePhonemeClick}
@@ -344,17 +370,52 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
                   autoScale={autoScale}
                   disabledPhonemes={shouldDisablePhoneme}
                 />
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center' }}>
                   <Button
                     variant="outlined"
                     onClick={handleBackspace}
                     disabled={!userInput}
-                    sx={{ minWidth: 120 }}
+                    size="small"
+                    sx={{ minWidth: 100 }}
                   >
                     Backspace
                   </Button>
                 </Box>
               </Box>
+
+              {/* Feedback Alert - Positioned absolutely */}
+              {showFeedback && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 1000,
+                    minWidth: '200px',
+                    animation: 'fadeInOut 1.5s ease-in-out',
+                    '@keyframes fadeInOut': {
+                      '0%': { opacity: 0, transform: 'translate(-50%, -40%)' },
+                      '15%': { opacity: 1, transform: 'translate(-50%, -50%)' },
+                      '85%': { opacity: 1, transform: 'translate(-50%, -50%)' },
+                      '100%': { opacity: 0, transform: 'translate(-50%, -60%)' }
+                    }
+                  }}
+                >
+                  <Alert 
+                    severity={feedbackType === 'success' ? 'success' : 'error'}
+                    sx={{
+                      boxShadow: 3,
+                      '& .MuiAlert-message': {
+                        fontSize: '1.1rem',
+                        fontWeight: 500
+                      }
+                    }}
+                  >
+                    {feedbackType === 'success' ? 'Correct! Well done!' : 'Try again!'}
+                  </Alert>
+                </Box>
+              )}
             </>
           )}
         </Box>

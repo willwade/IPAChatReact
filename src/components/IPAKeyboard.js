@@ -6,14 +6,19 @@ import { ChromePicker } from 'react-color';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { phoneticData } from '../data/phonemes';
 
-const IPAKeyboard = ({ 
-  mode, 
-  onPhonemeClick, 
-  disabledPhonemes, 
-  buttonScale = 1, 
-  buttonSpacing = 4, 
+const IPAKeyboard = ({
+  mode = 'build',
+  onPhonemeClick,
+  disabledPhonemes,
+  buttonScale = 1,
+  buttonSpacing = 4,
   selectedLanguage = 'en-GB',
-  autoScale = true 
+  autoScale = true,
+  touchDwellEnabled = false,
+  touchDwellTime = 800,
+  dwellIndicatorType = 'border',
+  dwellIndicatorColor = 'primary',
+  hapticFeedback = false,
 }) => {
   const [customizations, setCustomizations] = useState({});
   const [calculatedScale, setCalculatedScale] = useState(buttonScale);
@@ -33,7 +38,14 @@ const IPAKeyboard = ({
   const containerRef = useRef(null);
   const [isJiggling, setIsJiggling] = useState(false);
   const [dragEnabled, setDragEnabled] = useState(false);
+  const [touchStartTime, setTouchStartTime] = useState(null);
+  const [touchPosition, setTouchPosition] = useState(null);
+  const [dwellProgress, setDwellProgress] = useState(0);
+  const [currentPhoneme, setCurrentPhoneme] = useState(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const animationFrameRef = useRef();
   const longPressTimer = useRef(null);
+  const [hoveredPhoneme, setHoveredPhoneme] = useState(null);
 
   useEffect(() => {
     // Clear any stored customizations that might affect case
@@ -51,6 +63,14 @@ const IPAKeyboard = ({
     setIsJiggling(false);
     setDragEnabled(false);
   }, [mode]);
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!autoScale) {
@@ -100,6 +120,108 @@ const IPAKeyboard = ({
     };
   }, [autoScale, buttonScale, buttonSpacing, selectedLanguage, phoneticData]);
 
+  const triggerHapticFeedback = () => {
+    if (hapticFeedback && window.navigator.vibrate) {
+      window.navigator.vibrate(50); // Short vibration
+    }
+  };
+
+  const handleTouchStart = (e, phoneme) => {
+    if (!touchDwellEnabled) return;
+
+    e.preventDefault();
+    const touch = e.touches[0];
+    setTouchStartTime(Date.now());
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+    setCurrentPhoneme(phoneme);
+    setIsSelecting(true);
+    setDwellProgress(0);
+
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = now - touchStartTime;
+      const progress = Math.min(elapsed / touchDwellTime, 1);
+      setDwellProgress(progress);
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        if (hapticFeedback && window.navigator.vibrate) {
+          window.navigator.vibrate(50);
+        }
+        onPhonemeClick(phoneme);
+        setIsSelecting(false);
+        setDwellProgress(0);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchDwellEnabled || !isSelecting) return;
+
+    const touch = e.touches[0];
+    const moveThreshold = 20;
+    const dx = touch.clientX - touchPosition.x;
+    const dy = touch.clientY - touchPosition.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > moveThreshold) {
+      cancelDwell();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchDwellEnabled) return;
+    cancelDwell();
+  };
+
+  const cancelDwell = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    setIsSelecting(false);
+    setDwellProgress(0);
+    setCurrentPhoneme(null);
+  };
+
+  const getDwellStyles = (phoneme) => {
+    if (!isSelecting || currentPhoneme !== phoneme) return {};
+
+    const baseColor = dwellIndicatorColor;
+    const progress = dwellProgress * 100;
+
+    switch (dwellIndicatorType) {
+      case 'border':
+        return {
+          background: `linear-gradient(90deg, ${baseColor} ${progress}%, transparent ${progress}%)`,
+          borderColor: baseColor,
+        };
+      case 'fill':
+        return {
+          background: `linear-gradient(90deg, ${baseColor}${Math.round(progress * 0.5)}%, transparent ${progress}%)`,
+        };
+      case 'circle':
+        return {
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: `${progress}%`,
+            height: `${progress}%`,
+            borderRadius: '50%',
+            backgroundColor: `${baseColor}40`,
+            pointerEvents: 'none',
+          },
+        };
+      default:
+        return {};
+    }
+  };
+
   const handleLongPress = () => {
     if (mode === 'edit') {
       setIsJiggling(true);
@@ -107,14 +229,14 @@ const IPAKeyboard = ({
     }
   };
 
-  const handleTouchStart = (e) => {
+  const handleTouchStartButton = (e) => {
     if (mode === 'edit') {
       e.preventDefault(); // Prevent default touch behavior
       longPressTimer.current = setTimeout(handleLongPress, 500);
     }
   };
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEndButton = (e) => {
     if (longPressTimer.current) {
       e.preventDefault(); // Prevent default touch behavior
       clearTimeout(longPressTimer.current);
@@ -189,6 +311,10 @@ const IPAKeyboard = ({
         variant="contained"
         onClick={() => !isJiggling && !isDisabled && handlePhonemeClick(phoneme)}
         disabled={isDisabled}
+        onTouchStart={(e) => handleTouchStart(e, phoneme)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         sx={{
           backgroundColor: customization.customColor || groupColor,
           minWidth: 'unset',
@@ -205,7 +331,8 @@ const IPAKeyboard = ({
           '&.Mui-disabled': {
             backgroundColor: 'grey.300',
             color: 'grey.500',
-          }
+          },
+          ...getDwellStyles(phoneme)
         }}
       >
         {buttonContent}

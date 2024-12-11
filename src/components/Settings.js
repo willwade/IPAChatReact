@@ -1,10 +1,25 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, FormControl, InputLabel, Select, MenuItem, Slider, FormControlLabel, Switch } from '@mui/material';
-import { phoneticData } from '../data/phonemes';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Slider,
+  FormControlLabel,
+  Switch,
+  Typography,
+  Box,
+  Divider,
+} from '@mui/material';
 
-const Settings = ({ 
-  open, 
-  onClose, 
+const Settings = ({
+  open,
+  onClose,
   selectedLanguage,
   selectedVoice,
   onLanguageChange,
@@ -15,107 +30,159 @@ const Settings = ({
   onButtonSpacingChange,
   autoScale,
   onAutoScaleChange,
-  voices = []
+  touchDwellEnabled,
+  onTouchDwellEnabledChange,
+  touchDwellTime,
+  onTouchDwellTimeChange,
+  dwellIndicatorType,
+  onDwellIndicatorTypeChange,
+  dwellIndicatorColor,
+  onDwellIndicatorColorChange,
+  hapticFeedback,
+  onHapticFeedbackChange,
+  voices = [],
 }) => {
-  const languages = Object.keys(phoneticData).map(code => ({
-    code,
-    name: phoneticData[code].name
-  }));
-
   const handleLanguageChange = (event) => {
-    if (onLanguageChange) {
-      onLanguageChange(event.target.value);
-    }
+    onLanguageChange(event.target.value);
   };
 
   const handleVoiceChange = (event) => {
-    if (onVoiceChange) {
-      onVoiceChange(event.target.value);
-    }
+    onVoiceChange(event.target.value);
   };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Settings</DialogTitle>
       <DialogContent>
-        <FormControl fullWidth sx={{ mt: 2 }}>
-          <InputLabel>Language</InputLabel>
-          <Select
-            value={selectedLanguage}
-            label="Language"
-            onChange={handleLanguageChange}
-          >
-            {languages.map(lang => (
-              <MenuItem key={lang.code} value={lang.code}>
-                {lang.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Box sx={{ '& > :not(style)': { my: 2 } }}>
+          {/* Voice Settings */}
+          <Typography variant="h6" gutterBottom>Voice Settings</Typography>
+          <FormControl fullWidth>
+            <InputLabel>Language</InputLabel>
+            <Select value={selectedLanguage} onChange={handleLanguageChange} label="Language">
+              <MenuItem value="en-GB">English (UK)</MenuItem>
+              <MenuItem value="en-US">English (US)</MenuItem>
+            </Select>
+          </FormControl>
 
-        <FormControl fullWidth sx={{ mt: 2 }}>
-          <InputLabel>Voice</InputLabel>
-          <Select
-            value={selectedVoice}
-            label="Voice"
-            onChange={handleVoiceChange}
-          >
-            {voices.map(voice => (
-              <MenuItem key={voice.name} value={voice.name}>
-                {voice.displayName}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+          <FormControl fullWidth>
+            <InputLabel>Voice</InputLabel>
+            <Select value={selectedVoice} onChange={handleVoiceChange} label="Voice">
+              {Array.isArray(voices) && voices.map((voice) => (
+                <MenuItem key={voice.name} value={voice.name}>
+                  {voice.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={autoScale}
-              onChange={(e) => onAutoScaleChange(e.target.checked)}
-            />
-          }
-          label="Auto-scale buttons to fit window"
-          sx={{ mt: 2, mb: 1, display: 'block' }}
-        />
+          <Divider />
 
-        {!autoScale && (
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel shrink>Button Scale</InputLabel>
+          {/* Layout Settings */}
+          <Typography variant="h6" gutterBottom>Layout Settings</Typography>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={autoScale}
+                onChange={(e) => onAutoScaleChange(e.target.checked)}
+              />
+            }
+            label="Auto-scale buttons to screen"
+          />
+
+          <Box sx={{ width: '100%' }}>
+            <Typography gutterBottom>Button Scale</Typography>
             <Slider
-              value={typeof buttonScale === 'number' ? buttonScale : 1}
+              value={buttonScale}
               onChange={(_, value) => onButtonScaleChange(value)}
               min={0.5}
-              max={3}
+              max={2}
               step={0.1}
-              marks={[
-                { value: 0.5, label: '0.5x' },
-                { value: 1, label: '1x' },
-                { value: 2, label: '2x' },
-                { value: 3, label: '3x' }
-              ]}
+              marks
+              valueLabelDisplay="auto"
+              disabled={autoScale}
+            />
+          </Box>
+
+          <Box sx={{ width: '100%' }}>
+            <Typography gutterBottom>Button Spacing (px)</Typography>
+            <Slider
+              value={buttonSpacing}
+              onChange={(_, value) => onButtonSpacingChange(value)}
+              min={0}
+              max={20}
+              step={1}
+              marks
               valueLabelDisplay="auto"
             />
-          </FormControl>
-        )}
+          </Box>
 
-        <FormControl fullWidth sx={{ mt: 3 }}>
-          <InputLabel shrink>Button Spacing</InputLabel>
-          <Slider
-            value={typeof buttonSpacing === 'number' ? buttonSpacing : 2}
-            onChange={(_, value) => onButtonSpacingChange(value)}
-            min={0}
-            max={20}
-            step={1}
-            marks={[
-              { value: 0, label: '0px' },
-              { value: 5, label: '5px' },
-              { value: 10, label: '10px' },
-              { value: 20, label: '20px' }
-            ]}
-            valueLabelDisplay="auto"
+          <Divider />
+
+          {/* Accessibility Settings */}
+          <Typography variant="h6" gutterBottom>Accessibility Settings</Typography>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={touchDwellEnabled}
+                onChange={(e) => onTouchDwellEnabledChange(e.target.checked)}
+              />
+            }
+            label="Enable Touch Dwell Selection"
           />
-        </FormControl>
+
+          <Box sx={{ width: '100%' }}>
+            <Typography gutterBottom>Dwell Time (ms)</Typography>
+            <Slider
+              value={touchDwellTime}
+              onChange={(_, value) => onTouchDwellTimeChange(value)}
+              min={200}
+              max={2000}
+              step={100}
+              marks
+              valueLabelDisplay="auto"
+              disabled={!touchDwellEnabled}
+            />
+          </Box>
+
+          <FormControl fullWidth disabled={!touchDwellEnabled}>
+            <InputLabel>Dwell Indicator Style</InputLabel>
+            <Select
+              value={dwellIndicatorType}
+              onChange={(e) => onDwellIndicatorTypeChange(e.target.value)}
+              label="Dwell Indicator Style"
+            >
+              <MenuItem value="border">Border</MenuItem>
+              <MenuItem value="fill">Fill</MenuItem>
+              <MenuItem value="circle">Circle</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth disabled={!touchDwellEnabled}>
+            <InputLabel>Dwell Indicator Color</InputLabel>
+            <Select
+              value={dwellIndicatorColor}
+              onChange={(e) => onDwellIndicatorColorChange(e.target.value)}
+              label="Dwell Indicator Color"
+            >
+              <MenuItem value="primary">Primary</MenuItem>
+              <MenuItem value="secondary">Secondary</MenuItem>
+              <MenuItem value="success">Success</MenuItem>
+              <MenuItem value="warning">Warning</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={hapticFeedback}
+                onChange={(e) => onHapticFeedbackChange(e.target.checked)}
+                disabled={!touchDwellEnabled}
+              />
+            }
+            label="Enable Haptic Feedback"
+          />
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

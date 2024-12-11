@@ -18,26 +18,17 @@ import { config } from './config';
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
   const [selectedLanguage, setSelectedLanguage] = useState(() => localStorage.getItem('selectedLanguage') || 'en-GB');
-  const [selectedVoice, setSelectedVoice] = useState(() => {
-    const saved = localStorage.getItem('selectedVoice');
-    if (saved) return saved;
-    const defaultVoices = voicesByLanguage['en-GB'] || [];
-    return defaultVoices.length > 0 ? defaultVoices[0].name : '';
-  });
+  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('selectedVoice') || '');
+  const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
+  const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
+  const [autoScale, setAutoScale] = useState(() => localStorage.getItem('autoScale') === 'true');
+  const [touchDwellEnabled, setTouchDwellEnabled] = useState(() => localStorage.getItem('touchDwellEnabled') === 'true');
+  const [touchDwellTime, setTouchDwellTime] = useState(() => parseInt(localStorage.getItem('touchDwellTime')) || 800);
+  const [dwellIndicatorType, setDwellIndicatorType] = useState(() => localStorage.getItem('dwellIndicatorType') || 'border');
+  const [dwellIndicatorColor, setDwellIndicatorColor] = useState(() => localStorage.getItem('dwellIndicatorColor') || 'primary');
+  const [hapticFeedback, setHapticFeedback] = useState(() => localStorage.getItem('hapticFeedback') === 'true');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [buttonScale, setButtonScale] = useState(() => {
-    const saved = localStorage.getItem('buttonScale');
-    return saved ? parseFloat(saved) : 1;
-  });
-  const [buttonSpacing, setButtonSpacing] = useState(() => {
-    const saved = localStorage.getItem('buttonSpacing');
-    return saved ? parseInt(saved) : 2;
-  });
   const [message, setMessage] = useState('');
-  const [autoScale, setAutoScale] = useState(() => {
-    const saved = localStorage.getItem('autoScale');
-    return saved ? JSON.parse(saved) : true;
-  });
   const [availableVoices, setAvailableVoices] = useState([]);
   const [voicesLoading, setVoicesLoading] = useState(true);
 
@@ -103,6 +94,26 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('autoScale', autoScale);
   }, [autoScale]);
+
+  useEffect(() => {
+    localStorage.setItem('touchDwellEnabled', touchDwellEnabled);
+  }, [touchDwellEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('touchDwellTime', touchDwellTime);
+  }, [touchDwellTime]);
+
+  useEffect(() => {
+    localStorage.setItem('dwellIndicatorType', dwellIndicatorType);
+  }, [dwellIndicatorType]);
+
+  useEffect(() => {
+    localStorage.setItem('dwellIndicatorColor', dwellIndicatorColor);
+  }, [dwellIndicatorColor]);
+
+  useEffect(() => {
+    localStorage.setItem('hapticFeedback', hapticFeedback);
+  }, [hapticFeedback]);
 
   const handlePhonemeSpeak = async (text) => {
     if (!text || !selectedVoice) return;
@@ -211,10 +222,18 @@ const App = () => {
             onPhonemeClick={handlePhonemeClick}
             onSpeakRequest={handleSpeakRequest}
             selectedLanguage={selectedLanguage}
-            voices={availableVoices[selectedLanguage] || []}
+            voices={availableVoices}
             onLanguageChange={handleLanguageChange}
             onVoiceChange={handleVoiceChange}
             selectedVoice={selectedVoice}
+            buttonScale={buttonScale}
+            buttonSpacing={buttonSpacing}
+            autoScale={autoScale}
+            touchDwellEnabled={touchDwellEnabled}
+            touchDwellTime={touchDwellTime}
+            dwellIndicatorType={dwellIndicatorType}
+            dwellIndicatorColor={dwellIndicatorColor}
+            hapticFeedback={hapticFeedback}
           />
         ) : mode === 'edit' ? (
           <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -277,6 +296,11 @@ const App = () => {
               buttonSpacing={buttonSpacing}
               selectedLanguage={selectedLanguage}
               autoScale={autoScale}
+              touchDwellEnabled={touchDwellEnabled}
+              touchDwellTime={touchDwellTime}
+              dwellIndicatorType={dwellIndicatorType}
+              dwellIndicatorColor={dwellIndicatorColor}
+              hapticFeedback={hapticFeedback}
             />
           </>
         )}
@@ -305,17 +329,21 @@ const App = () => {
         onLanguageChange={handleLanguageChange}
         onVoiceChange={handleVoiceChange}
         buttonScale={buttonScale}
-        onButtonScaleChange={(value) => {
-          setButtonScale(value);
-          localStorage.setItem('buttonScale', value);
-        }}
+        onButtonScaleChange={setButtonScale}
         buttonSpacing={buttonSpacing}
-        onButtonSpacingChange={(value) => {
-          setButtonSpacing(value);
-          localStorage.setItem('buttonSpacing', value);
-        }}
+        onButtonSpacingChange={setButtonSpacing}
         autoScale={autoScale}
-        onAutoScaleChange={handleAutoScaleChange}
+        onAutoScaleChange={setAutoScale}
+        touchDwellEnabled={touchDwellEnabled}
+        onTouchDwellEnabledChange={setTouchDwellEnabled}
+        touchDwellTime={touchDwellTime}
+        onTouchDwellTimeChange={setTouchDwellTime}
+        dwellIndicatorType={dwellIndicatorType}
+        onDwellIndicatorTypeChange={setDwellIndicatorType}
+        dwellIndicatorColor={dwellIndicatorColor}
+        onDwellIndicatorColorChange={setDwellIndicatorColor}
+        hapticFeedback={hapticFeedback}
+        onHapticFeedbackChange={setHapticFeedback}
         voices={availableVoices[selectedLanguage] || []}
       />
     </Box>
