@@ -46,15 +46,17 @@ const IPAKeyboard = ({
   const animationFrameRef = useRef();
   const longPressTimer = useRef(null);
   const [hoveredPhoneme, setHoveredPhoneme] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    // Clear any stored customizations that might affect case
-    localStorage.removeItem('ipaCustomizations');
-    localStorage.removeItem('phonemeOrder');
-    
     const saved = localStorage.getItem('ipaCustomizations');
     if (saved) {
-      setCustomizations(JSON.parse(saved));
+      try {
+        const parsedCustomizations = JSON.parse(saved);
+        setCustomizations(parsedCustomizations);
+      } catch (e) {
+        console.error('Error loading customizations:', e);
+      }
     }
   }, []);
 
@@ -246,28 +248,65 @@ const IPAKeyboard = ({
     }
   };
 
-  const handleLongPress = () => {
+  const handleLongPress = (phoneme) => {
     if (mode === 'edit') {
       setIsJiggling(true);
       setDragEnabled(true);
+      // Clear any existing timers
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
     }
   };
 
-  const handleTouchStartButton = (e) => {
+  const handleMouseDown = (e, phoneme) => {
+    if (mode === 'edit') {
+      e.preventDefault();
+      setCurrentPhoneme(phoneme);
+      longPressTimer.current = setTimeout(() => handleLongPress(phoneme), 500);
+    }
+  };
+
+  const handleMouseUp = (e) => {
+    if (mode === 'edit') {
+      e.preventDefault();
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+      setCurrentPhoneme(null);
+    }
+  };
+
+  const handleMouseLeave = (e) => {
+    if (mode === 'edit') {
+      e.preventDefault();
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+      setCurrentPhoneme(null);
+    }
+  };
+
+  const handleTouchStartButton = (e, phoneme) => {
     if (mode === 'edit') {
       e.preventDefault(); // Prevent default touch behavior
-      longPressTimer.current = setTimeout(handleLongPress, 500);
+      setCurrentPhoneme(phoneme);
+      longPressTimer.current = setTimeout(() => handleLongPress(phoneme), 500);
     }
   };
 
   const handleTouchEndButton = (e) => {
-    if (longPressTimer.current) {
+    if (mode === 'edit') {
       e.preventDefault(); // Prevent default touch behavior
-      clearTimeout(longPressTimer.current);
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+      setCurrentPhoneme(null);
     }
   };
 
-  const handlePhonemeClick = (phoneme) => {
+  const handlePhonemeClick = (phoneme, e) => {
     if (mode === 'edit') {
       if (!isJiggling) {
         setSelectedPhoneme(phoneme);
@@ -278,7 +317,12 @@ const IPAKeyboard = ({
     }
   };
 
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
   const handleDragEnd = (result) => {
+    setIsDragging(false);
     if (!result.destination) return;
 
     const items = Array.from(Object.values(phoneticData[selectedLanguage].groups)
@@ -313,85 +357,99 @@ const IPAKeyboard = ({
     const displayPhoneme = phoneme.replace(/[A-Z]/g, char => char.toLowerCase());
     const buttonSize = 60 * calculatedScale;
 
-    // Create the button content
-    const buttonContent = (
-      <Box sx={{ 
-        fontSize: `${24 * calculatedScale}px`,
-        fontFamily: "'Noto Sans', 'DejaVu Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        opacity: customization.hidden ? 0.3 : 1,
-        userSelect: 'none',
-        textTransform: 'none' // Prevent any automatic text transformation
-      }}>
-        {displayPhoneme}
-      </Box>
-    );
-    
     return (
-      <Button
+      <Box
         key={phoneme}
-        variant="contained"
-        onClick={() => !isJiggling && !isDisabled && handlePhonemeClick(phoneme)}
-        disabled={isDisabled}
-        onTouchStart={(e) => handleTouchStart(e, phoneme)}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
         sx={{
-          backgroundColor: customization.customColor || groupColor,
-          minWidth: 'unset',
+          position: 'relative',
           width: `${buttonSize}px`,
           height: `${buttonSize}px`,
-          margin: `${buttonSpacing/2}px`,
-          padding: 0,
-          textTransform: 'none',
-          '&:hover': {
-            backgroundColor: customization.customColor || groupColor,
-            filter: 'brightness(0.9)'
-          },
+          backgroundColor: customization.customColor || groupColor,
+          border: '2px solid',
+          borderColor: 'transparent',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
           opacity: isDisabled ? 0.5 : 1,
-          '&.Mui-disabled': {
-            backgroundColor: 'grey.300',
-            color: 'grey.500',
-          },
-          ...getDwellStyles(phoneme)
+          fontSize: `${16 * calculatedScale}px`,
+          fontFamily: "'Noto Sans', 'DejaVu Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
+          userSelect: 'none',
+          '&:hover': {
+            borderColor: mode === 'edit' ? 'primary.main' : 'transparent',
+            filter: 'brightness(0.9)'
+          }
         }}
+        onClick={() => !isJiggling && !isDisabled && handlePhonemeClick(phoneme)}
       >
-        {buttonContent}
-      </Button>
+        {!customization.hideLabel && (
+          <Box sx={{ 
+            position: 'relative',
+            zIndex: 2,
+            fontSize: `${24 * calculatedScale}px`,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            textTransform: 'none'
+          }}>
+            {displayPhoneme}
+          </Box>
+        )}
+        {customization.image && (
+          <img 
+            src={customization.image} 
+            alt={phoneme}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              maxWidth: '80%',
+              maxHeight: '80%',
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          />
+        )}
+      </Box>
     );
   };
 
-  const EditDialog = ({ open, onClose, phoneme }) => {
-    const [customization, setCustomization] = useState(() => customizations[phoneme] || {});
+  const saveCustomization = (phoneme, customization) => {
+    const newCustomizations = {
+      ...customizations,
+      [phoneme]: customization
+    };
+    setCustomizations(newCustomizations);
+    localStorage.setItem('ipaCustomizations', JSON.stringify(newCustomizations));
+    setEditMode(false);
+    setSelectedPhoneme(null);
+  };
+
+  const EditPhonemeDialog = ({ open, onClose, phoneme }) => {
+    const customization = customizations[phoneme] || {};
+    const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
+    const [hideButton, setHideButton] = useState(customization.hideButton || false);
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [image, setImage] = useState(customization.image || '');
-    const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
-    const [hideButton, setHideButton] = useState(customization.hidden || false);
-
-    const handleSave = () => {
-      const newCustomizations = {
-        ...customizations,
-        [phoneme]: {
-          ...customization,
-          hideLabel,
-          hidden: hideButton,
-          customColor: customization.customColor,
-          image
-        }
-      };
-      setCustomizations(newCustomizations);
-      localStorage.setItem('ipaCustomizations', JSON.stringify(newCustomizations));
-      onClose();
-    };
+    const [customColor, setCustomColor] = useState(customization.customColor || null);
 
     const handleColorChange = (color) => {
-      setCustomization(prev => ({
-        ...prev,
-        customColor: color.hex
-      }));
+      setCustomColor(color.hex);
+    };
+
+    const handleSave = () => {
+      const newCustomization = {
+        ...customization,
+        hideLabel,
+        hideButton,
+        image,
+        customColor
+      };
+      saveCustomization(phoneme, newCustomization);
+      onClose();
     };
 
     const handleImageUpload = (event) => {
@@ -501,7 +559,7 @@ const IPAKeyboard = ({
         position: 'relative'
       }}
     >
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
         <Droppable droppableId="all-phonemes" direction="horizontal">
           {(provided) => (
             <Box
@@ -516,62 +574,123 @@ const IPAKeyboard = ({
                 width: '100%',
                 height: '100%',
                 justifyContent: 'center',
-                position: 'relative',
-                '& > *': {
-                  transition: 'none !important' // Disable transitions that might cause jumping
-                }
+                position: 'relative'
               }}
             >
               {Object.values(phoneticData[selectedLanguage].groups)
-                .flatMap(group => 
-                  group.phonemes.map((phoneme, groupIndex) => ({
-                    phoneme,
-                    color: group.color
-                  }))
-                )
-                .map(({ phoneme, color }, index) => (
-                  <Draggable
-                    key={phoneme}
-                    draggableId={phoneme}
-                    index={index}
-                    isDragDisabled={!isJiggling}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        {renderPhonemeButton(phoneme, index, color)}
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
+                .flatMap(group => group.phonemes)
+                .sort((a, b) => (phonemeOrder[a] || 0) - (phonemeOrder[b] || 0))
+                .map((phoneme, index) => {
+                  const isDisabled = disabledPhonemes && disabledPhonemes(phoneme);
+                  const customization = customizations[phoneme] || {};
+                  if (customization.hideButton) return null;
+
+                  return (
+                    <Draggable 
+                      key={phoneme} 
+                      draggableId={phoneme} 
+                      index={index}
+                      isDragDisabled={!isJiggling}
+                    >
+                      {(provided, snapshot) => (
+                        <Box
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          onMouseDown={(e) => handleMouseDown(e, phoneme)}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseLeave}
+                          onTouchStart={(e) => handleTouchStartButton(e, phoneme)}
+                          onTouchEnd={handleTouchEndButton}
+                          onClick={(e) => handlePhonemeClick(phoneme, e)}
+                          sx={{
+                            position: 'relative',
+                            width: `${60 * calculatedScale}px`,
+                            height: `${60 * calculatedScale}px`,
+                            backgroundColor: customization.customColor || getPhonemeColor(phoneme),
+                            border: '2px solid',
+                            borderColor: 'transparent',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: isDisabled ? 'not-allowed' : (isJiggling ? 'grab' : 'pointer'),
+                            opacity: isDisabled ? 0.5 : 1,
+                            fontSize: `${16 * calculatedScale}px`,
+                            fontFamily: 'Arial',
+                            userSelect: 'none',
+                            transition: isJiggling ? 'transform 0.1s ease-in-out' : 'none',
+                            animation: isJiggling ? 'jiggle 0.2s infinite' : 'none',
+                            transform: snapshot.isDragging ? 'scale(1.1)' : 'none',
+                            '@keyframes jiggle': {
+                              '0%, 100%': { transform: 'rotate(-2deg)' },
+                              '50%': { transform: 'rotate(2deg)' }
+                            },
+                            '&:hover': {
+                              borderColor: mode === 'edit' ? 'primary.main' : 'transparent'
+                            },
+                            ...getDwellStyles(phoneme)
+                          }}
+                        >
+                          {!customization.hideLabel && (
+                            <Box sx={{ 
+                              position: 'relative',
+                              zIndex: 2 
+                            }}>
+                              {phoneme}
+                            </Box>
+                          )}
+                          {mode === 'edit' && isJiggling && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: -8,
+                                right: -8,
+                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                borderRadius: '50%',
+                                padding: '2px',
+                                zIndex: 3
+                              }}
+                            >
+                              <DragIndicatorIcon 
+                                sx={{ 
+                                  fontSize: `${16 * calculatedScale}px`,
+                                  color: 'rgba(0, 0, 0, 0.5)',
+                                  transform: 'rotate(90deg)'
+                                }} 
+                              />
+                            </Box>
+                          )}
+                          {customization.image && (
+                            <img 
+                              src={customization.image} 
+                              alt={phoneme}
+                              style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                maxWidth: '80%',
+                                maxHeight: '80%',
+                                objectFit: 'contain',
+                                pointerEvents: 'none',
+                                zIndex: 1
+                              }}
+                            />
+                          )}
+                        </Box>
+                      )}
+                    </Draggable>
+                  );
+                })}
               {provided.placeholder}
-              
-              {mode === 'edit' && isJiggling && (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => setIsJiggling(false)}
-                  sx={{
-                    position: 'fixed',
-                    bottom: 20,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    zIndex: 1000
-                  }}
-                >
-                  Done
-                </Button>
-              )}
             </Box>
           )}
         </Droppable>
       </DragDropContext>
       
       {selectedPhoneme && (
-        <EditDialog
+        <EditPhonemeDialog
           open={Boolean(selectedPhoneme)}
           onClose={() => setSelectedPhoneme(null)}
           phoneme={selectedPhoneme}
