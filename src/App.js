@@ -13,6 +13,7 @@ import EditMode from './components/EditMode';
 import Settings from './components/Settings';
 import GameMode from './components/GameMode';
 import { voicesByLanguage } from './data/phonemes';
+import { config } from './config';
 
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
@@ -48,23 +49,24 @@ const App = () => {
     { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) }
   ];
 
-  useEffect(() => {
-    // Fetch available voices
-    const fetchVoices = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/voices');
-        if (!response.ok) {
-          throw new Error('Failed to fetch voices');
+  const fetchVoices = async () => {
+    try {
+      const response = await config.api.get('/api/voices');
+      if (response.data) {
+        setAvailableVoices(response.data);
+        // Set default voice if available
+        if (response.data.length > 0) {
+          setSelectedVoice(response.data[0].name);
         }
-        const voiceData = await response.json();
-        setAvailableVoices(voiceData);
-        setVoicesLoading(false);
-      } catch (error) {
-        console.error('Error fetching voices:', error);
         setVoicesLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching voices:', error);
+      setVoicesLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchVoices();
   }, []);
 
@@ -106,27 +108,16 @@ const App = () => {
     if (!text || !selectedVoice) return;
 
     try {
-      const response = await fetch('http://localhost:3001/api/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          voice: selectedVoice,
-          language: selectedLanguage
-        }),
+      const response = await config.api.post('/api/tts', { 
+        text,
+        voice: selectedVoice,
+        language: selectedLanguage
       });
       
-      if (!response.ok) {
-        throw new Error('Speech synthesis failed. Please check your Azure settings.');
+      if (response.data && response.data.audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        await audio.play();
       }
-      
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      await audio.play();
-      URL.revokeObjectURL(audioUrl); // Clean up the URL after playing
     } catch (error) {
       console.error('Error in speech synthesis:', error);
       alert(error.message);
@@ -159,21 +150,39 @@ const App = () => {
     handlePhonemeSpeak(message);
   };
 
-  const handleSpeakRequest = (text) => {
-    if (!text) return;
-    
-    // For IPA text, we want to use a specific voice that can handle IPA
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Try to find an English voice
-    const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(voice => voice.lang.startsWith('en-'));
-    if (englishVoice) {
-      utterance.voice = englishVoice;
+  const handleSpeakRequest = async (text) => {
+    if (!text || !selectedVoice) return;
+
+    try {
+      console.log('Making TTS request:', {
+        text,
+        voice: selectedVoice,
+        language: selectedLanguage
+      });
+
+      const response = await config.api.post('/api/tts', { 
+        text,
+        voice: selectedVoice,
+        language: selectedLanguage
+      });
+      
+      console.log('TTS response:', response.data);
+      
+      if (response.data && response.data.audio) {
+        console.log('Creating audio from base64');
+        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        console.log('Playing audio');
+        await audio.play();
+        console.log('Audio playback complete');
+      } else {
+        console.error('No audio data in response:', response.data);
+      }
+    } catch (error) {
+      console.error('Error in speech synthesis:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
     }
-    
-    utterance.rate = 0.8; // Slightly slower for clarity
-    window.speechSynthesis.speak(utterance);
   };
 
   const handleLanguageChange = (language) => {

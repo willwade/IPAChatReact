@@ -282,12 +282,12 @@ app.post('/api/tts', async (req, res) => {
       headers: response.headers
     });
 
-    res.set({
-      'Content-Type': 'audio/mpeg',
-      'Content-Length': response.data.length
-    });
+    // Convert audio buffer to base64
+    const base64Audio = Buffer.from(response.data).toString('base64');
 
-    res.send(response.data);
+    res.json({
+      audio: base64Audio
+    });
   } catch (error) {
     console.error('Error in TTS:', error.response?.data || error.message);
     res.status(500).json({ 

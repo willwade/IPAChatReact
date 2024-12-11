@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import {
   Box,
   Typography,
@@ -35,6 +34,7 @@ import {
   HelpOutline as HelpOutlineIcon
 } from '@mui/icons-material';
 import IPAKeyboard from './IPAKeyboard';
+import { config } from '../config';
 
 const DIFFICULTY_LEVELS = {
   LEVEL1: { id: 1, name: "All Cues", description: "Written model, Spoken model, Greyed-out incorrect buttons" },
@@ -147,16 +147,13 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
   useEffect(() => {
     const loadWordList = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/words');
-        if (!response.ok) {
-          throw new Error('Failed to fetch words');
-        }
-        const words = await response.json();
-        setWordList(words);
-        // Start with first word
-        if (words.length > 0) {
-          setCurrentWord(words[0]);
-          setShowWordCue(true); // Show the first word automatically
+        const response = await config.api.get('/api/words');
+        if (response.data) {
+          setWordList(response.data);
+          if (response.data.length > 0) {
+            setCurrentWord(response.data[0]);
+            setShowWordCue(true); // Show the first word automatically
+          }
         }
       } catch (error) {
         setError('Failed to load words. Please try again.');
@@ -205,6 +202,39 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     localStorage.setItem('gameDifficulty', JSON.stringify(newDifficulty));
     // Show word cue when difficulty changes
     setShowWordCue(true);
+  };
+
+  const playSound = async (text) => {
+    try {
+      console.log('Making TTS request:', {
+        text,
+        voice: selectedVoice,
+        language: selectedLanguage
+      });
+
+      const response = await config.api.post('/api/tts', { 
+        text,
+        voice: selectedVoice,
+        language: selectedLanguage
+      });
+      
+      console.log('TTS response:', response.data);
+      
+      if (response.data && response.data.audio) {
+        console.log('Creating audio from base64');
+        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        console.log('Playing audio');
+        await audio.play();
+        console.log('Audio playback complete');
+      } else {
+        console.error('No audio data in response:', response.data);
+      }
+    } catch (error) {
+      console.error('Error in speech synthesis:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+    }
   };
 
   return (
