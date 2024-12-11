@@ -9,6 +9,7 @@ import { phoneticData } from '../data/phonemes';
 const IPAKeyboard = ({ 
   mode, 
   onPhonemeClick, 
+  disabledPhonemes, 
   buttonScale = 1, 
   buttonSpacing = 4, 
   selectedLanguage = 'en-GB',
@@ -35,6 +36,10 @@ const IPAKeyboard = ({
   const longPressTimer = useRef(null);
 
   useEffect(() => {
+    // Clear any stored customizations that might affect case
+    localStorage.removeItem('ipaCustomizations');
+    localStorage.removeItem('phonemeOrder');
+    
     const saved = localStorage.getItem('ipaCustomizations');
     if (saved) {
       setCustomizations(JSON.parse(saved));
@@ -156,127 +161,55 @@ const IPAKeyboard = ({
 
   const renderPhonemeButton = (phoneme, index, groupColor) => {
     const customization = customizations[phoneme] || {};
-    const baseColor = customization.customColor || groupColor;
+    const isDisabled = mode === 'game' && disabledPhonemes && disabledPhonemes(phoneme);
     
-    if (customization.hidden && mode !== 'edit') {
-      return null;
-    }
-
+    // Force lowercase for basic Latin characters but preserve special IPA characters
+    const displayPhoneme = phoneme.replace(/[A-Z]/g, char => char.toLowerCase());
     const buttonSize = 60 * calculatedScale;
-    const buttonContent = customization.image ? (
-      <img 
-        src={customization.image} 
-        alt={phoneme}
-        style={{ 
-          width: '100%', 
-          height: '100%', 
-          objectFit: 'contain',
-          opacity: customization.hidden ? 0.3 : 1
-        }} 
-      />
-    ) : (
+
+    // Create the button content
+    const buttonContent = (
       <Box sx={{ 
         fontSize: `${24 * calculatedScale}px`,
-        fontFamily: "'Noto Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
+        fontFamily: "'Noto Sans', 'DejaVu Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        opacity: customization.hidden ? 0.3 : 1
+        opacity: customization.hidden ? 0.3 : 1,
+        userSelect: 'none',
+        textTransform: 'none' // Prevent any automatic text transformation
       }}>
-        {customization.label || phoneme}
+        {displayPhoneme}
       </Box>
     );
     
-    const button = (
+    return (
       <Button
         key={phoneme}
         variant="contained"
-        onClick={() => !isJiggling && handlePhonemeClick(phoneme)}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleTouchStart}
-        onMouseUp={handleTouchEnd}
-        onMouseLeave={handleTouchEnd}
-        aria-label={`Phoneme ${phoneme}`}
-        role="button"
-        tabIndex={0}
-        onKeyPress={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            !isJiggling && handlePhonemeClick(phoneme);
-          }
-        }}
+        onClick={() => !isJiggling && !isDisabled && handlePhonemeClick(phoneme)}
+        disabled={isDisabled}
         sx={{
-          backgroundColor: customization.image ? 'transparent' : baseColor,
+          backgroundColor: customization.customColor || groupColor,
           minWidth: 'unset',
           width: `${buttonSize}px`,
           height: `${buttonSize}px`,
           margin: `${buttonSpacing/2}px`,
-          position: 'relative',
           padding: 0,
-          overflow: 'hidden',
-          cursor: isJiggling ? 'grab' : 'pointer',
-          animation: isJiggling ? 'jiggle 0.2s infinite ease-in-out' : 'none',
-          touchAction: 'none', // Prevent scrolling while dragging
-          '@keyframes jiggle': {
-            '0%, 100%': {
-              transform: 'rotate(-1deg)',
-            },
-            '50%': {
-              transform: 'rotate(1deg)',
-            }
-          },
+          textTransform: 'none',
           '&:hover': {
-            backgroundColor: customization.image ? 'rgba(0,0,0,0.1)' : baseColor,
-            filter: 'brightness(0.9)',
-            '& .edit-overlay': {
-              display: mode === 'edit' && !isJiggling ? 'flex' : 'none'
-            }
+            backgroundColor: customization.customColor || groupColor,
+            filter: 'brightness(0.9)'
           },
-          '&.dragging': {
-            opacity: 0.5,
+          opacity: isDisabled ? 0.5 : 1,
+          '&.Mui-disabled': {
+            backgroundColor: 'grey.300',
+            color: 'grey.500',
           }
         }}
       >
         {buttonContent}
-        {mode === 'edit' && !isJiggling && (
-          <Box
-            className="edit-overlay"
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              display: 'none',
-              alignItems: 'center',
-              justifyContent: 'center',
-              pointerEvents: 'none',
-            }}
-          >
-            <EditIcon sx={{ color: 'white' }} />
-          </Box>
-        )}
       </Button>
-    );
-
-    return (
-      <Draggable
-        key={phoneme}
-        draggableId={phoneme}
-        index={index}
-        isDragDisabled={!isJiggling}
-      >
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-          >
-            {button}
-          </div>
-        )}
-      </Draggable>
     );
   };
 

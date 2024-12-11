@@ -23,10 +23,15 @@ const Settings = ({
   }));
 
   const handleLanguageChange = (event) => {
-    onLanguageChange(event.target.value);
-    // Reset selected voice when changing language
-    const defaultVoice = voices[0]?.name || '';
-    onVoiceChange(defaultVoice);
+    if (onLanguageChange) {
+      onLanguageChange(event.target.value);
+    }
+  };
+
+  const handleVoiceChange = (event) => {
+    if (onVoiceChange) {
+      onVoiceChange(event.target.value);
+    }
   };
 
   return (
@@ -53,7 +58,7 @@ const Settings = ({
           <Select
             value={selectedVoice}
             label="Voice"
-            onChange={(e) => onVoiceChange(e.target.value)}
+            onChange={handleVoiceChange}
           >
             {voices.map(voice => (
               <MenuItem key={voice.name} value={voice.name}>

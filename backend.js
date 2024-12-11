@@ -36,6 +36,176 @@ console.log('Azure Configuration:', {
   keyLength: AZURE_KEY ? AZURE_KEY.length : 0
 });
 
+// Voice data
+const voiceData = {
+  'en-GB': [
+    { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)', locale: 'en-GB' },
+    { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)', locale: 'en-GB' },
+    { name: 'en-GB-LibbyNeural', displayName: 'Libby (Female)', locale: 'en-GB' },
+  ],
+  'en-US': [
+    { name: 'en-US-JennyNeural', displayName: 'Jenny (Female)', locale: 'en-US' },
+    { name: 'en-US-GuyNeural', displayName: 'Guy (Male)', locale: 'en-US' },
+    { name: 'en-US-AriaNeural', displayName: 'Aria (Female)', locale: 'en-US' },
+  ],
+};
+
+// Log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, req.body);
+  next();
+});
+
+// Endpoint to get available voices
+app.get('/api/voices', (req, res) => {
+  try {
+    // Log the response for debugging
+    console.log('Sending voice data:', voiceData);
+    res.json(voiceData);
+  } catch (error) {
+    console.error('Error getting voices:', error);
+    res.status(500).json({ error: 'Failed to get voices' });
+  }
+});
+
+// IPA Game Mode Phases and Words
+const gamePhases = {
+  phase1: {
+    name: "Single-Syllable Words (Simple Phonemes)",
+    words: {
+      "mum": "mʌm",
+      "dad": "dæd",
+      "cat": "kæt",
+      "dog": "dɒg",
+      "bus": "bʌs",
+      "pig": "pɪg",
+      "sun": "sʌn",
+      "bird": "bɜːd"
+    }
+  },
+  phase2: {
+    name: "Two-Syllable Words (Adding Variety)",
+    words: {
+      "happy": "ˈhæpi",
+      "banana": "bəˈnɑːnə",
+      "tickle": "ˈtɪkəl",
+      "butter": "ˈbʌtə",
+      "hammer": "ˈhæmə",
+      "desert": "ˈdezət"
+    }
+  },
+  phase3: {
+    name: "Two-Word Phrases",
+    words: {
+      "hello mum": "həˈləʊ mʌm",
+      "bye dad": "baɪ dæd",
+      "pig cat": "pɪg kæt",
+      "run fast": "rʌn fɑːst",
+      "good dog": "gʊd dɒg",
+      "say hi": "seɪ haɪ"
+    }
+  }
+};
+
+// Simple English phoneme mapping
+const englishPhonemeMap = {
+  'hello': 'həˈləʊ',
+  'dog': 'dɒg',
+  'cat': 'kæt',
+  'bird': 'bɜːd',
+  'fish': 'fɪʃ',
+  'book': 'bʊk',
+  'tree': 'triː',
+  'house': 'haʊs',
+  'mouse': 'maʊs',
+  'car': 'kɑː',
+  'star': 'stɑː',
+  'sun': 'sʌn',
+  'moon': 'muːn',
+  'rain': 'reɪn',
+  'snow': 'snəʊ',
+  'play': 'pleɪ',
+  'day': 'deɪ',
+  'night': 'naɪt',
+  'light': 'laɪt',
+  'time': 'taɪm'
+};
+
+// Game Mode endpoints
+app.get('/api/game/phases', (req, res) => {
+  try {
+    console.log('Fetching phases...');
+    const phases = Object.entries(gamePhases).map(([id, phase]) => ({
+      id,
+      name: phase.name,
+      wordCount: Object.keys(phase.words).length
+    }));
+    console.log('Returning phases:', phases);
+    res.json(phases);
+  } catch (error) {
+    console.error('Error getting phases:', error);
+    res.status(500).json({ error: 'Failed to get phases' });
+  }
+});
+
+app.get('/api/game/phase/:phaseId', (req, res) => {
+  console.log('Fetching phase:', req.params.phaseId);
+  const phase = gamePhases[req.params.phaseId];
+  if (!phase) {
+    console.log('Phase not found:', req.params.phaseId);
+    return res.status(404).json({ error: 'Phase not found' });
+  }
+  console.log('Returning phase:', phase);
+  res.json(phase);
+});
+
+app.get('/api/game/word/:word', (req, res) => {
+  const word = req.params.word.toLowerCase();
+  let foundWord = null;
+  let foundPhase = null;
+
+  // Search through all phases for the word
+  for (const [phaseId, phase] of Object.entries(gamePhases)) {
+    if (phase.words[word]) {
+      foundWord = {
+        word: word,
+        ipa: phase.words[word],
+        phonemes: Array.from(phase.words[word]).filter(char => char.trim())
+      };
+      foundPhase = phaseId;
+      break;
+    }
+  }
+
+  if (!foundWord) {
+    return res.status(404).json({ error: 'Word not found' });
+  }
+
+  res.json({
+    ...foundWord,
+    phase: foundPhase
+  });
+});
+
+app.get('/api/words', (req, res) => {
+  try {
+    // Convert the gamePhases words into a flat array
+    const allWords = Object.values(gamePhases).reduce((words, phase) => {
+      const phaseWords = Object.entries(phase.words).map(([word, ipa]) => ({
+        word,
+        ipa,
+        phonemes: Array.from(ipa.replace(/[ˈˌ]/g, '')) // Remove stress marks and convert to array
+      }));
+      return [...words, ...phaseWords];
+    }, []);
+    
+    res.json(allWords);
+  } catch (error) {
+    console.error('Error getting words:', error);
+    res.status(500).json({ error: 'Failed to get words' });
+  }
+});
+
 // Routes
 app.post('/api/save', (req, res) => {
   appState = req.body;
@@ -122,35 +292,49 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
-// Add voices endpoint
-app.get('/api/voices', async (req, res) => {
-  if (!AZURE_KEY || !AZURE_REGION) {
-    return res.status(500).json({ error: 'Azure credentials not configured' });
+// Phonemization endpoint
+app.post('/api/phonemize', async (req, res) => {
+  const { text } = req.body;
+  console.log('Phonemize request:', text);
+
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
   }
 
   try {
-    const response = await axios({
-      method: 'get',
-      url: `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/voices/list`,
-      headers: {
-        'Ocp-Apim-Subscription-Key': AZURE_KEY
-      }
+    // If text is 'dummy', return the list of available words
+    if (text === 'dummy') {
+      const wordList = Object.keys(englishPhonemeMap).join(', ');
+      console.log('Returning word list:', wordList);
+      return res.status(404).json({ 
+        error: 'Word not found', 
+        message: 'Try one of these words: ' + wordList
+      });
+    }
+
+    const word = text.toLowerCase().trim();
+    if (!englishPhonemeMap[word]) {
+      return res.status(404).json({ 
+        error: 'Word not found', 
+        message: 'Try one of these words: ' + Object.keys(englishPhonemeMap).join(', ')
+      });
+    }
+
+    const ipa = englishPhonemeMap[word];
+    const phonemes = Array.from(ipa).filter(p => p.trim());
+
+    res.json({ 
+      word: text,
+      ipa: ipa,
+      phonemes
     });
 
-    // Filter and format the voices
-    const voices = response.data
-      .filter(voice => voice.VoiceType === "Neural") // Only get Neural voices
-      .map(voice => ({
-        name: voice.ShortName,
-        displayName: `${voice.LocalName} (${voice.Gender})`,
-        gender: voice.Gender,
-        locale: voice.Locale
-      }));
-
-    res.json(voices);
   } catch (error) {
-    console.error('Error fetching voices:', error);
-    res.status(500).json({ error: 'Failed to fetch voices from Azure' });
+    console.error('Error getting phonemes:', error);
+    res.status(500).json({ 
+      error: 'Failed to get phonemes',
+      details: error.message 
+    });
   }
 });
 
