@@ -1,4 +1,5 @@
-const CACHE_NAME = 'ipa-chat-v1';
+const BUILD_TIME = new Date().getTime(); // This will be different for each build
+const CACHE_NAME = `ipa-chat-${BUILD_TIME}`;
 const urlsToCache = [
   '/',
   '/index.html',
@@ -14,10 +15,30 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
+        console.log('Opened cache:', CACHE_NAME);
         return cache.addAll(urlsToCache);
       })
   );
+  // Immediately activate the new service worker
+  self.skipWaiting();
+});
+
+// Activate the service worker and clean up old caches
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  // Ensure the new service worker takes control immediately
+  self.clients.claim();
 });
 
 // Cache and return requests
@@ -54,21 +75,5 @@ self.addEventListener('fetch', event => {
           }
         );
       })
-    );
-});
-
-// Update a service worker
-self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
   );
 });
