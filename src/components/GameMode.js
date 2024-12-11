@@ -321,16 +321,21 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
         flexDirection: 'column', 
         height: '100%',
         p: 1,
-        position: 'relative' // Add position relative for absolute positioning context
+        position: 'relative'
       }}>
         {/* Game content */}
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0 // Important for proper flex behavior
+        }}>
           {error ? (
             <Alert severity="error">{error}</Alert>
           ) : (
             <>
               {/* Word display area */}
-              <Box sx={{ mb: 1, textAlign: 'center' }}>
+              <Box sx={{ mb: 1, textAlign: 'center', flexShrink: 0 }}>
                 {showWordCue && currentWord && (
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                     {(difficulty.id !== DIFFICULTY_LEVELS.LEVEL5.id) && (
@@ -360,7 +365,12 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
               </Box>
 
               {/* IPA Keyboard */}
-              <Box>
+              <Box sx={{ 
+                flexGrow: 1,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
                 <IPAKeyboard
                   mode="game"
                   onPhonemeClick={handlePhonemeClick}
@@ -370,7 +380,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
                   autoScale={autoScale}
                   disabledPhonemes={shouldDisablePhoneme}
                 />
-                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
                   <Button
                     variant="outlined"
                     onClick={handleBackspace}

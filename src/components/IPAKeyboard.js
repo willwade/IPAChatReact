@@ -82,43 +82,67 @@ const IPAKeyboard = ({
       const container = containerRef.current;
       if (!container) return;
 
-      const padding = 32; // 2rem padding
-      const containerWidth = container.clientWidth - padding;
-      const containerHeight = container.clientHeight - padding;
-      
+      // Get container dimensions
+      const rect = container.getBoundingClientRect();
+      const containerWidth = rect.width - 32; // 2rem padding
+      const containerHeight = rect.height - 32;
+
+      if (containerWidth <= 0 || containerHeight <= 0) return;
+
+      // Get total buttons for the current language
       const totalButtons = Object.values(phoneticData[selectedLanguage].groups)
         .reduce((sum, group) => sum + group.phonemes.length, 0);
 
-      // Start with a reasonable number of columns based on the aspect ratio
-      const containerAspectRatio = containerWidth / containerHeight;
-      const maxColumns = Math.floor(Math.sqrt(totalButtons * containerAspectRatio));
+      if (totalButtons <= 0) return;
+
+      // Calculate optimal grid
+      const aspectRatio = containerWidth / containerHeight;
+      const cols = Math.ceil(Math.sqrt(totalButtons * aspectRatio));
+      const rows = Math.ceil(totalButtons / cols);
+
+      // Base button size (60px is our reference size)
+      const baseSize = 60;
       
-      // Calculate minimum rows needed
-      const minRows = Math.ceil(totalButtons / maxColumns);
+      // Calculate scales
+      const scaleX = (containerWidth - (cols - 1) * buttonSpacing) / (cols * baseSize);
+      const scaleY = (containerHeight - (rows - 1) * buttonSpacing) / (rows * baseSize);
       
-      // Calculate the maximum possible scale that will fit both width and height
-      const scaleFromWidth = (containerWidth - (maxColumns - 1) * buttonSpacing) / (maxColumns * 60);
-      const scaleFromHeight = (containerHeight - (minRows - 1) * buttonSpacing) / (minRows * 60);
+      // Use the smaller scale with a safety margin
+      const newScale = Math.min(scaleX, scaleY) * 0.9;
       
-      // Use the smaller scale to ensure everything fits
-      const finalScale = Math.min(scaleFromWidth, scaleFromHeight);
-      
-      // Apply scale with limits
-      setCalculatedScale(Math.min(Math.max(finalScale * 0.95, 0.5), 3)); // Added 5% margin for safety
+      // Clamp scale between 0.5 and 2
+      const clampedScale = Math.min(Math.max(newScale, 0.5), 2);
+
+      // Only update if the change is significant
+      if (Math.abs(clampedScale - calculatedScale) > 0.05) {
+        setCalculatedScale(clampedScale);
+      }
     };
 
-    // Update on mount and window resize
+    // Debounce the resize observer callback
+    let resizeTimeout;
+    const debouncedUpdateScale = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(updateScale, 100);
+    };
+
+    // Initial update
     updateScale();
-    const resizeObserver = new ResizeObserver(updateScale);
-    resizeObserver.observe(containerRef.current);
+
+    // Setup resize observer with debouncing
+    const resizeObserver = new ResizeObserver(debouncedUpdateScale);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
 
     return () => {
+      clearTimeout(resizeTimeout);
       if (containerRef.current) {
         resizeObserver.unobserve(containerRef.current);
       }
       resizeObserver.disconnect();
     };
-  }, [autoScale, buttonScale, buttonSpacing, selectedLanguage, phoneticData]);
+  }, [autoScale, buttonScale, buttonSpacing, selectedLanguage]);
 
   const triggerHapticFeedback = () => {
     if (hapticFeedback && window.navigator.vibrate) {
@@ -473,7 +497,8 @@ const IPAKeyboard = ({
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
       }}
     >
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -490,8 +515,11 @@ const IPAKeyboard = ({
                 backgroundColor: mode === 'edit' && isJiggling ? 'rgba(0,0,0,0.03)' : 'transparent',
                 width: '100%',
                 height: '100%',
-                justifyContent: 'center', // Center the buttons horizontally
-                position: 'relative' // Added for absolute positioning of Done button
+                justifyContent: 'center',
+                position: 'relative',
+                '& > *': {
+                  transition: 'none !important' // Disable transitions that might cause jumping
+                }
               }}
             >
               {Object.values(phoneticData[selectedLanguage].groups)
