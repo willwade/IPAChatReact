@@ -8,6 +8,15 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+
+// Serve static files from the React build directory in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
+}
+
 // Debug logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -17,10 +26,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
 
 // In-memory storage (replace with a database in production)
 let appState = null;
@@ -338,17 +343,14 @@ app.post('/api/phonemize', async (req, res) => {
   }
 });
 
-// Serve the React app
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  console.log('Environment:', {
-    nodeEnv: process.env.NODE_ENV,
-    port: port,
-    publicPath: path.join(__dirname, 'public')
+// Catch-all handler to serve React app in production
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
   });
+}
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port}`);
+  console.log('Environment:', process.env.NODE_ENV);
 });
