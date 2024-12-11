@@ -158,7 +158,7 @@ const IPAKeyboard = ({
     const customization = customizations[phoneme] || {};
     const baseColor = customization.customColor || groupColor;
     
-    if (customization.hidden) {
+    if (customization.hidden && mode !== 'edit') {
       return null;
     }
 
@@ -170,7 +170,8 @@ const IPAKeyboard = ({
         style={{ 
           width: '100%', 
           height: '100%', 
-          objectFit: 'contain' 
+          objectFit: 'contain',
+          opacity: customization.hidden ? 0.3 : 1
         }} 
       />
     ) : (
@@ -179,7 +180,8 @@ const IPAKeyboard = ({
         fontFamily: "'Noto Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-        textOverflow: 'ellipsis'
+        textOverflow: 'ellipsis',
+        opacity: customization.hidden ? 0.3 : 1
       }}>
         {customization.label || phoneme}
       </Box>
@@ -279,26 +281,33 @@ const IPAKeyboard = ({
   };
 
   const EditDialog = ({ open, onClose, phoneme }) => {
-    const [label, setLabel] = useState(customizations[phoneme]?.label || '');
-    const [hideLabel, setHideLabel] = useState(customizations[phoneme]?.hideLabel || false);
-    const [color, setColor] = useState(customizations[phoneme]?.customColor || getPhonemeColor(phoneme));
+    const [customization, setCustomization] = useState(() => customizations[phoneme] || {});
     const [showColorPicker, setShowColorPicker] = useState(false);
-    const [image, setImage] = useState(customizations[phoneme]?.image || '');
+    const [image, setImage] = useState(customization.image || '');
+    const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
+    const [hideButton, setHideButton] = useState(customization.hidden || false);
 
     const handleSave = () => {
       const newCustomizations = {
         ...customizations,
         [phoneme]: {
-          ...customizations[phoneme],
-          label: label || undefined,
-          hideLabel: hideLabel || undefined,
-          customColor: color !== getPhonemeColor(phoneme) ? color : undefined,
-          image: image || undefined,
+          ...customization,
+          hideLabel,
+          hidden: hideButton,
+          customColor: customization.customColor,
+          image
         }
       };
       setCustomizations(newCustomizations);
       localStorage.setItem('ipaCustomizations', JSON.stringify(newCustomizations));
       onClose();
+    };
+
+    const handleColorChange = (color) => {
+      setCustomization(prev => ({
+        ...prev,
+        customColor: color.hex
+      }));
     };
 
     const handleImageUpload = (event) => {
@@ -318,15 +327,9 @@ const IPAKeyboard = ({
 
     return (
       <Dialog open={open} onClose={onClose}>
-        <DialogTitle>Edit Button: {phoneme}</DialogTitle>
+        <DialogTitle>Edit Phoneme: {phoneme}</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Custom Label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              fullWidth
-            />
+          <Box sx={{ mt: 2 }}>
             <FormControlLabel
               control={
                 <Switch
@@ -335,6 +338,15 @@ const IPAKeyboard = ({
                 />
               }
               label="Hide Label"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={hideButton}
+                  onChange={(e) => setHideButton(e.target.checked)}
+                />
+              }
+              label="Hide Button"
             />
             <Button
               variant="outlined"
@@ -345,8 +357,8 @@ const IPAKeyboard = ({
             {showColorPicker && (
               <Box sx={{ mt: 1 }}>
                 <ChromePicker
-                  color={color}
-                  onChange={(color) => setColor(color.hex)}
+                  color={customization.customColor || getPhonemeColor(phoneme)}
+                  onChange={handleColorChange}
                 />
               </Box>
             )}
