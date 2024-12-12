@@ -1,14 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel } from '@mui/material';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { ChromePicker } from 'react-color';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { phoneticData } from '../data/phonemes';
+
+const debounce = (func, wait) => {
+  let timeout;
+  return function (...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+};
 
 const IPAKeyboard = ({
   mode = 'build',
   onPhonemeClick,
+  onPhonemeSwap,
   disabledPhonemes,
   buttonScale = 1,
   buttonSpacing = 4,
@@ -22,7 +31,7 @@ const IPAKeyboard = ({
 }) => {
   const [customizations, setCustomizations] = useState({});
   const [calculatedScale, setCalculatedScale] = useState(buttonScale);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState('move'); 
   const [selectedPhoneme, setSelectedPhoneme] = useState(null);
   const [phonemeOrder, setPhonemeOrder] = useState(() => {
     const saved = localStorage.getItem('phonemeOrder');
@@ -35,6 +44,7 @@ const IPAKeyboard = ({
     }
     return {};
   });
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const containerRef = useRef(null);
   const [isJiggling, setIsJiggling] = useState(false);
   const [dragEnabled, setDragEnabled] = useState(false);
@@ -47,6 +57,79 @@ const IPAKeyboard = ({
   const longPressTimer = useRef(null);
   const [hoveredPhoneme, setHoveredPhoneme] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [draggedPhoneme, setDraggedPhoneme] = useState(null);
+  const [draggedElement, setDraggedElement] = useState(null);
+  const [gridColumns, setGridColumns] = useState(8);
+
+  const calculateOptimalGrid = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+    
+    // Account for container padding
+    const effectiveWidth = containerWidth - (buttonSpacing * 4);  // 2x padding on each side
+    const effectiveHeight = containerHeight - (buttonSpacing * 4);
+    
+    // Get total number of buttons
+    const totalButtons = Object.values(phoneticData[selectedLanguage].groups)
+      .reduce((sum, group) => sum + group.phonemes.length, 0);
+
+    // Calculate button size including spacing
+    const buttonSizeWithSpacing = 60 + (buttonSpacing * 2);
+
+    // Calculate maximum possible columns that fit in width
+    const maxColumns = Math.floor(effectiveWidth / buttonSizeWithSpacing);
+    
+    let bestColumns = maxColumns;
+    let bestRatio = Infinity;
+    
+    for (let cols = 1; cols <= maxColumns; cols++) {
+      const rows = Math.ceil(totalButtons / cols);
+      const gridWidth = cols * buttonSizeWithSpacing;
+      const gridHeight = rows * buttonSizeWithSpacing;
+      
+      // Compare with effective container dimensions
+      const ratio = Math.abs((gridWidth / gridHeight) - (effectiveWidth / effectiveHeight));
+      
+      if (ratio < bestRatio && gridHeight <= effectiveHeight) {  // Ensure grid fits in height
+        bestRatio = ratio;
+        bestColumns = cols;
+      }
+    }
+
+    // Calculate final scale to fit within container
+    const gridWidth = bestColumns * buttonSizeWithSpacing;
+    const rows = Math.ceil(totalButtons / bestColumns);
+    const gridHeight = rows * buttonSizeWithSpacing;
+    
+    setGridColumns(bestColumns);
+  }, [buttonSpacing, selectedLanguage]);
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      requestAnimationFrame(() => {
+        calculateOptimalGrid();
+      });
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // Initial calculation
+    calculateOptimalGrid();
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [calculateOptimalGrid]);
+
+  useEffect(() => {
+    calculateOptimalGrid();
+  }, [calculateOptimalGrid, autoScale, buttonScale]);
 
   useEffect(() => {
     const saved = localStorage.getItem('ipaCustomizations');
@@ -75,6 +158,14 @@ const IPAKeyboard = ({
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!autoScale) {
       setCalculatedScale(buttonScale);
       return;
@@ -86,12 +177,8 @@ const IPAKeyboard = ({
 
       // Get container dimensions
       const rect = container.getBoundingClientRect();
-      
-      // Account for top elements (assuming ~120px for top elements)
-      const topOffset = 120;
-      const availableHeight = window.innerHeight - topOffset;
-      const containerWidth = rect.width - 32; // 2rem padding
-      const containerHeight = Math.min(rect.height - 32, availableHeight);
+      const containerWidth = rect.width;
+      const containerHeight = rect.height;
 
       if (containerWidth <= 0 || containerHeight <= 0) return;
 
@@ -101,52 +188,44 @@ const IPAKeyboard = ({
 
       if (totalButtons <= 0) return;
 
-      // Calculate optimal grid
-      const aspectRatio = containerWidth / containerHeight;
-      const cols = Math.ceil(Math.sqrt(totalButtons * aspectRatio));
+      // Calculate optimal grid based on container size
+      const effectiveButtonWidth = 60 + buttonSpacing * 2; // Button width plus spacing
+      const maxPossibleCols = Math.floor(containerWidth / effectiveButtonWidth);
+      const minRows = Math.ceil(totalButtons / maxPossibleCols);
+      
+      // Try to make grid more square-like for better visual appearance
+      const targetAspectRatio = containerWidth / containerHeight;
+      const cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
       const rows = Math.ceil(totalButtons / cols);
 
       // Calculate the maximum possible scale
-      const scaleX = (containerWidth - (cols - 1) * buttonSpacing) / (cols * 60);
-      const scaleY = (containerHeight - (rows - 1) * buttonSpacing) / (rows * 60);
+      const scaleX = (containerWidth) / (cols * effectiveButtonWidth);
+      const scaleY = (containerHeight) / (rows * effectiveButtonWidth);
       
       // Use the smaller scale with a safety margin
       const newScale = Math.min(scaleX, scaleY) * 0.9;
       
-      // Clamp scale between 0.5 and 1.5
-      const clampedScale = Math.min(Math.max(newScale, 0.5), 1.5);
-
-      if (Math.abs(clampedScale - calculatedScale) > 0.05) {
-        setCalculatedScale(clampedScale);
-      }
+      requestAnimationFrame(() => {
+        setCalculatedScale(newScale);
+      });
     };
 
-    // Debounce the resize observer callback
     let resizeTimeout;
     const debouncedUpdateScale = () => {
+      cancelAnimationFrame(animationFrameRef.current);
       clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(updateScale, 100);
+      resizeTimeout = setTimeout(() => {
+        animationFrameRef.current = requestAnimationFrame(updateScale);
+      }, 150);
     };
 
-    // Initial update
     updateScale();
-
-    // Setup resize observer with debouncing
-    const resizeObserver = new ResizeObserver(debouncedUpdateScale);
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-
-    // Also observe window resize for mobile orientation changes
     window.addEventListener('resize', debouncedUpdateScale);
-
+    
     return () => {
-      clearTimeout(resizeTimeout);
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-      resizeObserver.disconnect();
       window.removeEventListener('resize', debouncedUpdateScale);
+      clearTimeout(resizeTimeout);
+      cancelAnimationFrame(animationFrameRef.current);
     };
   }, [autoScale, buttonScale, buttonSpacing, selectedLanguage]);
 
@@ -156,11 +235,65 @@ const IPAKeyboard = ({
     }
   };
 
-  const handleTouchStart = (e, phoneme) => {
+  const handleDragStart = (event, phoneme, element, isTouch = false) => {
+    if (editMode !== 'move') return;
+    
+    if (!isTouch) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    setDraggedPhoneme(phoneme);
+    setDraggedElement(element);
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (event) => {
+    if (!isDragging || editMode !== 'move') return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const targetButton = event.target.closest('[data-phoneme]');
+    if (!targetButton) return;
+
+    const targetPhoneme = targetButton.dataset.phoneme;
+    if (targetPhoneme !== draggedPhoneme) {
+      setHoveredPhoneme(targetPhoneme);
+    }
+  };
+
+  const handleDrop = (event) => {
+    if (!isDragging || editMode !== 'move') return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+
+    const targetButton = event.target.closest('[data-phoneme]');
+    if (!targetButton) return;
+
+    const targetPhoneme = targetButton.dataset.phoneme;
+    if (targetPhoneme !== draggedPhoneme) {
+      onPhonemeSwap?.(draggedPhoneme, targetPhoneme);
+    }
+
+    setIsDragging(false);
+    setDraggedPhoneme(null);
+    setDraggedElement(null);
+    setHoveredPhoneme(null);
+  };
+
+  const handleTouchStart = (event, phoneme) => {
+    if (editMode === 'move') {
+      event.preventDefault();
+      event.stopPropagation();
+      handleDragStart(event.touches[0], phoneme, event.currentTarget, true);
+      return;
+    }
+
     if (!touchDwellEnabled) return;
 
-    e.preventDefault();
-    const touch = e.touches[0];
+    const touch = event.touches[0];
     setTouchStartTime(Date.now());
     setTouchPosition({ x: touch.clientX, y: touch.clientY });
     setCurrentPhoneme(phoneme);
@@ -179,7 +312,7 @@ const IPAKeyboard = ({
         if (hapticFeedback && window.navigator.vibrate) {
           window.navigator.vibrate(50);
         }
-        onPhonemeClick(phoneme);
+        onPhonemeClick?.(phoneme);
         setIsSelecting(false);
         setDwellProgress(0);
       }
@@ -188,10 +321,28 @@ const IPAKeyboard = ({
     animationFrameRef.current = requestAnimationFrame(animate);
   };
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = (event) => {
+    if (isDragging && editMode === 'move') {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      const touch = event.touches[0];
+      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (!targetElement) return;
+
+      const targetButton = targetElement.closest('[data-phoneme]');
+      if (!targetButton) return;
+
+      const targetPhoneme = targetButton.dataset.phoneme;
+      if (targetPhoneme !== draggedPhoneme) {
+        setHoveredPhoneme(targetPhoneme);
+      }
+      return;
+    }
+
     if (!touchDwellEnabled || !isSelecting) return;
 
-    const touch = e.touches[0];
+    const touch = event.touches[0];
     const moveThreshold = 20;
     const dx = touch.clientX - touchPosition.x;
     const dy = touch.clientY - touchPosition.y;
@@ -202,54 +353,32 @@ const IPAKeyboard = ({
     }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (event) => {
+    if (isDragging && editMode === 'move') {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const touch = event.changedTouches[0];
+      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (!targetElement) return;
+
+      const targetButton = targetElement.closest('[data-phoneme]');
+      if (!targetButton) return;
+
+      const targetPhoneme = targetButton.dataset.phoneme;
+      if (targetPhoneme !== draggedPhoneme) {
+        onPhonemeSwap?.(draggedPhoneme, targetPhoneme);
+      }
+
+      setIsDragging(false);
+      setDraggedPhoneme(null);
+      setDraggedElement(null);
+      setHoveredPhoneme(null);
+      return;
+    }
+
     if (!touchDwellEnabled) return;
     cancelDwell();
-  };
-
-  const cancelDwell = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    setIsSelecting(false);
-    setDwellProgress(0);
-    setCurrentPhoneme(null);
-  };
-
-  const getDwellStyles = (phoneme) => {
-    if (!isSelecting || currentPhoneme !== phoneme) return {};
-
-    const baseColor = dwellIndicatorColor;
-    const progress = dwellProgress * 100;
-
-    switch (dwellIndicatorType) {
-      case 'border':
-        return {
-          background: `linear-gradient(90deg, ${baseColor} ${progress}%, transparent ${progress}%)`,
-          borderColor: baseColor,
-        };
-      case 'fill':
-        return {
-          background: `linear-gradient(90deg, ${baseColor}${Math.round(progress * 0.5)}%, transparent ${progress}%)`,
-        };
-      case 'circle':
-        return {
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: `${progress}%`,
-            height: `${progress}%`,
-            borderRadius: '50%',
-            backgroundColor: `${baseColor}40`,
-            pointerEvents: 'none',
-          },
-        };
-      default:
-        return {};
-    }
   };
 
   const handleLongPress = (phoneme) => {
@@ -322,144 +451,34 @@ const IPAKeyboard = ({
         setEditMode(true);
       }
     } else {
-      onPhonemeClick(phoneme);
+      onPhonemeClick?.(phoneme);
     }
   };
 
-  const handleDragStart = (result) => {
-    setIsDragging(true);
-    // Trigger haptic feedback if available
-    if (hapticFeedback && window.navigator.vibrate) {
-      window.navigator.vibrate(50);
-    }
-  };
-
-  const handleDragEnd = (result) => {
-    setIsDragging(false);
-    if (!result.destination) return;
-
-    // Trigger haptic feedback if available
-    if (hapticFeedback && window.navigator.vibrate) {
-      window.navigator.vibrate([30, 30, 30]);
-    }
-
-    const items = Array.from(Object.values(phoneticData[selectedLanguage].groups)
-      .flatMap(group => group.phonemes));
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    // Save the new order
-    const newOrder = {};
-    items.forEach((item, index) => {
-      newOrder[item] = index;
-    });
-    setPhonemeOrder(newOrder);
-    localStorage.setItem('phonemeOrder', JSON.stringify(newOrder));
-  };
-
-  useEffect(() => {
-    if (!touchDwellEnabled || !currentPhoneme || isJiggling) return;
-
-    let startTime = Date.now();
-    let animationId;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / touchDwellTime, 1);
-      setDwellProgress(progress);
-
-      if (progress < 1) {
-        animationId = requestAnimationFrame(animate);
-      } else {
-        handleLongPress(currentPhoneme);
+  const handleButtonClick = (phoneme) => {
+    if (mode === 'edit') {
+      if (editMode === 'customize') {
+        setSelectedPhoneme(phoneme);
+        setEditDialogOpen(true);
       }
-    };
+    } else {
+      onPhonemeClick?.(phoneme);
+    }
+  };
 
-    animationId = requestAnimationFrame(animate);
-
-    return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-    };
-  }, [currentPhoneme, touchDwellEnabled, touchDwellTime, isJiggling]);
+  const getAllPhonemes = (language) => {
+    return Object.values(phoneticData[language].groups)
+      .flatMap(group => group.phonemes);
+  };
 
   const getPhonemeColor = (phoneme) => {
-    const languageData = phoneticData[selectedLanguage];
-    for (const group of Object.values(languageData.groups)) {
+    const groups = phoneticData[selectedLanguage].groups;
+    for (const group of Object.values(groups)) {
       if (group.phonemes.includes(phoneme)) {
         return group.color;
       }
     }
-    return '#808080';
-  };
-
-  const renderPhonemeButton = (phoneme, index, groupColor) => {
-    const customization = customizations[phoneme] || {};
-    const isDisabled = mode === 'game' && disabledPhonemes && disabledPhonemes(phoneme);
-    
-    // Force lowercase for basic Latin characters but preserve special IPA characters
-    const displayPhoneme = phoneme.replace(/[A-Z]/g, char => char.toLowerCase());
-    const buttonSize = 60 * calculatedScale;
-
-    return (
-      <Box
-        key={phoneme}
-        sx={{
-          position: 'relative',
-          width: `${buttonSize}px`,
-          height: `${buttonSize}px`,
-          backgroundColor: customization.customColor || groupColor,
-          border: '2px solid',
-          borderColor: 'transparent',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: isDisabled ? 'not-allowed' : 'pointer',
-          opacity: isDisabled ? 0.5 : 1,
-          fontSize: `${16 * calculatedScale}px`,
-          fontFamily: "'Noto Sans', 'DejaVu Sans', 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif",
-          userSelect: 'none',
-          '&:hover': {
-            borderColor: mode === 'edit' ? 'primary.main' : 'transparent',
-            filter: 'brightness(0.9)'
-          }
-        }}
-        onClick={() => !isJiggling && !isDisabled && handlePhonemeClick(phoneme)}
-      >
-        {!customization.hideLabel && (
-          <Box sx={{ 
-            position: 'relative',
-            zIndex: 2,
-            fontSize: `${24 * calculatedScale}px`,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            textTransform: 'none'
-          }}>
-            {displayPhoneme}
-          </Box>
-        )}
-        {customization.image && (
-          <img 
-            src={customization.image} 
-            alt={phoneme}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              maxWidth: '80%',
-              maxHeight: '80%',
-              objectFit: 'contain',
-              pointerEvents: 'none',
-              zIndex: 1
-            }}
-          />
-        )}
-      </Box>
-    );
+    return 'inherit';
   };
 
   const saveCustomization = (phoneme, customization) => {
@@ -471,6 +490,51 @@ const IPAKeyboard = ({
     localStorage.setItem('ipaCustomizations', JSON.stringify(newCustomizations));
     setEditMode(false);
     setSelectedPhoneme(null);
+  };
+
+  const cancelDwell = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    setIsSelecting(false);
+    setDwellProgress(0);
+    setCurrentPhoneme(null);
+  };
+
+  const getDwellStyles = (phoneme) => {
+    if (!isSelecting || currentPhoneme !== phoneme) return {};
+
+    const baseColor = dwellIndicatorColor;
+    const progress = dwellProgress * 100;
+
+    switch (dwellIndicatorType) {
+      case 'border':
+        return {
+          background: `linear-gradient(90deg, ${baseColor} ${progress}%, transparent ${progress}%)`,
+          borderColor: baseColor,
+        };
+      case 'fill':
+        return {
+          background: `linear-gradient(90deg, ${baseColor}${Math.round(progress * 0.5)}%, transparent ${progress}%)`,
+        };
+      case 'circle':
+        return {
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: `${progress}%`,
+            height: `${progress}%`,
+            borderRadius: '50%',
+            backgroundColor: `${baseColor}40`,
+            pointerEvents: 'none',
+          },
+        };
+      default:
+        return {};
+    }
   };
 
   const EditPhonemeDialog = ({ open, onClose, phoneme }) => {
@@ -595,161 +659,173 @@ const IPAKeyboard = ({
     <Box 
       ref={containerRef}
       sx={{ 
-        display: 'flex',
-        flexDirection: 'column',
         height: '100%',
+        width: '100%',
+        overflow: 'hidden',
         position: 'relative',
-        touchAction: 'none', // Prevent default touch behaviors
+        p: 2,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
       }}
     >
-      {/* Remove the old spacing box that was adding extra space */}
-      {/* Keyboard area */}
-      <Box sx={{
-        flex: 1,
-        minHeight: 0,
-        padding: 2,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
-        <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-          <Droppable droppableId="all-phonemes" direction="horizontal">
-            {(provided) => (
-              <Box
-                {...provided.droppableProps}
-                ref={provided.innerRef}
+      <Grid 
+        container
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${gridColumns}, ${60}px)`,
+          gap: buttonSpacing * 2,
+          justifyContent: 'center',
+          alignContent: 'center',
+          padding: `${buttonSpacing * 2}px`,
+          height: 'auto',
+          maxHeight: '100%',
+          transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
+          transformOrigin: 'center center',
+          '& .MuiGrid-item': {
+            width: '60px !important',
+            height: '40px !important',
+            padding: '0 !important',
+            margin: '0 !important',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }
+        }}
+      >
+        {(phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage)).map((phoneme) => {
+          const customization = customizations[phoneme] || {};
+          const isDragged = draggedPhoneme === phoneme;
+          const groupColor = getPhonemeColor(phoneme);
+          const isDisabled = typeof disabledPhonemes === 'function' ? disabledPhonemes(phoneme) : disabledPhonemes?.includes(phoneme);
+          
+          return (
+            <Grid item key={phoneme}>
+              <Button
+                data-phoneme={phoneme}
+                onClick={() => handleButtonClick(phoneme)}
+                onMouseDown={(e) => editMode === 'move' && handleDragStart(e, phoneme, e.currentTarget)}
+                onTouchStart={(e) => handleTouchStart(e, phoneme)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                draggable={false}
+                disableRipple
+                disableTouchRipple
+                disableFocusRipple
+                disableElevation
+                disabled={isDisabled}
                 sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: buttonSpacing,
-                  alignContent: 'flex-start',
-                  backgroundColor: mode === 'edit' && isJiggling ? 'rgba(0,0,0,0.03)' : 'transparent',
+                  backgroundColor: customization.customColor || groupColor,
+                  color: 'inherit',
+                  opacity: isDragged ? 0.3 : (isDisabled ? 0.5 : 1),
+                  cursor: isDisabled ? 'not-allowed' : (editMode === 'move' ? 'grab' : 'pointer'),
                   width: '100%',
                   height: '100%',
-                  justifyContent: 'center',
-                  position: 'relative'
+                  minWidth: 'unset',
+                  padding: 0,
+                  margin: 0,
+                  border: 'none',
+                  outline: 'none',
+                  boxShadow: 'none !important',
+                  transform: 'none !important',
+                  transition: 'opacity 0.15s ease',
+                  WebkitTapHighlightColor: 'transparent',
+                  userSelect: 'none',
+                  touchAction: 'none',
+                  '&:hover': {
+                    backgroundColor: customization.customColor || groupColor,
+                    opacity: isDisabled ? 0.5 : 0.8,
+                    border: 'none',
+                    outline: 'none',
+                    boxShadow: 'none !important',
+                    transform: 'none !important'
+                  },
+                  '&:active': {
+                    cursor: isDisabled ? 'not-allowed' : (editMode === 'move' ? 'grabbing' : 'pointer'),
+                    opacity: isDisabled ? 0.5 : 0.6,
+                    border: 'none',
+                    outline: 'none',
+                    boxShadow: 'none !important',
+                    transform: 'none !important'
+                  },
+                  '&:focus': {
+                    border: 'none',
+                    outline: 'none',
+                    boxShadow: 'none !important',
+                    transform: 'none !important'
+                  },
+                  '&.Mui-disabled': {
+                    backgroundColor: customization.customColor || groupColor,
+                    opacity: 0.5,
+                    color: 'inherit',
+                    border: 'none',
+                    outline: 'none',
+                    boxShadow: 'none !important',
+                    transform: 'none !important'
+                  },
+                  '&::after, &::before': {
+                    display: 'none'
+                  },
+                  textTransform: 'none'
                 }}
               >
-                {Object.values(phoneticData[selectedLanguage].groups)
-                  .flatMap(group => group.phonemes)
-                  .sort((a, b) => (phonemeOrder[a] || 0) - (phonemeOrder[b] || 0))
-                  .map((phoneme, index) => {
-                    const isDisabled = disabledPhonemes && disabledPhonemes(phoneme);
-                    const customization = customizations[phoneme] || {};
-                    if (customization.hideButton) return null;
+                {customization.hideLabel ? (
+                  customization.image ? (
+                    <img src={customization.image} alt={phoneme} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                  ) : null
+                ) : (
+                  phoneme
+                )}
+              </Button>
+            </Grid>
+          );
+        })}
+      </Grid>
 
-                    return (
-                      <Draggable 
-                        key={phoneme} 
-                        draggableId={phoneme} 
-                        index={index}
-                        isDragDisabled={!isJiggling}
-                      >
-                        {(provided, snapshot) => (
-                          <Box
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            onMouseDown={(e) => handleMouseDown(e, phoneme)}
-                            onMouseUp={handleMouseUp}
-                            onMouseLeave={handleMouseLeave}
-                            onTouchStart={(e) => handleTouchStartButton(e, phoneme)}
-                            onTouchEnd={handleTouchEndButton}
-                            onClick={(e) => handlePhonemeClick(phoneme, e)}
-                            sx={{
-                              position: 'relative',
-                              width: `${60 * calculatedScale}px`,
-                              height: `${60 * calculatedScale}px`,
-                              backgroundColor: customization.customColor || getPhonemeColor(phoneme),
-                              border: '2px solid',
-                              borderColor: 'transparent',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: isDisabled ? 'not-allowed' : (isJiggling ? 'grab' : 'pointer'),
-                              opacity: isDisabled ? 0.5 : 1,
-                              fontSize: `${16 * calculatedScale}px`,
-                              fontFamily: 'Arial',
-                              userSelect: 'none',
-                              transition: isJiggling ? 'transform 0.1s ease-in-out' : 'none',
-                              animation: isJiggling ? 'jiggle 0.2s infinite' : 'none',
-                              transform: snapshot.isDragging ? 'scale(1.1)' : 'none',
-                              '@keyframes jiggle': {
-                                '0%, 100%': { transform: 'rotate(-2deg)' },
-                                '50%': { transform: 'rotate(2deg)' }
-                              },
-                              '&:hover': {
-                                borderColor: mode === 'edit' ? 'primary.main' : 'transparent'
-                              },
-                              ...getDwellStyles(phoneme)
-                            }}
-                          >
-                            {!customization.hideLabel && (
-                              <Box sx={{ 
-                                position: 'relative',
-                                zIndex: 2 
-                              }}>
-                                {phoneme}
-                              </Box>
-                            )}
-                            {mode === 'edit' && isJiggling && (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  top: -8,
-                                  right: -8,
-                                  backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                                  borderRadius: '50%',
-                                  padding: '2px',
-                                  zIndex: 3
-                                }}
-                              >
-                                <DragIndicatorIcon 
-                                  sx={{ 
-                                    fontSize: `${16 * calculatedScale}px`,
-                                    color: 'rgba(0, 0, 0, 0.5)',
-                                    transform: 'rotate(90deg)'
-                                  }} 
-                                />
-                              </Box>
-                            )}
-                            {customization.image && (
-                              <img 
-                                src={customization.image} 
-                                alt={phoneme}
-                                style={{
-                                  position: 'absolute',
-                                  top: '50%',
-                                  left: '50%',
-                                  transform: 'translate(-50%, -50%)',
-                                  maxWidth: '80%',
-                                  maxHeight: '80%',
-                                  objectFit: 'contain',
-                                  pointerEvents: 'none',
-                                  zIndex: 1
-                                }}
-                              />
-                            )}
-                          </Box>
-                        )}
-                      </Draggable>
-                    );
-                  })}
-                {provided.placeholder}
-              </Box>
-            )}
-          </Droppable>
-        </DragDropContext>
-        
-        {selectedPhoneme && (
-          <EditPhonemeDialog
-            open={Boolean(selectedPhoneme)}
-            onClose={() => setSelectedPhoneme(null)}
-            phoneme={selectedPhoneme}
-          />
-        )}
-      </Box>
+      {mode === 'edit' && (
+        <Box sx={{ 
+          position: 'fixed',
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          backgroundColor: 'background.paper',
+          borderRadius: 2,
+          boxShadow: 3,
+          p: 1,
+          display: 'flex',
+          gap: 1
+        }}>
+          <Button
+            variant={editMode === 'move' ? 'contained' : 'outlined'}
+            onClick={() => {
+              setEditMode('move');
+            }}
+            size="small"
+          >
+            Move
+          </Button>
+          <Button
+            variant={editMode === 'customize' ? 'contained' : 'outlined'}
+            onClick={() => {
+              setEditMode('customize');
+            }}
+            size="small"
+          >
+            Customize
+          </Button>
+        </Box>
+      )}
+
+      {selectedPhoneme && (
+        <EditPhonemeDialog
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          phoneme={selectedPhoneme}
+        />
+      )}
     </Box>
   );
 };

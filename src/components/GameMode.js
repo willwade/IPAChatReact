@@ -151,6 +151,19 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    const handleHelp = () => setShowHelp(true);
+    const handleSettings = () => setShowSettings(true);
+    
+    window.addEventListener('openGameHelp', handleHelp);
+    window.addEventListener('openGameSettings', handleSettings);
+    
+    return () => {
+      window.removeEventListener('openGameHelp', handleHelp);
+      window.removeEventListener('openGameSettings', handleSettings);
+    };
+  }, []);
+
   // Load word list on mount
   useEffect(() => {
     const loadWordList = async () => {
@@ -188,10 +201,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     if (!currentWord || difficulty.id !== DIFFICULTY_LEVELS.LEVEL1.id) {
       return false;
     }
-    // Convert both strings to lowercase for case-insensitive comparison
-    const targetIPA = currentWord.ipa.toLowerCase();
-    const testPhoneme = phoneme.toLowerCase();
-    return !targetIPA.includes(testPhoneme);
+    return !currentWord.ipa.includes(phoneme);
   };
 
   const handleButtonScaleChange = (newScale) => {
@@ -261,86 +271,121 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
 
   return (
     <Box sx={{ 
-      height: '100%', 
       display: 'flex', 
       flexDirection: 'column',
-      overflow: 'hidden'
+      height: '100%'
     }}>
-      {/* Game controls and status */}
+      {/* Top section with progress and word display */}
       <Box sx={{ 
-        flexShrink: 0,
-        maxHeight: '120px', 
-        p: 2,
-        backgroundColor: 'background.paper',
+        p: 1.5, 
         borderBottom: 1,
-        borderColor: 'divider'
+        borderColor: 'divider',
+        backgroundColor: 'background.paper',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        height: '56px'  // Match message bar height
       }}>
-        {/* Game controls content */}
+        {/* Left side: Progress */}
         <Box sx={{ 
           display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 1
+          alignItems: 'center', 
+          gap: 1,
+          minWidth: '100px'
         }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              onClick={() => setShowSettings(true)}
-              startIcon={<SchoolIcon />}
-              size="small"
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              whiteSpace: 'nowrap',
+              color: 'text.secondary'
+            }}
+          >
+            {currentWordIndex + 1}/{wordList.length}
+          </Typography>
+          
+          <LinearProgress 
+            variant="determinate" 
+            value={(currentWordIndex / wordList.length) * 100} 
+            sx={{ 
+              width: '60px',
+              height: 4, 
+              borderRadius: 2
+            }}
+          />
+        </Box>
+
+        {/* Center: Current word */}
+        <Box sx={{ 
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 2
+        }}>
+          {showWordCue && (
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: 'text.primary',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                fontSize: '1.1rem'  // Slightly smaller to fit reduced height
+              }}
             >
-              {difficulty.name}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => setShowHelp(true)}
-              startIcon={<HelpOutlineIcon />}
-              size="small"
-            >
-              Help
-            </Button>
-          </Box>
-          {currentWord && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {(difficulty.id !== DIFFICULTY_LEVELS.LEVEL5.id) && (
-                <>
-                  <Typography variant="h6" component="span">
-                    {currentWord.word}
-                  </Typography>
-                  <IconButton 
-                    onClick={() => playSound(currentWord.word)}
-                    size="small"
-                  >
-                    <VolumeUpIcon fontSize="small" />
-                  </IconButton>
-                </>
+              {currentWord?.word || ''}
+              {currentWord && (
+                <IconButton
+                  size="small"
+                  onClick={() => playSound(currentWord.word)}
+                >
+                  <VolumeUpIcon fontSize="small" />
+                </IconButton>
               )}
-            </Box>
+            </Typography>
           )}
         </Box>
-        
-        {/* User input display */}
-        <Typography 
-          variant="h6" 
-          color="primary" 
-          align="center"
-          sx={{ 
-            minHeight: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          {userInput}
-        </Typography>
+
+        {/* Right side: User input and feedback */}
+        <Box sx={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          minWidth: '200px',
+          justifyContent: 'flex-end'
+        }}>
+          <Typography 
+            variant="h6" 
+            color="primary"
+            sx={{ 
+              minWidth: '80px',
+              textAlign: 'center',
+              fontSize: '1.1rem'  // Slightly smaller to fit reduced height
+            }}
+          >
+            {userInput || ' '}
+          </Typography>
+
+          {showFeedback && (
+            <Alert 
+              icon={feedbackType === 'success' ? <CheckCircleIcon /> : <CancelIcon />}
+              severity={feedbackType}
+              sx={{ 
+                py: 0,
+                minWidth: 'auto',
+                '& .MuiAlert-message': {
+                  p: 0
+                }
+              }}
+            >
+              {feedbackType === 'success' ? 'Correct!' : 'Try again!'}
+            </Alert>
+          )}
+        </Box>
       </Box>
 
-      {/* IPA Keyboard area */}
-      <Box sx={{ 
-        flex: 1,
-        minHeight: 0,
-        position: 'relative'
-      }}>
+      {/* Keyboard area */}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
         <IPAKeyboard
           mode="game"
           onPhonemeClick={handlePhonemeClick}
@@ -350,40 +395,6 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
           autoScale={autoScale}
           disabledPhonemes={shouldDisablePhoneme}
         />
-        
-        {/* Feedback overlay */}
-        {showFeedback && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 1000,
-              minWidth: '200px',
-              animation: 'fadeInOut 1.5s ease-in-out',
-              '@keyframes fadeInOut': {
-                '0%': { opacity: 0, transform: 'translate(-50%, -40%)' },
-                '15%': { opacity: 1, transform: 'translate(-50%, -50%)' },
-                '85%': { opacity: 1, transform: 'translate(-50%, -50%)' },
-                '100%': { opacity: 0, transform: 'translate(-50%, -60%)' }
-              }
-            }}
-          >
-            <Alert 
-              severity={feedbackType === 'success' ? 'success' : 'error'}
-              sx={{
-                boxShadow: 3,
-                '& .MuiAlert-message': {
-                  fontSize: '1.1rem',
-                  fontWeight: 500
-                }
-              }}
-            >
-              {feedbackType === 'success' ? 'Correct! Well done!' : 'Try again!'}
-            </Alert>
-          </Box>
-        )}
       </Box>
 
       {/* Dialogs */}

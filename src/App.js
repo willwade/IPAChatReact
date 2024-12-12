@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography } from '@mui/material';
+import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -8,6 +8,8 @@ import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import ClearIcon from '@mui/icons-material/Clear';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import SchoolIcon from '@mui/icons-material/School';
 import IPAKeyboard from './components/IPAKeyboard';
 import EditMode from './components/EditMode';
 import Settings from './components/Settings';
@@ -214,111 +216,183 @@ const App = () => {
     setAutoScale(autoScale);
   };
 
-  const renderMessageBar = () => {
-    if (mode === 'build' || mode === 'babble') {
-      return (
-        <Box sx={{ 
-          p: 2, 
-          display: 'flex', 
-          gap: 2,
-          borderBottom: 1,
-          borderColor: 'divider',
-          backgroundColor: 'background.paper'
-        }}>
-          <TextField
-            fullWidth
-            value={message}
-            onChange={(e) => mode === 'build' && setMessage(e.target.value)}
-            placeholder="Type or click IPA symbols..."
-            disabled={mode === 'babble'}
-            sx={{
-              '& .MuiInputBase-input.Mui-disabled': {
-                WebkitTextFillColor: 'text.primary',
-                opacity: 0.7,
-              }
-            }}
-          />
-          <Button 
-            variant="contained" 
-            onClick={speak}
-            disabled={!message || mode === 'babble'}
-          >
-            <VolumeUpIcon />
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={() => setMessage('')}
-            disabled={!message || mode === 'babble'}
-          >
-            <ClearIcon />
-          </Button>
-        </Box>
-      );
-    }
-    return null;
-  };
-
   return (
     <Box sx={{ 
       height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
+      display: 'flex',
       overflow: 'hidden'
     }}>
-      {/* Mode selector and settings */}
-      <Box sx={{ 
-        p: 1, 
-        display: 'flex', 
-        justifyContent: 'flex-end',
-        borderBottom: 1,
+      {/* Vertical navigation sidebar */}
+      <Box sx={{
+        width: '48px',
+        borderRight: 1,
         borderColor: 'divider',
-        backgroundColor: 'background.paper'
+        backgroundColor: 'background.paper',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        py: 1
       }}>
-        <SpeedDial
-          ariaLabel="Mode selector"
-          sx={{ 
-            position: 'relative',
-            '& .MuiSpeedDial-fab': { width: 40, height: 40 }
-          }}
-          icon={<SpeedDialIcon icon={<MoreVertIcon />} />}
-          direction="left"
-        >
+        {/* Mode selection */}
+        <Box sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          width: '100%'
+        }}>
           {actions.map((action) => (
-            <SpeedDialAction
-              key={action.name}
-              icon={action.icon}
-              tooltipTitle={action.name}
-              onClick={action.onClick}
-            />
+            <Tooltip key={action.name} title={action.name} placement="right">
+              <IconButton
+                onClick={action.onClick}
+                color={mode === action.name.toLowerCase().split(' ')[0] ? 'primary' : 'default'}
+                sx={{
+                  mb: 1,
+                  width: '40px',
+                  height: '40px',
+                  backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'transparent',
+                  '&:hover': {
+                    backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'action.hover'
+                  }
+                }}
+              >
+                {action.icon}
+              </IconButton>
+            </Tooltip>
           ))}
-        </SpeedDial>
+        </Box>
+
+        {/* Game mode controls */}
+        {mode === 'game' && (
+          <Box sx={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: '100%',
+            mt: 'auto'
+          }}>
+            <Divider sx={{ width: '80%', my: 1 }} />
+            <Tooltip title="Help" placement="right">
+              <IconButton 
+                onClick={() => window.dispatchEvent(new CustomEvent('openGameHelp'))}
+                sx={{ mb: 1, width: '40px', height: '40px' }}
+              >
+                <HelpOutlineIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Settings" placement="right">
+              <IconButton 
+                onClick={() => window.dispatchEvent(new CustomEvent('openGameSettings'))}
+                sx={{ width: '40px', height: '40px' }}
+              >
+                <SchoolIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
       </Box>
 
-      {/* Message bar */}
-      {renderMessageBar()}
-
       {/* Main content area */}
-      <Box sx={{ flex: 1, minHeight: 0 }}>
-        {mode === 'edit' ? (
-          <Box sx={{ height: '100%' }}>
-            <Box sx={{ 
-              p: 2, 
-              borderBottom: 1,
-              borderColor: 'divider',
-              backgroundColor: 'background.paper',
-              display: 'flex',
-              gap: 2,
-              alignItems: 'center'
-            }}>
-              <Typography variant="body1" color="text.secondary">
-                Edit Mode: Click and drag buttons to reorder, or click a button to customize it
-              </Typography>
+      <Box sx={{ 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        {/* Message bar */}
+        {mode === 'build' || mode === 'babble' ? (
+          <Box sx={{ 
+            p: 1.5, 
+            display: 'flex', 
+            gap: 2,
+            borderBottom: 1,
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+            height: '56px'  
+          }}>
+            <TextField
+              fullWidth
+              value={message}
+              onChange={(e) => mode === 'build' && setMessage(e.target.value)}
+              placeholder="Type or click IPA symbols..."
+              disabled={mode === 'babble'}
+              size="small"
+              sx={{
+                '& .MuiInputBase-input.Mui-disabled': {
+                  WebkitTextFillColor: 'text.primary',
+                  opacity: 0.7,
+                }
+              }}
+            />
+            <Button 
+              variant="contained" 
+              onClick={speak}
+              disabled={!message || mode === 'babble'}
+              size="small"
+            >
+              <VolumeUpIcon />
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => setMessage('')}
+              disabled={!message || mode === 'babble'}
+              size="small"
+            >
+              <ClearIcon />
+            </Button>
+          </Box>
+        ) : mode === 'edit' ? (
+          <Box sx={{ 
+            p: 1.5, 
+            borderBottom: 1,
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+            height: '56px',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Typography variant="body1" color="text.secondary">
+              Edit Mode: Click and drag buttons to reorder, or click a button to customize it
+            </Typography>
+          </Box>
+        ) : null}
+
+        {/* Content */}
+        <Box sx={{ flex: 1, minHeight: 0 }}>
+          {mode === 'edit' ? (
+            <Box sx={{ height: '100%' }}>
+              <IPAKeyboard
+                mode="edit"
+                onPhonemeClick={handlePhonemeClick}
+                buttonScale={buttonScale}
+                buttonSpacing={buttonSpacing}
+                selectedLanguage={selectedLanguage}
+                autoScale={autoScale}
+                touchDwellEnabled={touchDwellEnabled}
+                touchDwellTime={touchDwellTime}
+                dwellIndicatorType={dwellIndicatorType}
+                dwellIndicatorColor={dwellIndicatorColor}
+                hapticFeedback={hapticFeedback}
+              />
             </Box>
+          ) : mode === 'game' ? (
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <GameMode
+                onPhonemeClick={handlePhonemeClick}
+                onSpeakRequest={handleSpeakRequest}
+                selectedLanguage={selectedLanguage}
+                voices={availableVoices}
+                onLanguageChange={handleLanguageChange}
+                onVoiceChange={setSelectedVoice}
+                selectedVoice={selectedVoice}
+              />
+            </Box>
+          ) : (
             <IPAKeyboard
-              mode="edit"
-              selectedLanguage={selectedLanguage}
+              mode={mode}
+              onPhonemeClick={handlePhonemeClick}
               buttonScale={buttonScale}
               buttonSpacing={buttonSpacing}
+              selectedLanguage={selectedLanguage}
               autoScale={autoScale}
               touchDwellEnabled={touchDwellEnabled}
               touchDwellTime={touchDwellTime}
@@ -326,60 +400,36 @@ const App = () => {
               dwellIndicatorColor={dwellIndicatorColor}
               hapticFeedback={hapticFeedback}
             />
-          </Box>
-        ) : mode === 'game' ? (
-          <GameMode
-            onPhonemeClick={handlePhonemeClick}
-            onSpeakRequest={handleSpeakRequest}
-            selectedLanguage={selectedLanguage}
-            voices={availableVoices}
-            onLanguageChange={handleLanguageChange}
-            onVoiceChange={setSelectedVoice}
-            selectedVoice={selectedVoice}
-          />
-        ) : (
-          <IPAKeyboard
-            mode={mode}
-            onPhonemeClick={handlePhonemeClick}
-            buttonScale={buttonScale}
-            buttonSpacing={buttonSpacing}
-            selectedLanguage={selectedLanguage}
-            autoScale={autoScale}
-            touchDwellEnabled={touchDwellEnabled}
-            touchDwellTime={touchDwellTime}
-            dwellIndicatorType={dwellIndicatorType}
-            dwellIndicatorColor={dwellIndicatorColor}
-            hapticFeedback={hapticFeedback}
-          />
-        )}
-      </Box>
+          )}
+        </Box>
 
-      {/* Settings dialog */}
-      <Settings
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        selectedLanguage={selectedLanguage}
-        selectedVoice={selectedVoice}
-        onLanguageChange={handleLanguageChange}
-        onVoiceChange={handleVoiceChange}
-        buttonScale={buttonScale}
-        onButtonScaleChange={setButtonScale}
-        buttonSpacing={buttonSpacing}
-        onButtonSpacingChange={setButtonSpacing}
-        autoScale={autoScale}
-        onAutoScaleChange={setAutoScale}
-        touchDwellEnabled={touchDwellEnabled}
-        onTouchDwellEnabledChange={setTouchDwellEnabled}
-        touchDwellTime={touchDwellTime}
-        onTouchDwellTimeChange={setTouchDwellTime}
-        dwellIndicatorType={dwellIndicatorType}
-        onDwellIndicatorTypeChange={setDwellIndicatorType}
-        dwellIndicatorColor={dwellIndicatorColor}
-        onDwellIndicatorColorChange={setDwellIndicatorColor}
-        hapticFeedback={hapticFeedback}
-        onHapticFeedbackChange={setHapticFeedback}
-        voices={availableVoices[selectedLanguage] || []}
-      />
+        {/* Settings dialog */}
+        <Settings
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          selectedLanguage={selectedLanguage}
+          selectedVoice={selectedVoice}
+          onLanguageChange={handleLanguageChange}
+          onVoiceChange={handleVoiceChange}
+          buttonScale={buttonScale}
+          onButtonScaleChange={setButtonScale}
+          buttonSpacing={buttonSpacing}
+          onButtonSpacingChange={setButtonSpacing}
+          autoScale={autoScale}
+          onAutoScaleChange={setAutoScale}
+          touchDwellEnabled={touchDwellEnabled}
+          onTouchDwellEnabledChange={setTouchDwellEnabled}
+          touchDwellTime={touchDwellTime}
+          onTouchDwellTimeChange={setTouchDwellTime}
+          dwellIndicatorType={dwellIndicatorType}
+          onDwellIndicatorTypeChange={setDwellIndicatorType}
+          dwellIndicatorColor={dwellIndicatorColor}
+          onDwellIndicatorColorChange={setDwellIndicatorColor}
+          hapticFeedback={hapticFeedback}
+          onHapticFeedbackChange={setHapticFeedback}
+          voices={availableVoices[selectedLanguage] || []}
+        />
+      </Box>
     </Box>
   );
 };

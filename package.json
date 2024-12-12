@@ -31,7 +31,8 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:fresh": "BROWSER=none npm run dev",
     "dev:backend": "nodemon backend.js",
-    "dev:frontend": "react-scripts start"
+    "dev:frontend": "react-scripts start",
+    "restart": "lsof -ti:3000,3001 | xargs -r kill -9 && npm run dev"
   },
   "eslintConfig": {
     "extends": [
@@ -54,6 +55,7 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "concurrently": "^8.2.2",
+    "kill-port": "^2.0.1",
     "nodemon": "^3.0.2"
   }
 }
