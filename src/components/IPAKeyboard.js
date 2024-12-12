@@ -20,7 +20,7 @@ const IPAKeyboard = ({
   onPhonemeSwap,
   disabledPhonemes,
   buttonScale = 1,
-  buttonSpacing = 4,
+  buttonSpacing = 1,
   selectedLanguage = 'en-GB',
   autoScale = true,
   touchDwellEnabled = false,
@@ -166,6 +166,19 @@ const IPAKeyboard = ({
   }, []);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const buttons = container.querySelectorAll('.MuiButton-root');
+    if (buttons.length > 1) {
+      const button1 = buttons[0].getBoundingClientRect();
+      const button2 = buttons[1].getBoundingClientRect();
+      const actualSpacing = button2.left - (button1.left + button1.width);
+      console.log('Actual spacing between buttons:', actualSpacing);
+    }
+  }, [buttonSpacing, gridColumns]);
+
+  useEffect(() => {
     if (!autoScale) {
       setCalculatedScale(buttonScale);
       return;
@@ -177,8 +190,9 @@ const IPAKeyboard = ({
 
       // Get container dimensions
       const rect = container.getBoundingClientRect();
-      const containerWidth = rect.width;
-      const containerHeight = rect.height;
+      const padding = Math.round(buttonSpacing);
+      const containerWidth = Math.floor(rect.width - (padding * 2));
+      const containerHeight = Math.floor(rect.height - (padding * 2));
 
       if (containerWidth <= 0 || containerHeight <= 0) return;
 
@@ -188,44 +202,56 @@ const IPAKeyboard = ({
 
       if (totalButtons <= 0) return;
 
+      // Calculate grid dimensions
+      const buttonWidth = 60;
+      const buttonHeight = 40;
+      const gap = Math.round(buttonSpacing);
+      
       // Calculate optimal grid based on container size
-      const effectiveButtonWidth = 60 + buttonSpacing * 2; // Button width plus spacing
-      const maxPossibleCols = Math.floor(containerWidth / effectiveButtonWidth);
-      const minRows = Math.ceil(totalButtons / maxPossibleCols);
+      const maxPossibleCols = Math.floor((containerWidth + gap) / (buttonWidth + gap));
       
       // Try to make grid more square-like for better visual appearance
       const targetAspectRatio = containerWidth / containerHeight;
       const cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
       const rows = Math.ceil(totalButtons / cols);
 
+      // Calculate total grid size including gaps
+      const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
+      const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
+
       // Calculate the maximum possible scale
-      const scaleX = (containerWidth) / (cols * effectiveButtonWidth);
-      const scaleY = (containerHeight) / (rows * effectiveButtonWidth);
+      const scaleX = containerWidth / totalGridWidth;
+      const scaleY = containerHeight / totalGridHeight;
       
       // Use the smaller scale with a safety margin
-      const newScale = Math.min(scaleX, scaleY) * 0.9;
+      const newScale = Math.min(scaleX, scaleY) * 0.98;
       
+      console.log('Scale calculation:', {
+        containerWidth,
+        containerHeight,
+        totalGridWidth,
+        totalGridHeight,
+        cols,
+        rows,
+        scaleX,
+        scaleY,
+        newScale,
+        gap
+      });
+
       requestAnimationFrame(() => {
         setCalculatedScale(newScale);
+        setGridColumns(cols);
       });
     };
 
-    let resizeTimeout;
-    const debouncedUpdateScale = () => {
-      cancelAnimationFrame(animationFrameRef.current);
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        animationFrameRef.current = requestAnimationFrame(updateScale);
-      }, 150);
-    };
+    const debouncedUpdateScale = debounce(updateScale, 150);
 
     updateScale();
     window.addEventListener('resize', debouncedUpdateScale);
     
     return () => {
       window.removeEventListener('resize', debouncedUpdateScale);
-      clearTimeout(resizeTimeout);
-      cancelAnimationFrame(animationFrameRef.current);
     };
   }, [autoScale, buttonScale, buttonSpacing, selectedLanguage]);
 
@@ -253,7 +279,7 @@ const IPAKeyboard = ({
     
     event.preventDefault();
     event.stopPropagation();
-    
+
     const targetButton = event.target.closest('[data-phoneme]');
     if (!targetButton) return;
 
@@ -663,7 +689,7 @@ const IPAKeyboard = ({
         width: '100%',
         overflow: 'hidden',
         position: 'relative',
-        p: 2,
+        p: Math.round(buttonSpacing),
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center'
@@ -674,10 +700,10 @@ const IPAKeyboard = ({
         sx={{
           display: 'grid',
           gridTemplateColumns: `repeat(${gridColumns}, ${60}px)`,
-          gap: buttonSpacing * 2,
+          gap: `${Math.round(buttonSpacing)}px`,
           justifyContent: 'center',
           alignContent: 'center',
-          padding: `${buttonSpacing * 2}px`,
+          padding: `${Math.round(buttonSpacing)}px`,
           height: 'auto',
           maxHeight: '100%',
           transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
