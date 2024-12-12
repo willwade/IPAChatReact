@@ -10,12 +10,13 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SchoolIcon from '@mui/icons-material/School';
+import { voicesByLanguage } from './data/phonemes';
+import { phoneticData } from './data/phonemes';
+import { config } from './config';
 import IPAKeyboard from './components/IPAKeyboard';
 import EditMode from './components/EditMode';
 import Settings from './components/Settings';
 import GameMode from './components/GameMode';
-import { voicesByLanguage } from './data/phonemes';
-import { config } from './config';
 
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
@@ -33,6 +34,8 @@ const App = () => {
   const [message, setMessage] = useState('');
   const [availableVoices, setAvailableVoices] = useState([]);
   const [voicesLoading, setVoicesLoading] = useState(true);
+  const [audioCache, setAudioCache] = useState({});
+  const [cacheLoading, setCacheLoading] = useState(false);
 
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
@@ -117,9 +120,95 @@ const App = () => {
     localStorage.setItem('hapticFeedback', hapticFeedback);
   }, [hapticFeedback]);
 
+  // Cache phoneme audio for the current language
+  const cachePhonemeAudio = async () => {
+    if (!selectedVoice || cacheLoading) return;
+    
+    setCacheLoading(true);
+    const newCache = {};
+    
+    // Get all phonemes except stress/intonation marks
+    const phonemes = Object.values(phoneticData[selectedLanguage].groups)
+      .flatMap(group => {
+        // Skip the stress group
+        if (group.title === 'Stress & Intonation') return [];
+        return group.phonemes;
+      })
+      .filter(phoneme => 
+        // Include all IPA characters but exclude arrows and other special marks
+        !/[↗↘↑↓|‖]/.test(phoneme)
+      );
+
+    console.log('Starting cache for phonemes:', phonemes);
+    
+    try {
+      // Create batches of 3 phonemes to reduce server load
+      const batchSize = 3;
+      for (let i = 0; i < phonemes.length; i += batchSize) {
+        const batch = phonemes.slice(i, i + batchSize);
+        await Promise.all(batch.map(async phoneme => {
+          try {
+            const response = await config.api.post('/api/tts', {
+              text: phoneme,
+              voice: selectedVoice,
+              language: selectedLanguage
+            });
+
+            if (response.data?.audio) {
+              const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+              // Preload the audio
+              await new Promise((resolve, reject) => {
+                audio.oncanplaythrough = resolve;
+                audio.onerror = reject;
+                audio.load();
+              });
+              newCache[phoneme] = audio;
+              console.log(`Cached phoneme: ${phoneme}`);
+            }
+          } catch (error) {
+            console.warn(`Failed to cache phoneme ${phoneme}:`, error.message);
+          }
+        }));
+        
+        // Small delay between batches
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setAudioCache(newCache);
+      console.log('Audio cache completed. Cached phonemes:', Object.keys(newCache).join(', '));
+    } catch (error) {
+      console.error('Error in audio caching:', error);
+    } finally {
+      setCacheLoading(false);
+    }
+  };
+
+  // Update cache when voice or language changes
+  useEffect(() => {
+    cachePhonemeAudio();
+  }, [selectedVoice, selectedLanguage]);
+
   const handlePhonemeSpeak = async (text) => {
     if (!text || !selectedVoice) return;
 
+    // Skip only special marks
+    if (/[↗↘↑↓|‖]/.test(text)) {
+      return;
+    }
+
+    // Check cache first
+    if (audioCache[text]) {
+      try {
+        // Clone the audio to allow multiple simultaneous playback
+        const audioClone = audioCache[text].cloneNode();
+        await audioClone.play();
+        return;
+      } catch (error) {
+        console.warn('Error playing cached audio:', error);
+      }
+    }
+
+    // Fallback to API call if not cached
     try {
       const response = await config.api.post('/api/tts', { 
         text,
@@ -132,22 +221,24 @@ const App = () => {
         await audio.play();
       }
     } catch (error) {
-      console.error('Error in speech synthesis:', error);
-      alert(error.message);
+      console.warn('Error in speech synthesis:', error);
     }
   };
 
   const handlePhonemeClick = (phoneme) => {
+    // Provide immediate UI feedback first
     if (mode === 'build') {
-      setMessage(prev => {
-        const newMessage = prev + phoneme;
-        return newMessage;
-      });
-    } else if (mode === 'babble') {
-      handlePhonemeSpeak(phoneme);
-    } else if (mode === 'game') {
-      // Let GameMode handle the phoneme click
-      // onPhonemeClick(phoneme);
+      setMessage(prev => prev + phoneme);
+    }
+    
+    // Then handle the speech synthesis asynchronously
+    if (mode === 'babble') {
+      // Use requestIdleCallback for non-critical speech synthesis
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(() => handlePhonemeSpeak(phoneme));
+      } else {
+        setTimeout(() => handlePhonemeSpeak(phoneme), 0);
+      }
     }
   };
 

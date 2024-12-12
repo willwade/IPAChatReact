@@ -44,9 +44,9 @@ console.log('Azure Configuration:', {
 // Voice data
 const voiceData = {
   'en-GB': [
-    { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)', locale: 'en-GB' },
-    { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)', locale: 'en-GB' },
     { name: 'en-GB-LibbyNeural', displayName: 'Libby (Female)', locale: 'en-GB' },
+    { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)', locale: 'en-GB' },
+    { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)', locale: 'en-GB' },
   ],
   'en-US': [
     { name: 'en-US-JennyNeural', displayName: 'Jenny (Female)', locale: 'en-US' },
@@ -227,9 +227,12 @@ app.get('/api/load', (req, res) => {
 
 app.post('/api/tts', async (req, res) => {
   console.log('TTS Request received:', {
-    hasText: !!req.body.text,
+    text: req.body.text,
     voice: req.body.voice,
-    language: req.body.language
+    language: req.body.language,
+    hasKey: !!AZURE_KEY,
+    hasRegion: !!AZURE_REGION,
+    region: AZURE_REGION
   });
 
   const { text, voice, language } = req.body;
@@ -241,7 +244,8 @@ app.post('/api/tts', async (req, res) => {
   if (!AZURE_KEY || !AZURE_REGION) {
     console.error('Azure credentials missing:', { 
       hasKey: !!AZURE_KEY, 
-      hasRegion: !!AZURE_REGION 
+      hasRegion: !!AZURE_REGION,
+      region: AZURE_REGION 
     });
     return res.status(500).json({ error: 'Azure credentials not configured' });
   }
@@ -252,16 +256,17 @@ app.post('/api/tts', async (req, res) => {
 
     // Create SSML with proper language context
     const ssml = `
-      <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${language}'>
-        <voice name='${voice}'>
-          <lang xml:lang='${language}'>
-            <phoneme alphabet='ipa' ph='${text}'>
-              ${text}
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+        <voice name="${voice}">
+          <prosody rate="slow" pitch="medium">
+            <phoneme alphabet="ipa" ph="${text}">
+              ${text === 'p' ? 'puh' : text === 'f' ? 'fuh' : '_'}
             </phoneme>
-          </lang>
+          </prosody>
         </voice>
       </speak>
-    `;
+    `.trim();
+    
     console.log('Generated SSML:', ssml);
 
     console.log('Making request to Azure...');
@@ -271,7 +276,8 @@ app.post('/api/tts', async (req, res) => {
       headers: {
         'Ocp-Apim-Subscription-Key': AZURE_KEY,
         'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3'
+        'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
+        'User-Agent': 'IPAChat'
       },
       data: ssml,
       responseType: 'arraybuffer'
@@ -279,20 +285,47 @@ app.post('/api/tts', async (req, res) => {
 
     console.log('Azure response received:', {
       status: response.status,
-      headers: response.headers
+      headers: response.headers,
+      dataLength: response.data?.length || 0
     });
 
     // Convert audio buffer to base64
     const base64Audio = Buffer.from(response.data).toString('base64');
+    console.log('Audio converted to base64, length:', base64Audio.length);
 
     res.json({
       audio: base64Audio
     });
   } catch (error) {
-    console.error('Error in TTS:', error.response?.data || error.message);
+    // Log the full error object
+    console.error('Full error object:', JSON.stringify(error, null, 2));
+    
+    // Log detailed error information
+    console.error('Error in TTS:', {
+      message: error.message,
+      code: error.code,
+      response: {
+        data: error.response?.data ? error.response.data.toString() : null,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers
+      },
+      requestData: {
+        text: text,
+        voice: voice,
+        language: language,
+        endpoint: `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`
+      }
+    });
+
     res.status(500).json({ 
       error: 'Speech synthesis failed',
-      details: error.response?.data ? error.response.data.toString() : error.message
+      details: error.response?.data ? error.response.data.toString() : error.message,
+      requestInfo: {
+        text: text,
+        voice: voice,
+        language: language
+      }
     });
   }
 });

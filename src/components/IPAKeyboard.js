@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { ChromePicker } from 'react-color';
@@ -488,7 +488,19 @@ const IPAKeyboard = ({
         setEditDialogOpen(true);
       }
     } else {
-      onPhonemeClick?.(phoneme);
+      // Provide immediate visual feedback
+      const button = document.querySelector(`[data-phoneme="${phoneme}"]`);
+      if (button) {
+        button.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          button.style.transform = 'none';
+        }, 100);
+      }
+      
+      // Call onPhonemeClick in the next frame to avoid blocking the UI
+      requestAnimationFrame(() => {
+        onPhonemeClick?.(phoneme);
+      });
     }
   };
 
@@ -708,6 +720,7 @@ const IPAKeyboard = ({
           maxHeight: '100%',
           transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
           transformOrigin: 'center center',
+          willChange: 'transform',
           '& .MuiGrid-item': {
             width: '60px !important',
             height: '40px !important',
@@ -737,10 +750,6 @@ const IPAKeyboard = ({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 draggable={false}
-                disableRipple
-                disableTouchRipple
-                disableFocusRipple
-                disableElevation
                 disabled={isDisabled}
                 sx={{
                   backgroundColor: customization.customColor || groupColor,
@@ -754,8 +763,7 @@ const IPAKeyboard = ({
                   margin: 0,
                   border: 'none',
                   outline: 'none',
-                  boxShadow: 'none !important',
-                  transform: 'none !important',
+                  boxShadow: 'none',
                   transition: 'opacity 0.15s ease',
                   WebkitTapHighlightColor: 'transparent',
                   userSelect: 'none',
@@ -766,36 +774,11 @@ const IPAKeyboard = ({
                   '&:hover': {
                     backgroundColor: customization.customColor || groupColor,
                     opacity: isDisabled ? 0.5 : 0.8,
-                    border: 'none',
-                    outline: 'none',
-                    boxShadow: 'none !important',
-                    transform: 'none !important'
-                  },
-                  '&:active': {
-                    cursor: isDisabled ? 'not-allowed' : (editMode === 'move' ? 'grabbing' : 'pointer'),
-                    opacity: isDisabled ? 0.5 : 0.6,
-                    border: 'none',
-                    outline: 'none',
-                    boxShadow: 'none !important',
-                    transform: 'none !important'
-                  },
-                  '&:focus': {
-                    border: 'none',
-                    outline: 'none',
-                    boxShadow: 'none !important',
-                    transform: 'none !important'
                   },
                   '&.Mui-disabled': {
                     backgroundColor: customization.customColor || groupColor,
                     opacity: 0.5,
-                    color: 'inherit',
-                    border: 'none',
-                    outline: 'none',
-                    boxShadow: 'none !important',
-                    transform: 'none !important'
-                  },
-                  '&::after, &::before': {
-                    display: 'none'
+                    color: 'inherit'
                   },
                   textTransform: 'none'
                 }}
