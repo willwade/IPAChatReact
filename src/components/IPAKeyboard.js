@@ -760,6 +760,9 @@ const IPAKeyboard = ({
                   WebkitTapHighlightColor: 'transparent',
                   userSelect: 'none',
                   touchAction: 'none',
+                  fontFamily: '"Noto Sans", sans-serif',
+                  fontSize: '16px',
+                  fontWeight: 400,
                   '&:hover': {
                     backgroundColor: customization.customColor || groupColor,
                     opacity: isDisabled ? 0.5 : 0.8,
