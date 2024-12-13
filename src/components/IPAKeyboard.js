@@ -310,48 +310,58 @@ const IPAKeyboard = ({
   };
 
   const handleTouchStart = (event, phoneme) => {
-    if (editMode === 'move') {
+    // Only prevent default for edit mode or dwell enabled
+    if (mode === 'edit' || touchDwellEnabled) {
       event.preventDefault();
       event.stopPropagation();
+    }
+
+    if (editMode === 'move') {
       handleDragStart(event.touches[0], phoneme, event.currentTarget, true);
       return;
     }
 
-    if (!touchDwellEnabled) return;
+    if (touchDwellEnabled) {
+      const touch = event.touches[0];
+      setTouchStartTime(Date.now());
+      setTouchPosition({ x: touch.clientX, y: touch.clientY });
+      setCurrentPhoneme(phoneme);
+      setIsSelecting(true);
+      setDwellProgress(0);
 
-    const touch = event.touches[0];
-    setTouchStartTime(Date.now());
-    setTouchPosition({ x: touch.clientX, y: touch.clientY });
-    setCurrentPhoneme(phoneme);
-    setIsSelecting(true);
-    setDwellProgress(0);
+      const animate = () => {
+        const now = Date.now();
+        const elapsed = now - touchStartTime;
+        const progress = Math.min(elapsed / touchDwellTime, 1);
+        setDwellProgress(progress);
 
-    const animate = () => {
-      const now = Date.now();
-      const elapsed = now - touchStartTime;
-      const progress = Math.min(elapsed / touchDwellTime, 1);
-      setDwellProgress(progress);
-
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-      } else {
-        if (hapticFeedback && window.navigator.vibrate) {
-          window.navigator.vibrate(50);
+        if (progress < 1) {
+          animationFrameRef.current = requestAnimationFrame(animate);
+        } else {
+          if (hapticFeedback && window.navigator.vibrate) {
+            window.navigator.vibrate(50);
+          }
+          onPhonemeClick?.(phoneme);
+          setIsSelecting(false);
+          setDwellProgress(0);
         }
-        onPhonemeClick?.(phoneme);
-        setIsSelecting(false);
-        setDwellProgress(0);
-      }
-    };
+      };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animate);
+    } else {
+      // For regular touch input, just trigger the click
+      handleButtonClick(phoneme);
+    }
   };
 
   const handleTouchMove = (event) => {
-    if (isDragging && editMode === 'move') {
+    // Only prevent default for edit mode or dwell enabled
+    if ((mode === 'edit' || touchDwellEnabled) && isSelecting) {
       event.preventDefault();
       event.stopPropagation();
-      
+    }
+
+    if (isDragging && editMode === 'move') {
       const touch = event.touches[0];
       const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
       if (!targetElement) return;
@@ -380,10 +390,13 @@ const IPAKeyboard = ({
   };
 
   const handleTouchEnd = (event) => {
-    if (isDragging && editMode === 'move') {
+    // Only prevent default for edit mode or dwell enabled
+    if (mode === 'edit' || touchDwellEnabled) {
       event.preventDefault();
       event.stopPropagation();
+    }
 
+    if (isDragging && editMode === 'move') {
       const touch = event.changedTouches[0];
       const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
       if (!targetElement) return;
@@ -403,8 +416,9 @@ const IPAKeyboard = ({
       return;
     }
 
-    if (!touchDwellEnabled) return;
-    cancelDwell();
+    if (touchDwellEnabled) {
+      cancelDwell();
+    }
   };
 
   const handleLongPress = (phoneme) => {
@@ -767,7 +781,7 @@ const IPAKeyboard = ({
                   transition: 'opacity 0.15s ease',
                   WebkitTapHighlightColor: 'transparent',
                   userSelect: 'none',
-                  touchAction: 'none',
+                  touchAction: mode === 'edit' || touchDwellEnabled ? 'none' : 'auto', // Only disable touch action when needed
                   fontFamily: '"Noto Sans", sans-serif',
                   fontSize: '16px',
                   fontWeight: 400,
