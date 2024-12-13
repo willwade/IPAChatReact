@@ -204,7 +204,7 @@ const IPAKeyboard = ({
 
       // Calculate grid dimensions
       const buttonWidth = 60;
-      const buttonHeight = 40;
+      const buttonHeight = 60;  // Changed from 40 to match actual button height
       const gap = Math.round(buttonSpacing);
       
       // Calculate optimal grid based on container size
@@ -224,7 +224,7 @@ const IPAKeyboard = ({
       const scaleY = containerHeight / totalGridHeight;
       
       // Use the smaller scale with a safety margin
-      const newScale = Math.min(scaleX, scaleY) * 0.98;
+      const newScale = Math.min(scaleX, scaleY) * 0.95;  // Increased safety margin from 0.98 to 0.95
       
       console.log('Scale calculation:', {
         containerWidth,
@@ -685,19 +685,17 @@ const IPAKeyboard = ({
     // Determine what to render inside the button
     const renderButtonContent = () => {
       if (customization.image) {
+        console.log(`Rendering image for ${phoneme}:`, customization.image.substring(0, 50) + '...');
         return (
           <img 
             src={customization.image} 
             alt={phoneme} 
             style={{ 
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
+              width: '95%',  
+              height: '95%', 
+              objectFit: 'contain',
               opacity: getOpacity(),
-              borderRadius: 'inherit', 
-              position: 'absolute', 
-              top: 0,
-              left: 0,
+              padding: '2px', 
             }} 
           />
         );
@@ -723,7 +721,7 @@ const IPAKeyboard = ({
           minWidth: 'unset',
           width: '60px',
           height: '60px',
-          p: 0,
+          p: 0.5,
           fontSize: '1rem',
           fontFamily: '"Noto Sans", sans-serif',
           backgroundColor: color,
@@ -742,7 +740,6 @@ const IPAKeyboard = ({
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          position: 'relative', 
           '&:hover': {
             backgroundColor: color,
             opacity: mode === 'edit' ? (customization.hideButton ? 0.4 : 0.9) : (isDisabled ? 0.5 : 0.9),

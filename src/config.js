@@ -1,12 +1,16 @@
 import axios from 'axios';
 
 const getApiUrl = () => {
+  // Get the current hostname (will be IP address when testing on mobile)
+  const hostname = window.location.hostname;
+  const port = '3001'; // Backend port
+
   if (process.env.NODE_ENV === 'production') {
-    // In production, use the same domain as the frontend
-    return '';
+    return `${window.location.protocol}//${window.location.host}`;
   }
-  // In development, use the proxy setting
-  return 'http://localhost:3001';
+  
+  // In development, use the same hostname (IP address) but different port
+  return `${window.location.protocol}//${hostname}:${port}`;
 };
 
 // Create axios instance with base URL
@@ -15,7 +19,25 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
+  validateStatus: (status) => {
+    return status >= 200 && status < 500;
+  },
 });
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', {
+      message: error.message,
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
+      method: error.config?.method,
+    });
+    return Promise.reject(error);
+  }
+);
 
 export const config = {
   apiUrl: getApiUrl(),
