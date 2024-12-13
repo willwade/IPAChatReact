@@ -685,17 +685,19 @@ const IPAKeyboard = ({
     // Determine what to render inside the button
     const renderButtonContent = () => {
       if (customization.image) {
-        console.log(`Rendering image for ${phoneme}:`, customization.image.substring(0, 50) + '...');
         return (
           <img 
             src={customization.image} 
             alt={phoneme} 
             style={{ 
-              width: '95%',  
-              height: '95%', 
-              objectFit: 'contain',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
               opacity: getOpacity(),
-              padding: '2px', 
+              borderRadius: 'inherit', 
+              position: 'absolute', 
+              top: 0,
+              left: 0,
             }} 
           />
         );
@@ -721,7 +723,7 @@ const IPAKeyboard = ({
           minWidth: 'unset',
           width: '60px',
           height: '60px',
-          p: 0.5,
+          p: 0,
           fontSize: '1rem',
           fontFamily: '"Noto Sans", sans-serif',
           backgroundColor: color,
@@ -740,6 +742,7 @@ const IPAKeyboard = ({
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
+          position: 'relative', 
           '&:hover': {
             backgroundColor: color,
             opacity: mode === 'edit' ? (customization.hideButton ? 0.4 : 0.9) : (isDisabled ? 0.5 : 0.9),
