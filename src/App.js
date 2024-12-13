@@ -24,7 +24,10 @@ const App = () => {
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('selectedVoice') || '');
   const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
-  const [autoScale, setAutoScale] = useState(() => localStorage.getItem('autoScale') === 'true');
+  const [autoScale, setAutoScale] = useState(() => {
+    const saved = localStorage.getItem('autoScale');
+    return saved === null ? true : saved === 'true';
+  });
   const [touchDwellEnabled, setTouchDwellEnabled] = useState(() => localStorage.getItem('touchDwellEnabled') === 'true');
   const [touchDwellTime, setTouchDwellTime] = useState(() => parseInt(localStorage.getItem('touchDwellTime')) || 800);
   const [dwellIndicatorType, setDwellIndicatorType] = useState(() => localStorage.getItem('dwellIndicatorType') || 'border');
