@@ -5,12 +5,18 @@ const getApiUrl = () => {
   const hostname = window.location.hostname;
   const port = '3001'; // Backend port
 
+  let apiUrl; // Declare apiUrl variable
+
   if (process.env.NODE_ENV === 'production') {
-    return `${window.location.protocol}//${window.location.host}`;
+    apiUrl = `${window.location.protocol}//${window.location.host}`;
   }
   
   // In development, use the same hostname (IP address) but different port
-  return `${window.location.protocol}//${hostname}:${port}`;
+  else {
+    apiUrl = `${window.location.protocol}//${hostname}:${port}`;
+  }
+
+  return apiUrl;
 };
 
 // Create axios instance with base URL

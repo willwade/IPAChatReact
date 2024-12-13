@@ -691,11 +691,15 @@ const IPAKeyboard = ({
             src={customization.image} 
             alt={phoneme} 
             style={{ 
-              width: '95%',  
-              height: '95%', 
-              objectFit: 'contain',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
               opacity: getOpacity(),
-              padding: '2px', 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
             }} 
           />
         );
