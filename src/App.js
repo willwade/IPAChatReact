@@ -130,13 +130,15 @@ const App = () => {
     // Get all phonemes except stress/intonation marks
     const phonemes = Object.values(phoneticData[selectedLanguage].groups)
       .flatMap(group => {
-        // Skip the stress group
+        // Skip the stress group and filter out problematic characters
         if (group.title === 'Stress & Intonation') return [];
         return group.phonemes;
       })
       .filter(phoneme => 
-        // Include all IPA characters but exclude arrows and other special marks
-        !/[↗↘↑↓|‖]/.test(phoneme)
+        // Include all IPA characters but exclude arrows, special marks, and problematic characters
+        !/[↗↘↑↓|‖]/.test(phoneme) && 
+        // Ensure the phoneme is properly encoded
+        encodeURIComponent(phoneme) !== '%EF%BF%BD'
       );
 
     console.log('Starting cache for phonemes:', phonemes);
@@ -148,25 +150,29 @@ const App = () => {
         const batch = phonemes.slice(i, i + batchSize);
         await Promise.all(batch.map(async phoneme => {
           try {
+            // Properly encode the phoneme for the API request
+            const encodedPhoneme = encodeURIComponent(phoneme);
             const response = await config.api.post('/api/tts', {
               text: phoneme,
               voice: selectedVoice,
-              language: selectedLanguage
+              language: selectedLanguage,
+              encoding: 'UTF-8' // Explicitly specify UTF-8 encoding
             });
 
             if (response.data?.audio) {
               const audio = new Audio();
+              audio.preload = 'auto';
+              audio.src = `data:audio/mp3;base64,${response.data.audio}`;
               
-              // Pre-warm by loading into memory without playback
               await new Promise((resolve, reject) => {
-                audio.preload = 'auto'; // Force preloading
-                audio.src = `data:audio/mp3;base64,${response.data.audio}`;
-                
-                // Once it can play through, it's fully loaded
-                audio.oncanplaythrough = () => {
-                  resolve();
-                };
+                audio.oncanplaythrough = resolve;
                 audio.onerror = reject;
+                
+                // Set a timeout to prevent hanging
+                setTimeout(reject, 5000);
+              }).catch(error => {
+                console.warn(`Timeout loading audio for ${phoneme}`);
+                throw error;
               });
               
               newCache[phoneme] = audio;
@@ -177,7 +183,7 @@ const App = () => {
           }
         }));
         
-        // Small delay between batches to prevent overwhelming the browser
+        // Small delay between batches
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       

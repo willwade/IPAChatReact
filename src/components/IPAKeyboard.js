@@ -500,6 +500,8 @@ const IPAKeyboard = ({
       if (editMode === 'customize') {
         setSelectedPhoneme(phoneme);
         setEditDialogOpen(true);
+      } else if (editMode === 'move') {
+        // Handle move mode if needed
       }
     } else {
       // Play audio immediately
@@ -533,15 +535,88 @@ const IPAKeyboard = ({
     return 'inherit';
   };
 
-  const saveCustomization = (phoneme, customization) => {
-    const newCustomizations = {
-      ...customizations,
-      [phoneme]: customization
-    };
-    setCustomizations(newCustomizations);
-    localStorage.setItem('ipaCustomizations', JSON.stringify(newCustomizations));
-    setEditMode(false);
-    setSelectedPhoneme(null);
+  const compressImage = (base64String, maxWidth = 200) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64String;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate new dimensions maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Using JPEG with 70% quality
+      };
+    });
+  };
+
+  const estimateStorageSize = (obj) => {
+    const str = JSON.stringify(obj);
+    return new Blob([str]).size;
+  };
+
+  const saveCustomization = async (phoneme, customization) => {
+    try {
+      console.log('Saving customization for', phoneme, customization);
+      const newCustomizations = {
+        ...customizations,
+        [phoneme]: customization
+      };
+      localStorage.setItem('ipaCustomizations', JSON.stringify(newCustomizations));
+      setCustomizations(newCustomizations);
+      console.log('Saved customizations:', newCustomizations);
+    } catch (error) {
+      console.error('Error saving customization:', error);
+      alert('Error saving customization. Please try again.');
+    }
+  };
+
+  const handleImageUploadBase = async (event, setFieldValue) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check file size before processing
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('Image is too large. Please choose an image under 5MB.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          // Start with more aggressive compression for larger files
+          const initialMaxWidth = file.size > 1024 * 1024 ? 150 : 200;
+          const compressed = await compressImage(reader.result, initialMaxWidth);
+          
+          // Check if the compressed result would fit
+          const testCustomizations = {
+            ...customizations,
+            test: { image: compressed }
+          };
+          
+          if (estimateStorageSize(testCustomizations) > 4.5 * 1024 * 1024) {
+            alert('Even after compression, this image would be too large. Please try a smaller image.');
+            return;
+          }
+          
+          setFieldValue('image', compressed);
+        } catch (error) {
+          console.error('Error processing image:', error);
+          alert('Error processing image. Please try a different image.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const cancelDwell = () => {
@@ -596,11 +671,44 @@ const IPAKeyboard = ({
     const customization = customizations[phoneme] || {};
     const color = customization.customColor || getPhonemeColor(phoneme);
     
+    // Debug log to check customization data
+    console.log(`Button ${phoneme} customization:`, customization);
+    
+    // Calculate opacity based on mode and button state
+    const getOpacity = () => {
+      if (mode === 'edit') {
+        return customization.hideButton ? 0.3 : 1;
+      }
+      return customization.hideButton ? 0 : (isDisabled ? 0.5 : 1);
+    };
+
+    // Determine what to render inside the button
+    const renderButtonContent = () => {
+      if (customization.image) {
+        console.log(`Rendering image for ${phoneme}:`, customization.image.substring(0, 50) + '...');
+        return (
+          <img 
+            src={customization.image} 
+            alt={phoneme} 
+            style={{ 
+              width: '95%',  
+              height: '95%', 
+              objectFit: 'contain',
+              opacity: getOpacity(),
+              padding: '2px', 
+            }} 
+          />
+        );
+      }
+      // If no image, show the phoneme text unless hideLabel is true
+      return !customization.hideLabel ? phoneme : null;
+    };
+
     return (
       <Button
         key={phoneme}
         data-phoneme={phoneme}
-        onClick={() => handlePhonemeClick(phoneme)}
+        onClick={() => handleButtonClick(phoneme)}
         onTouchStart={(e) => handleTouchStart(e, phoneme)}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -612,7 +720,7 @@ const IPAKeyboard = ({
         sx={(theme) => ({
           minWidth: 'unset',
           width: '60px',
-          height: '40px',
+          height: '60px', 
           m: buttonSpacing / 2,
           p: 0.5,
           fontSize: '1rem',
@@ -620,15 +728,22 @@ const IPAKeyboard = ({
           backgroundColor: color,
           color: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.87)' : '#fff',
           border: '1px solid',
-          borderColor: 'divider',
+          borderColor: mode === 'edit' && customization.hideButton ? 'rgba(0, 0, 0, 0.3)' : 'divider',
           transform: isJiggling ? 'rotate(-2deg)' : 'none',
           animation: isJiggling ? 'jiggle 0.5s infinite' : 'none',
           transition: 'transform 0.1s ease-in-out',
           textTransform: 'none',
-          opacity: isDisabled ? 0.5 : 1,
+          opacity: getOpacity(),
+          visibility: mode === 'edit' || !customization.hideButton ? 'visible' : 'hidden',
+          pointerEvents: mode === 'edit' || !customization.hideButton ? 'auto' : 'none',
+          cursor: mode === 'edit' ? (editMode === 'move' ? 'grab' : 'pointer') : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
           '&:hover': {
             backgroundColor: color,
-            opacity: isDisabled ? 0.5 : 0.9,
+            opacity: mode === 'edit' ? (customization.hideButton ? 0.4 : 0.9) : (isDisabled ? 0.5 : 0.9),
           },
           '&:active': {
             transform: 'scale(0.95)',
@@ -644,13 +759,7 @@ const IPAKeyboard = ({
           }),
         })}
       >
-        {customization.hideLabel ? (
-          customization.image ? (
-            <img src={customization.image} alt={phoneme} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-          ) : null
-        ) : (
-          phoneme
-        )}
+        {renderButtonContent()}
       </Button>
     );
   };
@@ -660,109 +769,125 @@ const IPAKeyboard = ({
     const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
     const [hideButton, setHideButton] = useState(customization.hideButton || false);
     const [showColorPicker, setShowColorPicker] = useState(false);
-    const [image, setImage] = useState(customization.image || '');
     const [customColor, setCustomColor] = useState(customization.customColor || null);
-
-    const handleColorChange = (color) => {
-      setCustomColor(color.hex);
-    };
+    const [previewSrc, setPreviewSrc] = useState(customization.image || '');
 
     const handleSave = () => {
       const newCustomization = {
-        ...customization,
         hideLabel,
         hideButton,
-        image,
-        customColor
+        image: previewSrc,
+        customColor,
       };
+      console.log('Saving new customization:', newCustomization);
       saveCustomization(phoneme, newCustomization);
       onClose();
     };
 
-    const handleImageUpload = (event) => {
+    const handleImageUpload = async (event) => {
       const file = event.target.files[0];
       if (file) {
+        // Check file size before processing
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          alert('Image is too large. Please choose an image under 5MB.');
+          return;
+        }
+
         const reader = new FileReader();
-        reader.onloadend = () => {
-          setImage(reader.result);
+        reader.onloadend = async () => {
+          try {
+            // Start with more aggressive compression for larger files
+            const initialMaxWidth = file.size > 1024 * 1024 ? 150 : 200;
+            const compressed = await compressImage(reader.result, initialMaxWidth);
+            
+            // Set both the image state and preview source
+            setPreviewSrc(compressed);
+          } catch (error) {
+            console.error('Error processing image:', error);
+            alert('Error processing image. Please try a different image.');
+          }
         };
         reader.readAsDataURL(file);
       }
     };
 
     const handleClearImage = () => {
-      setImage('');
+      setPreviewSrc('');
+    };
+
+    const handleColorChange = (color) => {
+      setCustomColor(color.hex);
     };
 
     return (
       <Dialog open={open} onClose={onClose}>
-        <DialogTitle>Edit Phoneme: {phoneme}</DialogTitle>
+        <DialogTitle>Customize Phoneme: {phoneme}</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: '300px', mt: 2 }}>
             <FormControlLabel
-              control={
-                <Switch
-                  checked={hideLabel}
-                  onChange={(e) => setHideLabel(e.target.checked)}
-                />
-              }
+              control={<Switch checked={hideLabel} onChange={(e) => setHideLabel(e.target.checked)} />}
               label="Hide Label"
             />
             <FormControlLabel
-              control={
-                <Switch
-                  checked={hideButton}
-                  onChange={(e) => setHideButton(e.target.checked)}
-                />
-              }
+              control={<Switch checked={hideButton} onChange={(e) => setHideButton(e.target.checked)} />}
               label="Hide Button"
             />
-            <Button
-              variant="outlined"
-              onClick={() => setShowColorPicker(!showColorPicker)}
-            >
-              {showColorPicker ? 'Hide Color Picker' : 'Show Color Picker'}
-            </Button>
-            {showColorPicker && (
-              <Box sx={{ mt: 1 }}>
-                <ChromePicker
-                  color={customization.customColor || getPhonemeColor(phoneme)}
-                  onChange={handleColorChange}
+            
+            {/* Image Upload Section */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                  id={`image-upload-${phoneme}`}
                 />
+                <label htmlFor={`image-upload-${phoneme}`}>
+                  <Button variant="outlined" component="span">
+                    Upload Image
+                  </Button>
+                </label>
+                {previewSrc && (
+                  <Button 
+                    variant="outlined" 
+                    color="error" 
+                    onClick={handleClearImage}
+                  >
+                    Clear Image
+                  </Button>
+                )}
               </Box>
-            )}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={{ display: 'none' }}
-                id={`image-upload-${phoneme}`}
-              />
-              <label htmlFor={`image-upload-${phoneme}`}>
-                <Button variant="outlined" component="span">
-                  Upload Image
-                </Button>
-              </label>
-              {image && (
-                <Button 
-                  variant="outlined" 
-                  color="error" 
-                  onClick={handleClearImage}
-                >
-                  Clear Image
-                </Button>
+              {previewSrc && (
+                <Box sx={{ mt: 1 }}>
+                  <img 
+                    src={previewSrc} 
+                    alt="Preview" 
+                    style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }} 
+                  />
+                </Box>
               )}
             </Box>
-            {image && (
-              <Box sx={{ mt: 1 }}>
-                <img 
-                  src={image} 
-                  alt="Preview" 
-                  style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }} 
-                />
-              </Box>
-            )}
+
+            {/* Color Picker Section */}
+            <Box>
+              <Button
+                variant="outlined"
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                sx={{ mb: 1 }}
+              >
+                {showColorPicker ? 'Hide Color Picker' : 'Show Color Picker'}
+              </Button>
+              {showColorPicker && (
+                <Box sx={{ position: 'relative', zIndex: 1000 }}>
+                  <ChromePicker
+                    color={customColor || getPhonemeColor(phoneme)}
+                    onChange={handleColorChange}
+                    disableAlpha={true}
+                  />
+                </Box>
+              )}
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
