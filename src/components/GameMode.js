@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import IPAKeyboard from './IPAKeyboard';
 import { config } from '../config';
+import Confetti from 'react-confetti';
 
 const DIFFICULTY_LEVELS = {
   LEVEL1: { id: 1, name: "All Cues", description: "Written word, IPA model, Audio, and Hints" },
@@ -51,6 +52,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
   const [showCue, setShowCue] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [difficulty, setDifficulty] = useState(() => {
     const saved = localStorage.getItem('gameDifficulty');
     return saved ? JSON.parse(saved) : DIFFICULTY_LEVELS.LEVEL1;
@@ -75,6 +77,17 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
   const [showIPACue, setShowIPACue] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackType, setFeedbackType] = useState('');
+  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
+  const [wordMastery, setWordMastery] = useState(() => {
+    const saved = localStorage.getItem('wordMastery');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [phaseProgress, setPhaseProgress] = useState(() => {
+    const saved = localStorage.getItem('phaseProgress');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [overallProgress, setOverallProgress] = useState(0);
+  const [streakCount, setStreakCount] = useState(0);
 
   // Audio feedback
   const errorSound = new Audio('/error.mp3'); // We'll need to add this sound file
@@ -97,6 +110,8 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       // Wrong input - play error sound and remove the wrong character
       errorSound.play().catch(() => {}); // Ignore errors if sound fails
       setTimeout(() => setUserInput(userInput), 200); // Remove the wrong character after a brief delay
+      setConsecutiveCorrect(0);
+      setStreakCount(0);
       return;
     }
 
@@ -104,13 +119,30 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     if (inputIPA === targetIPA) {
       setShowFeedback(true);
       setFeedbackType('success');
+      setShowConfetti(true);
+      
+      // Update mastery and progress
+      const newMastery = {
+        ...wordMastery,
+        [currentWord.word]: (wordMastery[currentWord.word] || 0) + 1
+      };
+      setWordMastery(newMastery);
+      localStorage.setItem('wordMastery', JSON.stringify(newMastery));
+
+      // Update consecutive correct answers and streak
+      const newConsecutiveCorrect = consecutiveCorrect + 1;
+      const newStreak = streakCount + 1;
+      setConsecutiveCorrect(newConsecutiveCorrect);
+      setStreakCount(newStreak);
       
       // Play the complete word
       await playSound(currentWord.word);
       
+      // Hide confetti after animation
       setTimeout(() => {
+        setShowConfetti(false);
         handleNextWord();
-      }, 1500); // Increased delay to allow for word playback
+      }, 2000);
     }
 
     if (onPhonemeClick) {
@@ -269,6 +301,47 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     }
   };
 
+  // Effect to handle adaptive difficulty
+  useEffect(() => {
+    if (consecutiveCorrect >= 5) {
+      const currentLevel = difficulty.id;
+      if (currentLevel < DIFFICULTY_LEVELS.LEVEL5.id) {
+        handleDifficultyChange(DIFFICULTY_LEVELS[`LEVEL${currentLevel + 1}`]);
+      }
+      setConsecutiveCorrect(0);
+    }
+  }, [consecutiveCorrect, difficulty.id]);
+
+  // Effect to update overall progress
+  useEffect(() => {
+    const calculateProgress = () => {
+      const totalWords = wordList.length;
+      const masteredWords = Object.values(wordMastery).filter(count => count > 0).length;
+      const newProgress = (masteredWords / totalWords) * 100;
+      setOverallProgress(newProgress);
+    };
+    calculateProgress();
+  }, [wordMastery, wordList.length]);
+
+  // Update the progress display in the UI
+  const progressDisplay = (
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 2,
+      minWidth: '200px'
+    }}>
+      <Typography variant="body2" color="text.secondary">
+        Progress: {Math.round(overallProgress)}%
+      </Typography>
+      <Chip 
+        label={`Streak: ${streakCount}`}
+        color={streakCount >= 5 ? "success" : "default"}
+        size="small"
+      />
+    </Box>
+  );
+
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -323,26 +396,45 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
           gap: 2
         }}>
           {showWordCue && (
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: 'text.primary',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                fontSize: '1.1rem'  // Slightly smaller to fit reduced height
-              }}
-            >
-              {currentWord?.word || ''}
-              {currentWord && (
-                <IconButton
-                  size="small"
-                  onClick={() => playSound(currentWord.word)}
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: 'text.primary',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  fontSize: '1.1rem'
+                }}
+              >
+                {currentWord?.word || ''}
+                {currentWord && (
+                  <IconButton
+                    size="small"
+                    onClick={() => playSound(currentWord.word)}
+                  >
+                    <VolumeUpIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Typography>
+              {/* Add IPA model for Level 1 */}
+              {difficulty.id === DIFFICULTY_LEVELS.LEVEL1.id && currentWord && (
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    fontStyle: 'italic'
+                  }}
                 >
-                  <VolumeUpIcon fontSize="small" />
-                </IconButton>
+                  IPA: {currentWord.ipa}
+                </Typography>
               )}
-            </Typography>
+            </Box>
           )}
         </Box>
 
@@ -360,7 +452,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
             sx={{ 
               minWidth: '80px',
               textAlign: 'center',
-              fontSize: '1.1rem'  // Slightly smaller to fit reduced height
+              fontSize: '1.1rem'
             }}
           >
             {userInput || ' '}
@@ -381,6 +473,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
               {feedbackType === 'success' ? 'Correct!' : 'Try again!'}
             </Alert>
           )}
+          {progressDisplay}
         </Box>
       </Box>
 
@@ -533,6 +626,21 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
         >
           {error}
         </Alert>
+      )}
+      {showConfetti && (
+        <Confetti
+          count={100}
+          size={20}
+          gravity={0.1}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1
+          }}
+        />
       )}
     </Box>
   );
