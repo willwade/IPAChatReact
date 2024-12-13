@@ -502,18 +502,18 @@ const IPAKeyboard = ({
         setEditDialogOpen(true);
       }
     } else {
-      // Provide immediate visual feedback
-      const button = document.querySelector(`[data-phoneme="${phoneme}"]`);
-      if (button) {
-        button.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-          button.style.transform = 'none';
-        }, 100);
-      }
+      // Play audio immediately
+      onPhonemeClick?.(phoneme);
       
-      // Call onPhonemeClick in the next frame to avoid blocking the UI
+      // Visual feedback after audio starts
       requestAnimationFrame(() => {
-        onPhonemeClick?.(phoneme);
+        const button = document.querySelector(`[data-phoneme="${phoneme}"]`);
+        if (button) {
+          button.style.transform = 'scale(0.95)';
+          setTimeout(() => {
+            button.style.transform = 'none';
+          }, 100);
+        }
       });
     }
   };
@@ -587,6 +587,72 @@ const IPAKeyboard = ({
       default:
         return {};
     }
+  };
+
+  const renderPhonemeButton = (phoneme, group) => {
+    const isDisabled = typeof disabledPhonemes === 'function' 
+      ? disabledPhonemes(phoneme) 
+      : disabledPhonemes?.includes(phoneme);
+    const customization = customizations[phoneme] || {};
+    const color = customization.customColor || getPhonemeColor(phoneme);
+    
+    return (
+      <Button
+        key={phoneme}
+        data-phoneme={phoneme}
+        onClick={() => handlePhonemeClick(phoneme)}
+        onTouchStart={(e) => handleTouchStart(e, phoneme)}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={(e) => handleMouseDown(e, phoneme)}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        disabled={isDisabled}
+        disableRipple={true}
+        sx={(theme) => ({
+          minWidth: 'unset',
+          width: '60px',
+          height: '40px',
+          m: buttonSpacing / 2,
+          p: 0.5,
+          fontSize: '1rem',
+          fontFamily: '"Noto Sans", sans-serif',
+          backgroundColor: color,
+          color: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.87)' : '#fff',
+          border: '1px solid',
+          borderColor: 'divider',
+          transform: isJiggling ? 'rotate(-2deg)' : 'none',
+          animation: isJiggling ? 'jiggle 0.5s infinite' : 'none',
+          transition: 'transform 0.1s ease-in-out',
+          textTransform: 'none',
+          opacity: isDisabled ? 0.5 : 1,
+          '&:hover': {
+            backgroundColor: color,
+            opacity: isDisabled ? 0.5 : 0.9,
+          },
+          '&:active': {
+            transform: 'scale(0.95)',
+          },
+          '&.Mui-disabled': {
+            color: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.38)' : 'rgba(255, 255, 255, 0.38)',
+            backgroundColor: color,
+          },
+          ...getDwellStyles(phoneme),
+          ...(hoveredPhoneme === phoneme && {
+            outline: `2px solid ${dwellIndicatorColor}`,
+            outlineOffset: '2px',
+          }),
+        })}
+      >
+        {customization.hideLabel ? (
+          customization.image ? (
+            <img src={customization.image} alt={phoneme} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+          ) : null
+        ) : (
+          phoneme
+        )}
+      </Button>
+    );
   };
 
   const EditPhonemeDialog = ({ open, onClose, phoneme }) => {
@@ -747,66 +813,8 @@ const IPAKeyboard = ({
         }}
       >
         {(phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage)).map((phoneme) => {
-          const customization = customizations[phoneme] || {};
-          const isDragged = draggedPhoneme === phoneme;
-          const groupColor = getPhonemeColor(phoneme);
-          const isDisabled = typeof disabledPhonemes === 'function' ? disabledPhonemes(phoneme) : disabledPhonemes?.includes(phoneme);
-          
-          return (
-            <Grid item key={phoneme}>
-              <Button
-                data-phoneme={phoneme}
-                onClick={() => handleButtonClick(phoneme)}
-                onMouseDown={(e) => editMode === 'move' && handleDragStart(e, phoneme, e.currentTarget)}
-                onTouchStart={(e) => handleTouchStart(e, phoneme)}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                draggable={false}
-                disabled={isDisabled}
-                sx={{
-                  backgroundColor: customization.customColor || groupColor,
-                  color: 'inherit',
-                  opacity: isDragged ? 0.3 : (isDisabled ? 0.5 : 1),
-                  cursor: isDisabled ? 'not-allowed' : (editMode === 'move' ? 'grab' : 'pointer'),
-                  width: '100%',
-                  height: '100%',
-                  minWidth: 'unset',
-                  padding: 0,
-                  margin: 0,
-                  border: 'none',
-                  outline: 'none',
-                  boxShadow: 'none',
-                  transition: 'opacity 0.15s ease',
-                  WebkitTapHighlightColor: 'transparent',
-                  userSelect: 'none',
-                  touchAction: mode === 'edit' || touchDwellEnabled ? 'none' : 'auto', // Only disable touch action when needed
-                  fontFamily: '"Noto Sans", sans-serif',
-                  fontSize: '16px',
-                  fontWeight: 400,
-                  '&:hover': {
-                    backgroundColor: customization.customColor || groupColor,
-                    opacity: isDisabled ? 0.5 : 0.8,
-                  },
-                  '&.Mui-disabled': {
-                    backgroundColor: customization.customColor || groupColor,
-                    opacity: 0.5,
-                    color: 'inherit'
-                  },
-                  textTransform: 'none'
-                }}
-              >
-                {customization.hideLabel ? (
-                  customization.image ? (
-                    <img src={customization.image} alt={phoneme} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-                  ) : null
-                ) : (
-                  phoneme
-                )}
-              </Button>
-            </Grid>
-          );
+          const group = Object.values(phoneticData[selectedLanguage].groups).find(group => group.phonemes.includes(phoneme));
+          return renderPhonemeButton(phoneme, group);
         })}
       </Grid>
 

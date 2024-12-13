@@ -155,13 +155,20 @@ const App = () => {
             });
 
             if (response.data?.audio) {
-              const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-              // Preload the audio
+              const audio = new Audio();
+              
+              // Pre-warm by loading into memory without playback
               await new Promise((resolve, reject) => {
-                audio.oncanplaythrough = resolve;
+                audio.preload = 'auto'; // Force preloading
+                audio.src = `data:audio/mp3;base64,${response.data.audio}`;
+                
+                // Once it can play through, it's fully loaded
+                audio.oncanplaythrough = () => {
+                  resolve();
+                };
                 audio.onerror = reject;
-                audio.load();
               });
+              
               newCache[phoneme] = audio;
               console.log(`Cached phoneme: ${phoneme}`);
             }
@@ -170,12 +177,12 @@ const App = () => {
           }
         }));
         
-        // Small delay between batches
+        // Small delay between batches to prevent overwhelming the browser
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
       setAudioCache(newCache);
-      console.log('Audio cache completed. Cached phonemes:', Object.keys(newCache).join(', '));
+      console.log('Audio cache completed. Ready phonemes:', Object.keys(newCache).join(', '));
     } catch (error) {
       console.error('Error in audio caching:', error);
     } finally {
@@ -226,18 +233,22 @@ const App = () => {
   };
 
   const handlePhonemeClick = (phoneme) => {
-    // Provide immediate UI feedback first
+    // In build mode, update the message
     if (mode === 'build') {
       setMessage(prev => prev + phoneme);
+      return;
     }
     
-    // Then handle the speech synthesis asynchronously
+    // In babble mode, play audio immediately from cache if available
     if (mode === 'babble') {
-      // Use requestIdleCallback for non-critical speech synthesis
-      if (window.requestIdleCallback) {
-        window.requestIdleCallback(() => handlePhonemeSpeak(phoneme));
+      if (audioCache[phoneme]) {
+        const audioClone = audioCache[phoneme].cloneNode();
+        audioClone.play().catch(error => {
+          console.warn('Error playing cached audio:', error);
+          handlePhonemeSpeak(phoneme); // Fallback to API if cache fails
+        });
       } else {
-        setTimeout(() => handlePhonemeSpeak(phoneme), 0);
+        handlePhonemeSpeak(phoneme); // Use API if not cached
       }
     }
   };
