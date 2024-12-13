@@ -720,8 +720,7 @@ const IPAKeyboard = ({
         sx={(theme) => ({
           minWidth: 'unset',
           width: '60px',
-          height: '60px', 
-          m: buttonSpacing / 2,
+          height: '60px',
           p: 0.5,
           fontSize: '1rem',
           fontFamily: '"Noto Sans", sans-serif',
@@ -928,7 +927,7 @@ const IPAKeyboard = ({
           willChange: 'transform',
           '& .MuiGrid-item': {
             width: '60px !important',
-            height: '40px !important',
+            height: '60px !important',  
             padding: '0 !important',
             margin: '0 !important',
             display: 'flex',
