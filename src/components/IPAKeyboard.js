@@ -247,13 +247,19 @@ const IPAKeyboard = ({
 
     const debouncedUpdateScale = debounce(updateScale, 150);
 
-    updateScale();
+    // Initial scale calculation with a small delay to ensure container is ready
+    const initialTimer = setTimeout(() => {
+      updateScale();
+    }, 100);
+
+    // Add resize listener
     window.addEventListener('resize', debouncedUpdateScale);
     
     return () => {
       window.removeEventListener('resize', debouncedUpdateScale);
+      clearTimeout(initialTimer);
     };
-  }, [autoScale, buttonScale, buttonSpacing, selectedLanguage]);
+  }, [autoScale, buttonScale, buttonSpacing, selectedLanguage, mode]);
 
   const triggerHapticFeedback = () => {
     if (hapticFeedback && window.navigator.vibrate) {
