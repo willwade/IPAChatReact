@@ -21,7 +21,7 @@
     "react-color": "^2.19.3",
     "react-confetti": "^6.1.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -54,9 +54,15 @@
     ]
   },
   "devDependencies": {
+    "@babel/core": "^7.26.0",
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.3",
     "concurrently": "^8.2.2",
     "kill-port": "^2.0.1",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
   }
 }

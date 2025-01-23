@@ -36,6 +36,7 @@ import {
 import IPAKeyboard from './IPAKeyboard';
 import { config } from '../config';
 import Confetti from 'react-confetti';
+import { gamePhases, getWordVariation, isCorrectIPA } from '../data/gamePhases';
 
 const DIFFICULTY_LEVELS = {
   LEVEL1: { id: 1, name: "All Cues", description: "Written word, IPA model, Audio, and Hints" },
@@ -45,7 +46,16 @@ const DIFFICULTY_LEVELS = {
   LEVEL5: { id: 5, name: "Audio Only", description: "Audio cues only" }
 };
 
-const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, onLanguageChange, onVoiceChange, selectedVoice }) => {
+const GameMode = ({ 
+  onPhonemeClick, 
+  onSpeakRequest, 
+  selectedLanguage, 
+  selectedRegion, 
+  voices, 
+  onLanguageChange, 
+  onVoiceChange, 
+  selectedVoice 
+}) => {
   const [currentPhase, setCurrentPhase] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [showWordCue, setShowWordCue] = useState(false);
@@ -102,11 +112,23 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     const newInput = userInput + phoneme;
     setUserInput(newInput);
 
-    // Check if the new input is a prefix of the target IPA (case-insensitive)
-    const targetIPA = currentWord.ipa.toLowerCase();
-    const inputIPA = newInput.toLowerCase();
+    // Get the current word variation with all its accepted forms
+    const phase = `phase${currentPhase + 1}`;
+    const words = Object.keys(gamePhases[phase].words);
+    const variation = getWordVariation(words[currentWordIndex], phase, selectedRegion);
     
-    if (!targetIPA.startsWith(inputIPA)) {
+    if (!variation) {
+      return;
+    }
+
+    // Get all accepted IPA forms for this word
+    const acceptedForms = [variation.ipa, ...variation.alternatives].map(form => form.toLowerCase());
+    const inputIPA = newInput.toLowerCase();
+
+    // Check if the input is a valid prefix of any accepted form
+    const isValidPrefix = acceptedForms.some(form => form.startsWith(inputIPA));
+    
+    if (!isValidPrefix) {
       // Wrong input - play error sound and remove the wrong character
       errorSound.play().catch(() => {}); // Ignore errors if sound fails
       setTimeout(() => setUserInput(userInput), 200); // Remove the wrong character after a brief delay
@@ -115,8 +137,10 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       return;
     }
 
-    // Check if the answer is complete
-    if (inputIPA === targetIPA) {
+    // Check if the answer matches any complete form
+    const isComplete = acceptedForms.includes(inputIPA);
+    
+    if (isComplete) {
       setShowFeedback(true);
       setFeedbackType('success');
       setShowConfetti(true);
@@ -124,7 +148,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       // Update mastery and progress
       const newMastery = {
         ...wordMastery,
-        [currentWord.word]: (wordMastery[currentWord.word] || 0) + 1
+        [getCurrentWord()]: (wordMastery[getCurrentWord()] || 0) + 1
       };
       setWordMastery(newMastery);
       localStorage.setItem('wordMastery', JSON.stringify(newMastery));
@@ -136,17 +160,17 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       setStreakCount(newStreak);
       
       // Play the complete word
-      await playSound(currentWord.word);
+      await playSound(getCurrentWord());
       
       // Hide confetti after animation
       setTimeout(() => {
         setShowConfetti(false);
-        handleNextWord();
       }, 2000);
-    }
 
-    if (onPhonemeClick) {
-      onPhonemeClick(phoneme);
+      // Move to next word after a delay
+      setTimeout(() => {
+        handleNextWord();
+      }, 1000);
     }
   };
 
@@ -155,67 +179,55 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     setUserInput(prev => prev.slice(0, -1));
   };
 
-  // Handle next word
+  // Initialize game state
+  useEffect(() => {
+    const initializeGame = () => {
+      const phase = `phase${currentPhase + 1}`;
+      if (gamePhases[phase]) {
+        const words = Object.keys(gamePhases[phase].words);
+        setWordList(words);
+        setCurrentWordIndex(0);
+        setCurrentWord(words[0]);
+        setShowWordCue(true);
+        setUserInput('');
+      }
+    };
+    
+    initializeGame();
+  }, [currentPhase]);
+
+  // Handle next word and phase transitions
   const handleNextWord = () => {
     setCurrentWordIndex(prev => {
       const nextIndex = prev + 1;
-      if (nextIndex < wordList.length) {
-        setCurrentWord(wordList[nextIndex]);
+      const currentPhaseWords = Object.keys(gamePhases[`phase${currentPhase + 1}`].words);
+      
+      if (nextIndex < currentPhaseWords.length) {
+        // Move to next word in current phase
+        setCurrentWord(currentPhaseWords[nextIndex]);
         setUserInput('');
         setShowFeedback(false);
         setShowIPACue(true);
         return nextIndex;
+      } else {
+        // Move to next phase
+        const nextPhase = currentPhase + 1;
+        if (gamePhases[`phase${nextPhase + 1}`]) {
+          setCurrentPhase(nextPhase);
+          setCurrentWordIndex(0);
+          const nextPhaseWords = Object.keys(gamePhases[`phase${nextPhase + 1}`].words);
+          setCurrentWord(nextPhaseWords[0]);
+          setUserInput('');
+          setShowFeedback(false);
+          setShowIPACue(true);
+          return 0;
+        }
+        // Game completed
+        return prev;
       }
-      // Game completed
-      return prev;
     });
   };
 
-  useEffect(() => {
-    // Add keyboard event listener for backspace
-    const handleKeyDown = (e) => {
-      if (e.key === 'Backspace') {
-        handleBackspace();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleHelp = () => setShowHelp(true);
-    const handleSettings = () => setShowSettings(true);
-    
-    window.addEventListener('openGameHelp', handleHelp);
-    window.addEventListener('openGameSettings', handleSettings);
-    
-    return () => {
-      window.removeEventListener('openGameHelp', handleHelp);
-      window.removeEventListener('openGameSettings', handleSettings);
-    };
-  }, []);
-
-  // Load word list on mount
-  useEffect(() => {
-    const loadWordList = async () => {
-      try {
-        const response = await config.api.get('/api/words');
-        if (response.data) {
-          setWordList(response.data);
-          if (response.data.length > 0) {
-            setCurrentWord(response.data[0]);
-            setShowWordCue(true); // Show the first word automatically
-          }
-        }
-      } catch (error) {
-        setError('Failed to load words. Please try again.');
-      }
-    };
-    loadWordList();
-  }, []);
-
-  // Show word cue on game start and when difficulty changes
   useEffect(() => {
     if (!gameStarted && currentWord) {
       setShowWordCue(true);
@@ -223,18 +235,26 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       
       // Play the word audio based on difficulty level
       if (difficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
-        playSound(currentWord.word);
+        playSound(getCurrentWord());
       }
     }
   }, [gameStarted, currentWord, difficulty]);
 
-  // Check if a phoneme should be disabled based on current word and difficulty
-  const shouldDisablePhoneme = (phoneme) => {
+  const shouldDisablePhoneme = useCallback((phoneme) => {
     if (!currentWord || difficulty.id !== DIFFICULTY_LEVELS.LEVEL1.id) {
       return false;
     }
-    return !currentWord.ipa.includes(phoneme);
-  };
+    const phase = `phase${currentPhase + 1}`;
+    const words = Object.keys(gamePhases[phase].words);
+    const variation = getWordVariation(words[currentWordIndex], phase, selectedRegion);
+    
+    if (!variation) {
+      return false;
+    }
+
+    // Use the validPhonemes array to determine which phonemes should be enabled
+    return !variation.validPhonemes.includes(phoneme);
+  }, [currentWord, difficulty.id, currentPhase, currentWordIndex, selectedRegion]);
 
   const handleButtonScaleChange = (newScale) => {
     setButtonScale(newScale);
@@ -264,7 +284,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
     
     // Play the word audio for audio-enabled difficulty levels
     if (currentWord && newDifficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
-      playSound(currentWord.word);
+      playSound(getCurrentWord());
     }
   };
 
@@ -300,6 +320,26 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
       }
     }
   };
+
+  const getCurrentWord = useCallback(() => {
+    const phase = `phase${currentPhase + 1}`;
+    const words = Object.keys(gamePhases[phase].words);
+    const variation = getWordVariation(words[currentWordIndex], phase, selectedRegion);
+    return variation ? variation.word : words[currentWordIndex];
+  }, [currentPhase, currentWordIndex, selectedRegion]);
+
+  const getCurrentIPA = useCallback(() => {
+    const phase = `phase${currentPhase + 1}`;
+    const words = Object.keys(gamePhases[phase].words);
+    const variation = getWordVariation(words[currentWordIndex], phase, selectedRegion);
+    return variation ? variation.ipa : '';
+  }, [currentPhase, currentWordIndex, selectedRegion]);
+
+  const checkAnswer = useCallback((input) => {
+    const phase = `phase${currentPhase + 1}`;
+    const words = Object.keys(gamePhases[phase].words);
+    return isCorrectIPA(words[currentWordIndex], phase, input, selectedRegion);
+  }, [currentPhase, currentWordIndex, selectedRegion]);
 
   // Effect to handle adaptive difficulty
   useEffect(() => {
@@ -412,18 +452,16 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
                   fontSize: '1.1rem'
                 }}
               >
-                {currentWord?.word || ''}
-                {currentWord && (
-                  <IconButton
-                    size="small"
-                    onClick={() => playSound(currentWord.word)}
-                  >
-                    <VolumeUpIcon fontSize="small" />
-                  </IconButton>
-                )}
+                {getCurrentWord()}
+                <IconButton
+                  size="small"
+                  onClick={() => playSound(getCurrentWord())}
+                >
+                  <VolumeUpIcon fontSize="small" />
+                </IconButton>
               </Typography>
               {/* Add IPA model for Level 1 */}
-              {difficulty.id === DIFFICULTY_LEVELS.LEVEL1.id && currentWord && (
+              {difficulty.id === DIFFICULTY_LEVELS.LEVEL1.id && (
                 <Typography 
                   variant="body1" 
                   sx={{ 
@@ -431,7 +469,7 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
                     fontStyle: 'italic'
                   }}
                 >
-                  IPA: {currentWord.ipa}
+                  IPA: {getCurrentIPA()}
                 </Typography>
               )}
             </Box>
@@ -496,11 +534,11 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
         <DialogTitle>New Word</DialogTitle>
         <DialogContent>
           <Typography variant="h4" gutterBottom>
-            {currentWord?.word}
+            {getCurrentWord()}
           </Typography>
-          {showIPACue && currentWord && (
+          {showIPACue && (
             <Typography variant="subtitle1" color="text.secondary">
-              Write this word using these IPA characters: {currentWord.ipa}
+              Write this word using these IPA characters: {getCurrentIPA()}
             </Typography>
           )}
         </DialogContent>
@@ -523,9 +561,9 @@ const GameMode = ({ onPhonemeClick, onSpeakRequest, selectedLanguage, voices, on
         <DialogTitle>IPA Transcription</DialogTitle>
         <DialogContent>
           <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography variant="h4">{currentWord?.ipa}</Typography>
+            <Typography variant="h4">{getCurrentIPA()}</Typography>
             <IconButton 
-              onClick={() => onSpeakRequest?.(currentWord?.ipa)}
+              onClick={() => onSpeakRequest?.(getCurrentIPA())}
               sx={{ mt: 2 }}
             >
               <VolumeUpIcon />

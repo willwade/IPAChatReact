@@ -5,7 +5,7 @@ export const phoneticData = {
       vowels: {
         title: 'Vowels',
         color: '#2196f3',
-        phonemes: ['iː', 'ɪ', 'e', 'æ', 'ɑː', 'ɒ', 'ɔː', 'ʊ', 'uː', 'ɜː', 'ə', 'ʌ', 'i']
+        phonemes: ['iː', 'ɪ', 'e', 'æ', 'ɑː', 'ɒ', 'ɐ', 'ɔː', 'ʊ', 'uː', 'ɜː', 'ə', 'ʌ', 'i']
       },
       diphthongs: {
         title: 'Diphthongs',

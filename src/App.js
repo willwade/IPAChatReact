@@ -13,6 +13,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import { voicesByLanguage } from './data/phonemes';
 import { phoneticData } from './data/phonemes';
 import { config } from './config';
+import { regions } from './data/gamePhases';
 import IPAKeyboard from './components/IPAKeyboard';
 import EditMode from './components/EditMode';
 import Settings from './components/Settings';
@@ -21,6 +22,7 @@ import GameMode from './components/GameMode';
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
   const [selectedLanguage, setSelectedLanguage] = useState(() => localStorage.getItem('selectedLanguage') || 'en-GB');
+  const [selectedRegion, setSelectedRegion] = useState(() => localStorage.getItem('selectedRegion') || 'en-GB-south');
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('selectedVoice') || '');
   const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
@@ -88,6 +90,10 @@ const App = () => {
   }, [selectedLanguage]);
 
   useEffect(() => {
+    localStorage.setItem('selectedRegion', selectedRegion);
+  }, [selectedRegion]);
+
+  useEffect(() => {
     localStorage.setItem('selectedVoice', selectedVoice);
   }, [selectedVoice]);
 
@@ -122,6 +128,19 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('hapticFeedback', hapticFeedback);
   }, [hapticFeedback]);
+
+  // Load saved preferences
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('selectedLanguage');
+    const savedRegion = localStorage.getItem('selectedRegion');
+    if (savedLanguage) setSelectedLanguage(savedLanguage);
+    if (savedRegion) setSelectedRegion(savedRegion);
+  }, []);
+
+  const handleRegionChange = (region) => {
+    setSelectedRegion(region);
+    localStorage.setItem('selectedRegion', region);
+  };
 
   // Cache phoneme audio for the current language
   const cachePhonemeAudio = async () => {
@@ -491,9 +510,10 @@ const App = () => {
                 onPhonemeClick={handlePhonemeClick}
                 onSpeakRequest={handleSpeakRequest}
                 selectedLanguage={selectedLanguage}
+                selectedRegion={selectedRegion}
                 voices={availableVoices}
                 onLanguageChange={handleLanguageChange}
-                onVoiceChange={setSelectedVoice}
+                onVoiceChange={handleVoiceChange}
                 selectedVoice={selectedVoice}
               />
             </Box>
@@ -519,8 +539,10 @@ const App = () => {
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
           selectedLanguage={selectedLanguage}
+          selectedRegion={selectedRegion}
           selectedVoice={selectedVoice}
           onLanguageChange={handleLanguageChange}
+          onRegionChange={handleRegionChange}
           onVoiceChange={handleVoiceChange}
           buttonScale={buttonScale}
           onButtonScaleChange={setButtonScale}
