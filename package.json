@@ -33,7 +33,9 @@
     "dev:fresh": "BROWSER=none npm run dev",
     "dev:backend": "nodemon backend.js",
     "dev:frontend": "react-scripts start",
-    "restart": "lsof -ti:3000,3001 | xargs -r kill -9 && npm run dev"
+    "restart": "lsof -ti:3000,3001 | xargs -r kill -9 && npm run dev",
+    "clean": "rm -rf node_modules/.cache build && rm -rf logs/* && rm -rf cache/* && echo 'Cleaned build cache, logs, and cache directories'",
+    "prebuild": "node scripts/generate-phoneme-audio.js",
   },
   "eslintConfig": {
     "extends": [
