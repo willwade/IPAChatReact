@@ -181,6 +181,10 @@ const App = () => {
     if (!selectedVoice || cacheLoading) return;
     
     setCacheLoading(true);
+    // Clear existing cache when voice changes
+    setAudioCache({});
+    console.log(`Clearing cache for previous voice and loading new cache for ${selectedVoice}`);
+    
     const newCache = {};
     
     // Get all phonemes except stress/intonation marks
@@ -197,11 +201,13 @@ const App = () => {
         encodeURIComponent(phoneme) !== '%EF%BF%BD'
       );
 
-    console.log('Starting cache for phonemes:', phonemes);
+    console.log(`Starting cache for ${phonemes.length} phonemes with voice: ${selectedVoice}`);
     
     try {
       // Load pre-generated audio files in parallel batches
       const batchSize = 5;
+      let loadedCount = 0;
+      
       for (let i = 0; i < phonemes.length; i += batchSize) {
         const batch = phonemes.slice(i, i + batchSize);
         await Promise.all(batch.map(async phoneme => {
@@ -217,7 +223,8 @@ const App = () => {
               try {
                 const audio = await loadAudioFile(fileName);
                 newCache[phoneme] = audio;
-                console.log(`Successfully cached phoneme: ${phoneme}`);
+                loadedCount++;
+                console.log(`Successfully cached phoneme: ${phoneme} (${loadedCount}/${phonemes.length})`);
               } catch (loadError) {
                 console.warn(`Primary voice failed for ${phoneme}:`, loadError.message);
                 // If the primary voice fails, try fallback voices
@@ -231,7 +238,8 @@ const App = () => {
                     console.log(`Trying fallback: ${fallbackFileName}`);
                     const audio = await loadAudioFile(fallbackFileName);
                     newCache[phoneme] = audio;
-                    console.log(`Cached phoneme ${phoneme} using fallback voice ${fallbackVoice}`);
+                    loadedCount++;
+                    console.log(`Cached phoneme ${phoneme} using fallback voice ${fallbackVoice} (${loadedCount}/${phonemes.length})`);
                     fallbackSuccess = true;
                     break;
                   } catch (fallbackError) {
@@ -257,8 +265,8 @@ const App = () => {
       
       setAudioCache(newCache);
       const cachedPhonemes = Object.keys(newCache);
-      console.log('Audio cache completed.');
-      console.log('Successfully cached phonemes:', cachedPhonemes);
+      console.log(`Audio cache completed for ${selectedVoice}.`);
+      console.log(`Successfully cached ${cachedPhonemes.length} phonemes:`, cachedPhonemes);
       console.log('Complex phonemes that will use TTS:', phonemes.filter(p => /^[aeiouɑɔəʊɪʊ][ɪʊə]$|ː/.test(p)));
       console.log('Failed phonemes:', phonemes.filter(p => !(/^[aeiouɑɔəʊɪʊ][ɪʊə]$|ː/.test(p)) && !cachedPhonemes.includes(p)));
     } catch (error) {
@@ -278,6 +286,29 @@ const App = () => {
 
     // Skip only special marks
     if (/[↗↘↑↓|‖]/.test(text)) {
+      return;
+    }
+
+    // Check if the text is a valid IPA phoneme
+    const isIpaPhoneme = Object.values(phoneticData[selectedLanguage].groups)
+      .some(group => group.phonemes.includes(text));
+
+    if (!isIpaPhoneme) {
+      // If it's not an IPA phoneme, use the TTS API directly
+      try {
+        const response = await config.api.post('/api/tts', { 
+          text,
+          voice: selectedVoice,
+          language: selectedLanguage
+        });
+        
+        if (response.data && response.data.audio) {
+          const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+          await audio.play();
+        }
+      } catch (error) {
+        console.warn('Error in speech synthesis:', error);
+      }
       return;
     }
 
@@ -321,7 +352,7 @@ const App = () => {
       }
     }
 
-    // For complex phonemes or longer utterances, use Azure TTS
+    // For complex phonemes or if all else fails, use Azure TTS
     try {
       const response = await config.api.post('/api/tts', { 
         text,
