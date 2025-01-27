@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -56,6 +56,7 @@ const App = () => {
   const [targetPhonemes, setTargetPhonemes] = useState([]);
   const [currentPhonemeIndex, setCurrentPhonemeIndex] = useState(0);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [includeStressMarkers, setIncludeStressMarkers] = useState(false);
 
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
@@ -508,9 +509,7 @@ const App = () => {
 
   const handleSearchSubmit = async () => {
     try {
-      // Get language code based on selectedLanguage
       const langCode = selectedLanguage === 'en-GB' ? 'en' : selectedLanguage.toLowerCase();
-      
       const apiUrl = `${process.env.REACT_APP_PHONEMIZE_API}/phonemize`;
       
       console.log('Making phonemize request:', {
@@ -527,30 +526,54 @@ const App = () => {
       console.log('Phonemize response:', response.data);
 
       if (response.data && response.data.ipa) {
-        // Process the IPA string into phonemes
-        const processedPhonemes = response.data.ipa
-          .replace(/[ˈˌ]/g, '')  // Remove stress markers
-          .split('')
-          .reduce((acc, curr, idx, arr) => {
-            // Check if current char is part of a multi-char phoneme
-            if (curr === 'ː' && acc.length > 0) {
-              // Combine length marker with previous phoneme
-              acc[acc.length - 1] += curr;
-            } else if (['ʊ', 'ə', 'ɪ'].includes(curr) && 
-                      acc.length > 0 && 
-                      /[aeiouɑɔəʊɪʊ]/.test(acc[acc.length - 1])) {
-              // Combine second part of diphthong with first part
-              acc[acc.length - 1] += curr;
-            } else {
-              // Add as new phoneme
-              acc.push(curr);
+        let phonemeArray = [];
+        let currentPhoneme = '';
+        const ipa = response.data.ipa;
+        
+        // Process the IPA string character by character
+        for (let i = 0; i < ipa.length; i++) {
+          const char = ipa[i];
+          
+          // Handle stress markers
+          if (/[ˈˌ]/.test(char)) {
+            if (includeStressMarkers) {
+              if (currentPhoneme) {
+                phonemeArray.push(currentPhoneme);
+                currentPhoneme = '';
+              }
+              phonemeArray.push(char);
             }
-            return acc;
-          }, [])
-          .filter(p => p.trim()); // Remove any empty strings
+            continue;
+          }
+          
+          // Handle length markers
+          if (char === 'ː') {
+            if (currentPhoneme) {
+              currentPhoneme += char;
+            }
+            continue;
+          }
+          
+          // Handle diphthongs and other multi-character phonemes
+          if (['ʊ', 'ə', 'ɪ'].includes(char) && 
+              currentPhoneme && 
+              /[aeiouɑɔəʊɪʊ]/.test(currentPhoneme)) {
+            currentPhoneme += char;
+          } else {
+            if (currentPhoneme) {
+              phonemeArray.push(currentPhoneme);
+            }
+            currentPhoneme = char;
+          }
+        }
+        
+        // Add the last phoneme if there is one
+        if (currentPhoneme) {
+          phonemeArray.push(currentPhoneme);
+        }
 
-        console.log('Processed phonemes:', processedPhonemes);
-        setTargetPhonemes(processedPhonemes);
+        console.log('Processed phonemes:', phonemeArray);
+        setTargetPhonemes(phonemeArray);
         setCurrentPhonemeIndex(0);
         setSearchDialogOpen(false);
         setMessage('');
@@ -560,7 +583,6 @@ const App = () => {
       if (error.response) {
         console.error('Error response:', error.response.data);
       }
-      // Show error to user
       alert(`Error converting word to phonemes: ${error.message}`);
     }
   };
@@ -743,7 +765,14 @@ const App = () => {
               disabledPhonemes={mode === 'search' ? 
                 Object.values(phoneticData[selectedLanguage].groups)
                   .flatMap(group => group.phonemes)
-                  .filter(p => p !== targetPhonemes[currentPhonemeIndex])
+                  .filter(p => {
+                    // If we're including stress markers, check if the current target is a stress marker
+                    if (includeStressMarkers && /[ˈˌ]/.test(targetPhonemes[currentPhonemeIndex])) {
+                      return p !== targetPhonemes[currentPhonemeIndex];
+                    }
+                    // Otherwise, enable the next expected phoneme
+                    return p !== targetPhonemes[currentPhonemeIndex];
+                  })
                 : []}
             />
           )}
@@ -796,6 +825,23 @@ const App = () => {
                 }
               }}
             />
+            <FormControl component="fieldset" sx={{ mt: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={includeStressMarkers}
+                      onChange={(e) => setIncludeStressMarkers(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="Include stress markers"
+                />
+                <Tooltip title="Toggle whether to include stress markers (ˈ, ˌ) in the phoneme sequence" sx={{ ml: 1 }}>
+                  <HelpOutlineIcon color="action" fontSize="small" />
+                </Tooltip>
+              </Box>
+            </FormControl>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setSearchDialogOpen(false)}>Cancel</Button>
