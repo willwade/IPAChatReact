@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider } from '@mui/material';
+import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -10,6 +10,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SchoolIcon from '@mui/icons-material/School';
+import SearchIcon from '@mui/icons-material/Search';
 import { voicesByLanguage } from './data/phonemes';
 import { phoneticData } from './data/phonemes';
 import { config } from './config';
@@ -19,6 +20,7 @@ import EditMode from './components/EditMode';
 import Settings from './components/Settings';
 import GameMode from './components/GameMode';
 import { phonemeToFilename } from './data/phonemeFilenames';
+import axios from 'axios';
 
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
@@ -50,9 +52,14 @@ const App = () => {
   const [voicesLoading, setVoicesLoading] = useState(true);
   const [audioCache, setAudioCache] = useState({});
   const [cacheLoading, setCacheLoading] = useState(false);
+  const [searchWord, setSearchWord] = useState('');
+  const [targetPhonemes, setTargetPhonemes] = useState([]);
+  const [currentPhonemeIndex, setCurrentPhonemeIndex] = useState(0);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
 
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
+    { icon: <SearchIcon />, name: 'Search Mode', onClick: () => { setMode('search'); setSearchDialogOpen(true); } },
     { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble') },
     { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit') },
     { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game') },
@@ -393,16 +400,35 @@ const App = () => {
       return;
     }
     
+    // In search mode, check if it's the correct next phoneme
+    if (mode === 'search' && targetPhonemes.length > 0) {
+      if (phoneme === targetPhonemes[currentPhonemeIndex]) {
+        setMessage(prev => prev + phoneme);
+        setCurrentPhonemeIndex(prev => prev + 1);
+        // Play the phoneme
+        if (audioCache[phoneme]) {
+          const audioClone = audioCache[phoneme].cloneNode();
+          audioClone.play().catch(error => {
+            console.warn('Error playing cached audio:', error);
+            handlePhonemeSpeak(phoneme);
+          });
+        } else {
+          handlePhonemeSpeak(phoneme);
+        }
+      }
+      return;
+    }
+    
     // In babble mode, play audio immediately from cache if available
     if (mode === 'babble') {
       if (audioCache[phoneme]) {
         const audioClone = audioCache[phoneme].cloneNode();
         audioClone.play().catch(error => {
           console.warn('Error playing cached audio:', error);
-          handlePhonemeSpeak(phoneme); // Fallback to API if cache fails
+          handlePhonemeSpeak(phoneme);
         });
       } else {
-        handlePhonemeSpeak(phoneme); // Use API if not cached
+        handlePhonemeSpeak(phoneme);
       }
     }
   };
@@ -476,6 +502,59 @@ const App = () => {
 
   const handleAutoScaleChange = (autoScale) => {
     setAutoScale(autoScale);
+  };
+
+  const handleSearchSubmit = async () => {
+    try {
+      // Get language code based on selectedLanguage
+      const langCode = selectedLanguage === 'en-GB' ? 'en' : selectedLanguage.toLowerCase();
+      
+      const apiUrl = `${process.env.REACT_APP_PHONEMIZE_API}/phonemize`;
+      
+      console.log('Making phonemize request:', {
+        text: searchWord,
+        language: langCode,
+        url: apiUrl
+      });
+
+      const response = await axios.post(apiUrl, {
+        text: searchWord,
+        language: langCode
+      });
+
+      console.log('Phonemize response:', response.data);
+
+      if (response.data && response.data.ipa) {
+        // Remove stress marks and split into array of phonemes
+        const phonemes = response.data.ipa
+          .replace(/ˈ/g, '')  // Remove primary stress
+          .replace(/ˌ/g, '')  // Remove secondary stress
+          .split('')
+          .reduce((acc, curr) => {
+            // Combine with previous char if it's a length mark or second part of a digraph
+            if (['ː', 'ʊ'].includes(curr) && acc.length > 0) {
+              acc[acc.length - 1] += curr;
+            } else {
+              acc.push(curr);
+            }
+            return acc;
+          }, [])
+          .filter(p => p.trim()); // Remove empty strings
+
+        console.log('Processed phonemes:', phonemes);
+        setTargetPhonemes(phonemes);
+        setCurrentPhonemeIndex(0);
+        setSearchDialogOpen(false);
+        setMessage('');
+      }
+    } catch (error) {
+      console.error('Error phonemizing word:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+      // Show error to user
+      alert(`Error converting word to phonemes: ${error.message}`);
+    }
   };
 
   return (
@@ -561,7 +640,7 @@ const App = () => {
         overflow: 'hidden'
       }}>
         {/* Message bar */}
-        {mode === 'build' || mode === 'babble' ? (
+        {(mode === 'build' || mode === 'search' || mode === 'babble') && (
           <Box sx={{ 
             p: 1.5, 
             display: 'flex', 
@@ -575,8 +654,8 @@ const App = () => {
               fullWidth
               value={message}
               onChange={(e) => mode === 'build' && setMessage(e.target.value)}
-              placeholder="Type or click IPA symbols..."
-              disabled={mode === 'babble'}
+              placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
+              disabled={mode === 'babble' || mode === 'search'}
               size="small"
               sx={{
                 '& .MuiInputBase-input.Mui-disabled': {
@@ -595,28 +674,19 @@ const App = () => {
             </Button>
             <Button 
               variant="outlined" 
-              onClick={() => setMessage('')}
+              onClick={() => {
+                setMessage('');
+                if (mode === 'search') {
+                  setCurrentPhonemeIndex(0);
+                }
+              }}
               disabled={!message || mode === 'babble'}
               size="small"
             >
               <ClearIcon />
             </Button>
           </Box>
-        ) : mode === 'edit' ? (
-          <Box sx={{ 
-            p: 1.5, 
-            borderBottom: 1,
-            borderColor: 'divider',
-            backgroundColor: 'background.paper',
-            height: '56px',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <Typography variant="body1" color="text.secondary">
-              Edit Mode: Click and drag buttons to reorder, or click a button to customize it
-            </Typography>
-          </Box>
-        ) : null}
+        )}
 
         {/* Content */}
         <Box sx={{ flex: 1, minHeight: 0 }}>
@@ -662,6 +732,11 @@ const App = () => {
               dwellIndicatorType={dwellIndicatorType}
               dwellIndicatorColor={dwellIndicatorColor}
               hapticFeedback={hapticFeedback}
+              disabledPhonemes={mode === 'search' ? 
+                Object.values(phoneticData[selectedLanguage].groups)
+                  .flatMap(group => group.phonemes)
+                  .filter(p => p !== targetPhonemes[currentPhonemeIndex])
+                : []}
             />
           )}
         </Box>
@@ -694,6 +769,31 @@ const App = () => {
           onHapticFeedbackChange={setHapticFeedback}
           voices={availableVoices[selectedLanguage] || []}
         />
+
+        {/* Search dialog */}
+        <Dialog open={searchDialogOpen} onClose={() => setSearchDialogOpen(false)}>
+          <DialogTitle>Search Word</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Enter a word"
+              fullWidth
+              variant="outlined"
+              value={searchWord}
+              onChange={(e) => setSearchWord(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearchSubmit();
+                }
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSearchDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSearchSubmit}>Search</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Box>
   );
