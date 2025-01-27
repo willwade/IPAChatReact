@@ -23,7 +23,15 @@ import { phonemeToFilename } from './data/phonemeFilenames';
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
   const [selectedLanguage, setSelectedLanguage] = useState(() => localStorage.getItem('selectedLanguage') || 'en-GB');
-  const [selectedRegion, setSelectedRegion] = useState(() => localStorage.getItem('selectedRegion') || 'en-GB-south');
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    const savedRegion = localStorage.getItem('selectedRegion');
+    if (savedRegion) return savedRegion;
+    
+    // Set default region based on language
+    const language = localStorage.getItem('selectedLanguage') || 'en-GB';
+    if (language === 'en-GB') return 'en-GB-london';
+    return ''; // No default region for other languages yet
+  });
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('selectedVoice') || '');
   const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
@@ -137,6 +145,15 @@ const App = () => {
     if (savedLanguage) setSelectedLanguage(savedLanguage);
     if (savedRegion) setSelectedRegion(savedRegion);
   }, []);
+
+  // Update region when language changes
+  useEffect(() => {
+    if (selectedLanguage === 'en-GB' && !selectedRegion) {
+      setSelectedRegion('en-GB-london');
+    } else if (selectedLanguage !== 'en-GB') {
+      setSelectedRegion(''); // Clear region for non-UK English
+    }
+  }, [selectedLanguage]);
 
   const handleRegionChange = (region) => {
     setSelectedRegion(region);
@@ -439,6 +456,12 @@ const App = () => {
 
   const handleLanguageChange = (language) => {
     setSelectedLanguage(language);
+    // Set default region for UK English
+    if (language === 'en-GB') {
+      setSelectedRegion('en-GB-london');
+    } else {
+      setSelectedRegion(''); // Clear region for other languages
+    }
     // Reset voice when language changes
     const voices = availableVoices[language] || [];
     if (voices.length > 0) {
