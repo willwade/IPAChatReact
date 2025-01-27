@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { ChromePicker } from 'react-color';
 import { phoneticData } from '../data/phonemes';
+import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
 const debounce = (func, wait) => {
   let timeout;
@@ -257,17 +259,36 @@ const IPAKeyboard = ({
     }
   };
 
-  const handleDragStart = (event, phoneme, element, isTouch = false) => {
+  const handleDragStart = (event, phoneme, element) => {
     if (editMode !== 'move') return;
     
-    if (!isTouch) {
+    // Don't try to prevent default on touch events
+    if (!event.touches) {
       event.preventDefault();
       event.stopPropagation();
+      
+      // Set drag image for mouse drag only
+      if (event.dataTransfer) {
+        const rect = element.getBoundingClientRect();
+        const ghost = element.cloneNode(true);
+        ghost.style.width = `${rect.width}px`;
+        ghost.style.height = `${rect.height}px`;
+        ghost.style.opacity = '0.7';
+        ghost.style.position = 'fixed';
+        ghost.style.top = '-1000px';
+        document.body.appendChild(ghost);
+        event.dataTransfer.setDragImage(ghost, rect.width / 2, rect.height / 2);
+        event.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => document.body.removeChild(ghost), 0);
+      }
     }
     
     setDraggedPhoneme(phoneme);
     setDraggedElement(element);
     setIsDragging(true);
+    
+    // Add dragging class to element
+    element.classList.add('dragging');
   };
 
   const handleDragOver = (event) => {
@@ -275,12 +296,26 @@ const IPAKeyboard = ({
     
     event.preventDefault();
     event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
 
     const targetButton = event.target.closest('[data-phoneme]');
     if (!targetButton) return;
 
     const targetPhoneme = targetButton.dataset.phoneme;
     if (targetPhoneme !== draggedPhoneme) {
+      // Add visual indicator for drop target
+      const buttons = document.querySelectorAll('[data-phoneme]');
+      buttons.forEach(button => {
+        button.classList.remove('drop-target');
+        button.classList.remove('drop-target-before');
+        button.classList.remove('drop-target-after');
+      });
+
+      const rect = targetButton.getBoundingClientRect();
+      const isBeforeMiddle = event.clientX < rect.left + rect.width / 2;
+      
+      targetButton.classList.add('drop-target');
+      targetButton.classList.add(isBeforeMiddle ? 'drop-target-before' : 'drop-target-after');
       setHoveredPhoneme(targetPhoneme);
     }
   };
@@ -296,8 +331,39 @@ const IPAKeyboard = ({
 
     const targetPhoneme = targetButton.dataset.phoneme;
     if (targetPhoneme !== draggedPhoneme) {
-      onPhonemeSwap?.(draggedPhoneme, targetPhoneme);
+      // Get current order
+      const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
+      const fromIndex = currentOrder.indexOf(draggedPhoneme);
+      const toIndex = currentOrder.indexOf(targetPhoneme);
+      
+      if (fromIndex !== -1 && toIndex !== -1) {
+        // Create new order
+        const newOrder = [...currentOrder];
+        newOrder.splice(fromIndex, 1);
+        newOrder.splice(toIndex, 0, draggedPhoneme);
+        
+        // Update order
+        setPhonemeOrder(prev => ({
+          ...prev,
+          [selectedLanguage]: newOrder
+        }));
+        
+        // Save to localStorage
+        localStorage.setItem('phonemeOrder', JSON.stringify({
+          ...phonemeOrder,
+          [selectedLanguage]: newOrder
+        }));
+      }
     }
+
+    // Clean up
+    const buttons = document.querySelectorAll('[data-phoneme]');
+    buttons.forEach(button => {
+      button.classList.remove('dragging');
+      button.classList.remove('drop-target');
+      button.classList.remove('drop-target-before');
+      button.classList.remove('drop-target-after');
+    });
 
     setIsDragging(false);
     setDraggedPhoneme(null);
@@ -305,41 +371,78 @@ const IPAKeyboard = ({
     setHoveredPhoneme(null);
   };
 
-  const handlePhonemeClick = (phoneme, e) => {
-    // Prevent any default behavior that might interfere
-    if (e) {
-      e.preventDefault();
-    }
+  // Add drag end handler to clean up if drop doesn't occur
+  const handleDragEnd = (event) => {
+    const buttons = document.querySelectorAll('[data-phoneme]');
+    buttons.forEach(button => {
+      button.classList.remove('dragging');
+      button.classList.remove('drop-target');
+      button.classList.remove('drop-target-before');
+      button.classList.remove('drop-target-after');
+    });
 
-    if (mode === 'edit') {
-      if (!isJiggling) {
-        setSelectedPhoneme(phoneme);
-        setEditDialogOpen(true);
-      }
-    } else {
-      // In game mode or other modes, directly trigger the click handler
-      onPhonemeClick?.(phoneme);
-      
-      // Provide haptic feedback if enabled
-      if (hapticFeedback && window.navigator.vibrate) {
-        window.navigator.vibrate(50);
-      }
+    setIsDragging(false);
+    setDraggedPhoneme(null);
+    setDraggedElement(null);
+    setHoveredPhoneme(null);
+  };
+
+  // Add styles for drag and drop
+  const dragDropStyles = {
+    '& .MuiButton-root.dragging': {
+      opacity: 0.5,
+      cursor: 'grabbing',
+    },
+    '& .MuiButton-root.drop-target': {
+      position: 'relative',
+    },
+    '& .MuiButton-root.drop-target-before::before': {
+      content: '""',
+      position: 'absolute',
+      left: -4,
+      top: 0,
+      bottom: 0,
+      width: 4,
+      backgroundColor: dwellIndicatorColor,
+      borderRadius: 2,
+    },
+    '& .MuiButton-root.drop-target-after::after': {
+      content: '""',
+      position: 'absolute',
+      right: -4,
+      top: 0,
+      bottom: 0,
+      width: 4,
+      backgroundColor: dwellIndicatorColor,
+      borderRadius: 2,
     }
   };
 
   const handleTouchStart = (event, phoneme) => {
     // For non-edit modes, immediately trigger the click
     if (mode !== 'edit') {
-      event.preventDefault(); // Prevent double-firing with click event
+      event.preventDefault(); // Prevent the subsequent click event
+      // Set a flag to prevent double triggering
+      setTouchPosition({ x: event.touches[0].clientX, y: event.touches[0].clientY });
       handlePhonemeClick(phoneme, event);
       return;
     }
 
     // Edit mode handling
     if (editMode === 'move') {
-      handleDragStart(event.touches[0], phoneme, event.currentTarget, true);
+      event.preventDefault(); // Prevent default on the actual event
+      const touch = event.touches[0];
+      const element = event.currentTarget;
+      setTouchPosition({ x: touch.clientX, y: touch.clientY });
+      // Create a dummy event object with only the methods we need
+      const dummyEvent = {
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        dataTransfer: null,
+        touches: [touch]
+      };
+      handleDragStart(dummyEvent, phoneme, element);
     } else if (touchDwellEnabled) {
-      event.preventDefault();
       const touch = event.touches[0];
       setTouchStartTime(Date.now());
       setTouchPosition({ x: touch.clientX, y: touch.clientY });
@@ -366,6 +469,34 @@ const IPAKeyboard = ({
     }
   };
 
+  const handlePhonemeClick = (phoneme, e) => {
+    // Don't handle click if it was triggered by touch
+    if (touchPosition) {
+      return;
+    }
+
+    // Prevent any default behavior that might interfere
+    if (e) {
+      e.preventDefault();
+    }
+
+    if (mode === 'edit') {
+      if (editMode === 'customize') {
+        setSelectedPhoneme(phoneme);
+        setEditDialogOpen(true);
+      }
+      // Don't handle clicks in move mode - let drag and drop handle it
+    } else {
+      // In game mode or other modes, directly trigger the click handler
+      onPhonemeClick?.(phoneme);
+      
+      // Provide haptic feedback if enabled
+      if (hapticFeedback && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }
+  };
+
   // Simplify touch move to only handle drag in edit mode
   const handleTouchMove = (event) => {
     if (mode !== 'edit') return;
@@ -386,8 +517,13 @@ const IPAKeyboard = ({
     }
   };
 
-  // Simplify touch end to only handle drag in edit mode
+  // Update the button component to clear touchPosition on touch end
   const handleTouchEnd = (event) => {
+    // Clear touch position after a short delay to prevent double triggers
+    setTimeout(() => {
+      setTouchPosition(null);
+    }, 100);
+
     if (mode !== 'edit') return;
 
     if (isDragging && editMode === 'move') {
@@ -456,6 +592,12 @@ const IPAKeyboard = ({
   };
 
   const handleButtonClick = (phoneme) => {
+    // Don't handle click if it was triggered by touch
+    if (touchPosition) {
+      setTouchPosition(null);
+      return;
+    }
+
     if (mode === 'edit') {
       if (editMode === 'customize') {
         setSelectedPhoneme(phoneme);
@@ -624,6 +766,130 @@ const IPAKeyboard = ({
     }
   };
 
+  // Add a function to handle phoneme reordering
+  const handlePhonemeMove = (phoneme, direction) => {
+    const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
+    const currentIndex = currentOrder.indexOf(phoneme);
+    const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+    
+    if (newIndex >= 0 && newIndex < currentOrder.length) {
+      const newOrder = [...currentOrder];
+      // Remove from current position
+      newOrder.splice(currentIndex, 1);
+      // Insert at new position
+      newOrder.splice(newIndex, 0, phoneme);
+      
+      // Update state and localStorage
+      setPhonemeOrder(prev => ({
+        ...prev,
+        [selectedLanguage]: newOrder
+      }));
+      
+      localStorage.setItem('phonemeOrder', JSON.stringify({
+        ...phonemeOrder,
+        [selectedLanguage]: newOrder
+      }));
+    }
+  };
+
+  const renderButtonContent = (phoneme, customization, getOpacity) => {
+    if (customization.image) {
+      return (
+        <img 
+          src={customization.image} 
+          alt={phoneme} 
+          style={{ 
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: getOpacity(),
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }} 
+        />
+      );
+    }
+
+    // In move mode, add move controls
+    if (mode === 'edit' && editMode === 'move') {
+      const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
+      const currentIndex = currentOrder.indexOf(phoneme);
+      const canMoveLeft = currentIndex > 0;
+      const canMoveRight = currentIndex < currentOrder.length - 1;
+
+      return (
+        <Box sx={{ 
+          position: 'relative', 
+          width: '100%', 
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {!customization.hideLabel && phoneme}
+          {canMoveLeft && (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePhonemeMove(phoneme, 'left');
+              }}
+              sx={{ 
+                position: 'absolute',
+                top: '50%',
+                left: -12,
+                transform: 'translateY(-50%)',
+                backgroundColor: 'background.paper',
+                boxShadow: 1,
+                opacity: 0.8,
+                zIndex: 2,
+                padding: '4px',
+                '&:hover': { 
+                  backgroundColor: 'background.paper',
+                  opacity: 1 
+                }
+              }}
+            >
+              <KeyboardArrowLeftIcon fontSize="small" />
+            </IconButton>
+          )}
+          {canMoveRight && (
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePhonemeMove(phoneme, 'right');
+              }}
+              sx={{ 
+                position: 'absolute',
+                top: '50%',
+                right: -12,
+                transform: 'translateY(-50%)',
+                backgroundColor: 'background.paper',
+                boxShadow: 1,
+                opacity: 0.8,
+                zIndex: 2,
+                padding: '4px',
+                '&:hover': { 
+                  backgroundColor: 'background.paper',
+                  opacity: 1 
+                }
+              }}
+            >
+              <KeyboardArrowRightIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      );
+    }
+
+    // If no image and not in move mode, show the phoneme text unless hideLabel is true
+    return !customization.hideLabel ? phoneme : null;
+  };
+
   const renderPhonemeButton = (phoneme, group) => {
     const isDisabled = typeof disabledPhonemes === 'function' 
       ? disabledPhonemes(phoneme) 
@@ -631,41 +897,12 @@ const IPAKeyboard = ({
     const customization = customizations[phoneme] || {};
     const color = customization.customColor || getPhonemeColor(phoneme);
     
-    // Debug log to check customization data
-    console.log(`Button ${phoneme} customization:`, customization);
-    
     // Calculate opacity based on mode and button state
     const getOpacity = () => {
       if (mode === 'edit') {
         return customization.hideButton ? 0.3 : 1;
       }
       return customization.hideButton ? 0 : (isDisabled ? 0.5 : 1);
-    };
-
-    // Determine what to render inside the button
-    const renderButtonContent = () => {
-      if (customization.image) {
-        console.log(`Rendering image for ${phoneme}:`, customization.image.substring(0, 50) + '...');
-        return (
-          <img 
-            src={customization.image} 
-            alt={phoneme} 
-            style={{ 
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: getOpacity(),
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-            }} 
-          />
-        );
-      }
-      // If no image, show the phoneme text unless hideLabel is true
-      return !customization.hideLabel ? phoneme : null;
     };
 
     return (
@@ -679,10 +916,6 @@ const IPAKeyboard = ({
         onMouseDown={(e) => handleMouseDown(e, phoneme)}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        draggable={mode === 'edit' && editMode === 'move'}
-        onDragStart={(e) => handleDragStart(e, phoneme, e.currentTarget)}
         disabled={isDisabled}
         disableRipple={true}
         sx={(theme) => ({
@@ -696,18 +929,13 @@ const IPAKeyboard = ({
           color: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.87)' : '#fff',
           border: '1px solid',
           borderColor: mode === 'edit' && customization.hideButton ? 'rgba(0, 0, 0, 0.3)' : 'divider',
-          transform: isJiggling ? 'rotate(-2deg)' : 'none',
-          animation: isJiggling ? 'jiggle 0.5s infinite' : 'none',
-          transition: 'transform 0.1s ease-in-out',
-          textTransform: 'none',
+          cursor: 'pointer',
+          transition: 'transform 0.1s ease-in-out, opacity 0.2s ease-in-out',
           opacity: getOpacity(),
           visibility: mode === 'edit' || !customization.hideButton ? 'visible' : 'hidden',
           pointerEvents: mode === 'edit' || !customization.hideButton ? 'auto' : 'none',
-          cursor: mode === 'edit' ? (editMode === 'move' ? 'grab' : 'pointer') : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
+          textTransform: 'none !important',
+          position: 'relative',
           '&:hover': {
             backgroundColor: color,
             opacity: mode === 'edit' ? (customization.hideButton ? 0.4 : 0.9) : (isDisabled ? 0.5 : 0.9),
@@ -720,13 +948,9 @@ const IPAKeyboard = ({
             backgroundColor: color,
           },
           ...getDwellStyles(phoneme),
-          ...(hoveredPhoneme === phoneme && {
-            outline: `2px solid ${dwellIndicatorColor}`,
-            outlineOffset: '2px',
-          }),
         })}
       >
-        {renderButtonContent()}
+        {renderButtonContent(phoneme, customization, getOpacity)}
       </Button>
     );
   };
@@ -877,7 +1101,8 @@ const IPAKeyboard = ({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        touchAction: 'manipulation' // Add this to improve touch handling
+        touchAction: 'manipulation',
+        ...dragDropStyles
       }}
     >
       <Grid 
@@ -894,7 +1119,7 @@ const IPAKeyboard = ({
           transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
           transformOrigin: 'center center',
           willChange: 'transform',
-          touchAction: 'manipulation', // Add this to improve touch handling
+          touchAction: 'manipulation',
           '& .MuiGrid-item': {
             width: '60px !important',
             height: '60px !important',  
@@ -903,7 +1128,7 @@ const IPAKeyboard = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            touchAction: 'manipulation' // Add this to improve touch handling
+            touchAction: 'manipulation'
           }
         }}
       >
