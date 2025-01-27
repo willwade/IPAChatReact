@@ -47,7 +47,6 @@ const IPAKeyboard = ({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const containerRef = useRef(null);
   const [isJiggling, setIsJiggling] = useState(false);
-  const [dragEnabled, setDragEnabled] = useState(false);
   const [touchStartTime, setTouchStartTime] = useState(null);
   const [touchPosition, setTouchPosition] = useState(null);
   const [dwellProgress, setDwellProgress] = useState(0);
@@ -146,16 +145,7 @@ const IPAKeyboard = ({
   useEffect(() => {
     // Reset jiggling state when mode changes
     setIsJiggling(false);
-    setDragEnabled(false);
   }, [mode]);
-
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -315,19 +305,41 @@ const IPAKeyboard = ({
     setHoveredPhoneme(null);
   };
 
-  const handleTouchStart = (event, phoneme) => {
-    // Only prevent default for edit mode or dwell enabled
-    if (mode === 'edit' || touchDwellEnabled) {
-      event.preventDefault();
-      event.stopPropagation();
+  const handlePhonemeClick = (phoneme, e) => {
+    // Prevent any default behavior that might interfere
+    if (e) {
+      e.preventDefault();
     }
 
-    if (editMode === 'move') {
-      handleDragStart(event.touches[0], phoneme, event.currentTarget, true);
+    if (mode === 'edit') {
+      if (!isJiggling) {
+        setSelectedPhoneme(phoneme);
+        setEditDialogOpen(true);
+      }
+    } else {
+      // In game mode or other modes, directly trigger the click handler
+      onPhonemeClick?.(phoneme);
+      
+      // Provide haptic feedback if enabled
+      if (hapticFeedback && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }
+  };
+
+  const handleTouchStart = (event, phoneme) => {
+    // For non-edit modes, immediately trigger the click
+    if (mode !== 'edit') {
+      event.preventDefault(); // Prevent double-firing with click event
+      handlePhonemeClick(phoneme, event);
       return;
     }
 
-    if (touchDwellEnabled) {
+    // Edit mode handling
+    if (editMode === 'move') {
+      handleDragStart(event.touches[0], phoneme, event.currentTarget, true);
+    } else if (touchDwellEnabled) {
+      event.preventDefault();
       const touch = event.touches[0];
       setTouchStartTime(Date.now());
       setTouchPosition({ x: touch.clientX, y: touch.clientY });
@@ -344,30 +356,22 @@ const IPAKeyboard = ({
         if (progress < 1) {
           animationFrameRef.current = requestAnimationFrame(animate);
         } else {
-          if (hapticFeedback && window.navigator.vibrate) {
-            window.navigator.vibrate(50);
-          }
-          onPhonemeClick?.(phoneme);
+          handlePhonemeClick(phoneme);
           setIsSelecting(false);
           setDwellProgress(0);
         }
       };
 
       animationFrameRef.current = requestAnimationFrame(animate);
-    } else {
-      // For regular touch input, just trigger the click
-      handleButtonClick(phoneme);
     }
   };
 
+  // Simplify touch move to only handle drag in edit mode
   const handleTouchMove = (event) => {
-    // Only prevent default for edit mode or dwell enabled
-    if ((mode === 'edit' || touchDwellEnabled) && isSelecting) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
+    if (mode !== 'edit') return;
 
     if (isDragging && editMode === 'move') {
+      event.preventDefault();
       const touch = event.touches[0];
       const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
       if (!targetElement) return;
@@ -379,30 +383,15 @@ const IPAKeyboard = ({
       if (targetPhoneme !== draggedPhoneme) {
         setHoveredPhoneme(targetPhoneme);
       }
-      return;
-    }
-
-    if (!touchDwellEnabled || !isSelecting) return;
-
-    const touch = event.touches[0];
-    const moveThreshold = 20;
-    const dx = touch.clientX - touchPosition.x;
-    const dy = touch.clientY - touchPosition.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > moveThreshold) {
-      cancelDwell();
     }
   };
 
+  // Simplify touch end to only handle drag in edit mode
   const handleTouchEnd = (event) => {
-    // Only prevent default for edit mode or dwell enabled
-    if (mode === 'edit' || touchDwellEnabled) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
+    if (mode !== 'edit') return;
 
     if (isDragging && editMode === 'move') {
+      event.preventDefault();
       const touch = event.changedTouches[0];
       const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
       if (!targetElement) return;
@@ -419,18 +408,14 @@ const IPAKeyboard = ({
       setDraggedPhoneme(null);
       setDraggedElement(null);
       setHoveredPhoneme(null);
-      return;
     }
 
-    if (touchDwellEnabled) {
-      cancelDwell();
-    }
+    cancelDwell();
   };
 
   const handleLongPress = (phoneme) => {
     if (mode === 'edit') {
       setIsJiggling(true);
-      setDragEnabled(true);
       // Clear any existing timers
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
@@ -467,37 +452,6 @@ const IPAKeyboard = ({
         clearTimeout(longPressTimer.current);
       }
       setCurrentPhoneme(null);
-    }
-  };
-
-  const handleTouchStartButton = (e, phoneme) => {
-    if (mode === 'edit') {
-      e.preventDefault(); // Prevent default touch behavior
-      e.stopPropagation(); // Stop event bubbling
-      setCurrentPhoneme(phoneme);
-      longPressTimer.current = setTimeout(() => handleLongPress(phoneme), 500);
-    }
-  };
-
-  const handleTouchEndButton = (e) => {
-    if (mode === 'edit') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-      }
-      setCurrentPhoneme(null);
-    }
-  };
-
-  const handlePhonemeClick = (phoneme, e) => {
-    if (mode === 'edit') {
-      if (!isJiggling) {
-        setSelectedPhoneme(phoneme);
-        setEditMode(true);
-      }
-    } else {
-      onPhonemeClick?.(phoneme);
     }
   };
 
@@ -718,13 +672,17 @@ const IPAKeyboard = ({
       <Button
         key={phoneme}
         data-phoneme={phoneme}
-        onClick={() => handleButtonClick(phoneme)}
+        onClick={(e) => handlePhonemeClick(phoneme, e)}
         onTouchStart={(e) => handleTouchStart(e, phoneme)}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onMouseDown={(e) => handleMouseDown(e, phoneme)}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        draggable={mode === 'edit' && editMode === 'move'}
+        onDragStart={(e) => handleDragStart(e, phoneme, e.currentTarget)}
         disabled={isDisabled}
         disableRipple={true}
         sx={(theme) => ({
@@ -918,7 +876,8 @@ const IPAKeyboard = ({
         p: Math.round(buttonSpacing),
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        touchAction: 'manipulation' // Add this to improve touch handling
       }}
     >
       <Grid 
@@ -935,6 +894,7 @@ const IPAKeyboard = ({
           transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
           transformOrigin: 'center center',
           willChange: 'transform',
+          touchAction: 'manipulation', // Add this to improve touch handling
           '& .MuiGrid-item': {
             width: '60px !important',
             height: '60px !important',  
@@ -942,7 +902,8 @@ const IPAKeyboard = ({
             margin: '0 !important',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            touchAction: 'manipulation' // Add this to improve touch handling
           }
         }}
       >
