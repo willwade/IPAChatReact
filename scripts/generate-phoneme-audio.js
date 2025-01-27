@@ -159,7 +159,9 @@ const phonemes = [
   // Combinations and long vowels
   'iː', 'ɑː', 'ɔː', 'uː', 'ɜː',
   'eɪ', 'aɪ', 'ɔɪ', 'aʊ', 'əʊ',
-  'ɪə', 'eə', 'ʊə', 'ʧ', 'ʤ'
+  'ɪə', 'eə', 'ʊə',
+  // Affricates (both variants)
+  'ʧ', 'tʃ', 'ʤ', 'dʒ'
 ];
 
 // Azure API configuration

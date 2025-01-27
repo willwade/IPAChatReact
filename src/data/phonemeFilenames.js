@@ -13,8 +13,10 @@ export const phonemeToFilename = {
   'ʊ': 'uh',    // as in "foot"
   'ə': 'schwa', // as in "about"
   'ʌ': 'vu',    // as in "strut"
-  'ʧ': 'tsh',   // as in "church"
-  'ʤ': 'dzh',   // as in "judge"
+  'ʧ': 'tsh',   // as in "church" (variant 1)
+  'tʃ': 'tsh',  // as in "church" (variant 2)
+  'ʤ': 'dzh',   // as in "judge" (variant 1)
+  'dʒ': 'dzh',  // as in "judge" (variant 2)
   'ɔ': 'aw',    // as in "thought"
   'ɑ': 'aa',    // as in "father"
   'ɛ': 'eh',    // as in "dress"
@@ -22,6 +24,8 @@ export const phonemeToFilename = {
   'ɚ': 'er',    // as in "letter" (rhotic)
   'ɹ': 'turned-r', // as in "red"
   'ɜ': 'ow',    // as in "nurse" (non-rhotic)
+  'g': 'g',     // as in "go" (ASCII variant)
+  'ɡ': 'g',     // as in "go" (Unicode variant)
 
   // Combinations and long vowels
   'ɔɪ': 'awih',     // as in "choice"

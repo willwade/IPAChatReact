@@ -1,12 +1,13 @@
-const tonalMarkers = ['˩', '˧', '˥']; // Low, mid, high tone markers for tonal languages
+// Tonal markers for tonal languages
+export const tonalMarkers = ['˩', '˧', '˥'];
 
-const stressors = {
+export const stressors = {
   title: 'Stress & Intonation',
   color: '#9c27b0',
   phonemes: ['ˈ', 'ˌ', '↗', '↘', '↑', '↓', '|', '‖']
 };
 
-const phoneticData = {
+export const detailedPhoneticData = {
   'en-GB': {
     name: 'British English',
     groups: {
@@ -27,8 +28,8 @@ const phoneticData = {
       },
       plosives: {
         title: 'Plosives',
-        color: '#9c27b0',
-        phonemes: ['p', 'b', 't', 'd', 'k', 'g', 'ɡ']
+        color: '#e91e63',
+        phonemes: ['p', 'b', 't', 'd', 'k', 'g']
       },
       affricates: {
         title: 'Affricates',
@@ -37,20 +38,24 @@ const phoneticData = {
       },
       approximants: {
         title: 'Approximants',
-        color: '#9c27b0',
+        color: '#673ab7',
         phonemes: ['ɹ', 'j', 'w']
       },
       laterals: {
         title: 'Lateral Approximants',
-        color: '#9c27b0',
+        color: '#3f51b5',
         phonemes: ['l']
       },
       nasals: {
         title: 'Nasals',
-        color: '#9c27b0',
+        color: '#795548',
         phonemes: ['m', 'n', 'ŋ']
       },
-      stress: stressors
+      stress: {
+        title: 'Stress & Intonation',
+        color: '#607d8b',
+        phonemes: ['ˈ', 'ˌ', '↗', '↘', '↑', '↓', '|', '‖']
+      }
     }
   },
   'en-US': {
@@ -164,7 +169,7 @@ const phoneticData = {
   }
 };
 
-const voicesByLanguage = {
+export const voicesByLanguage = {
   'en-GB': [
     { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)' },
     { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)' },
@@ -190,7 +195,7 @@ const voicesByLanguage = {
 };
 
 // Variants Map
-const variantsMap = {
+export const variantsMap = {
   // Minimal vowel differences
   'eə': ['ɛə'],       // Variants in diphthong transcription (e.g., "hair")
   'æ': ['a'],         // Variants in short "a" (e.g., "pan")
@@ -204,9 +209,6 @@ const variantsMap = {
   // Consonants (limited variation)
   'ɹ': ['r'],         // Approximant vs. trill for "r"
   'ʃ': ['s'],         // Palatal vs. simpler transcriptions
-  'tʃ': ['ʧ'],        // Affricate variants
-  'dʒ': ['ʤ'],        // Affricate variants
-  'g': ['ɡ'],         // Plosive g variants (ASCII vs. Unicode)
   
   // Diphthong simplifications
   'eɪ': ['ɛɪ'],       // Slight variations in diphthong starting point
@@ -218,7 +220,7 @@ const variantsMap = {
 };
 
 // Normalize Function
-function normalizePhoneme(phoneme) {
+export function normalizePhoneme(phoneme) {
   for (const [primary, variants] of Object.entries(variantsMap)) {
     if (phoneme === primary || variants.includes(phoneme)) {
       return primary; // Normalize to the primary symbol
@@ -228,7 +230,7 @@ function normalizePhoneme(phoneme) {
 }
 
 // Function to transform detailed phoneme groups into simpler ones for frontend
-function simplifyPhoneticData(data) {
+export function simplifyPhoneticData(data) {
   const simplified = {};
   
   for (const [lang, langData] of Object.entries(data)) {
@@ -273,13 +275,4 @@ function simplifyPhoneticData(data) {
   }
 
   return simplified;
-}
-
-module.exports = { 
-  phoneticData, 
-  voicesByLanguage,
-  stressors,
-  variantsMap, 
-  normalizePhoneme,
-  simplifyPhoneticData
-};
+} 
