@@ -669,8 +669,8 @@ const App = () => {
         flexDirection: 'column',
         overflow: 'hidden'
       }}>
-        {/* Message bar */}
-        {(mode === 'build' || mode === 'search' || mode === 'babble') && (
+        {/* Message bar - always visible but disabled in edit mode */}
+        {(mode === 'build' || mode === 'search' || mode === 'babble' || mode === 'edit') && (
           <Box sx={{ 
             p: 1.5, 
             display: 'flex', 
@@ -685,20 +685,21 @@ const App = () => {
               value={message}
               onChange={(e) => mode === 'build' && setMessage(e.target.value)}
               placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
-              disabled={mode === 'babble' || mode === 'search'}
+              disabled={mode === 'babble' || mode === 'search' || mode === 'edit'}
               size="small"
               sx={{
                 '& .MuiInputBase-input.Mui-disabled': {
-                  WebkitTextFillColor: 'text.primary',
-                  opacity: 0.7,
+                  WebkitTextFillColor: mode === 'edit' ? 'transparent' : 'text.primary',
+                  opacity: mode === 'edit' ? 0 : 0.7,
                 }
               }}
             />
             <Button 
               variant="contained" 
               onClick={speak}
-              disabled={!message || mode === 'babble'}
+              disabled={!message || mode === 'babble' || mode === 'edit'}
               size="small"
+              sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
             >
               <VolumeUpIcon />
             </Button>
@@ -710,8 +711,9 @@ const App = () => {
                   setCurrentPhonemeIndex(0);
                 }
               }}
-              disabled={!message || mode === 'babble'}
+              disabled={!message || mode === 'babble' || mode === 'edit'}
               size="small"
+              sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
             >
               <ClearIcon />
             </Button>

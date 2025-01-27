@@ -623,8 +623,17 @@ const IPAKeyboard = ({
   };
 
   const getAllPhonemes = (language) => {
-    return Object.values(phoneticData[language].groups)
-      .flatMap(group => group.phonemes);
+    // Get all phonemes in their original group order
+    const allPhonemes = [];
+    Object.values(phoneticData[language].groups).forEach(group => {
+      allPhonemes.push(...group.phonemes);
+    });
+    return allPhonemes;
+  };
+
+  const getOrderedPhonemes = () => {
+    // Use saved order if available, otherwise use default group order
+    return phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
   };
 
   const getPhonemeColor = (phoneme) => {
@@ -1097,46 +1106,53 @@ const IPAKeyboard = ({
         width: '100%',
         overflow: 'hidden',
         position: 'relative',
-        p: Math.round(buttonSpacing),
         display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        flexDirection: 'column',
         touchAction: 'manipulation',
         ...dragDropStyles
       }}
     >
-      <Grid 
-        container
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${gridColumns}, ${60}px)`,
-          gap: `${Math.round(buttonSpacing)}px`,
-          justifyContent: 'center',
-          alignContent: 'center',
-          padding: `${Math.round(buttonSpacing)}px`,
-          height: 'auto',
-          maxHeight: '100%',
-          transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
-          transformOrigin: 'center center',
-          willChange: 'transform',
-          touchAction: 'manipulation',
-          '& .MuiGrid-item': {
-            width: '60px !important',
-            height: '60px !important',  
-            padding: '0 !important',
-            margin: '0 !important',
-            display: 'flex',
-            alignItems: 'center',
+      {/* Remove spacer since we're keeping message bar */}
+      <Box sx={{
+        flex: 1,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        p: Math.round(buttonSpacing)
+      }}>
+        <Grid 
+          container
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${gridColumns}, ${60}px)`,
+            gap: `${Math.round(buttonSpacing)}px`,
             justifyContent: 'center',
-            touchAction: 'manipulation'
-          }
-        }}
-      >
-        {(phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage)).map((phoneme) => {
-          const group = Object.values(phoneticData[selectedLanguage].groups).find(group => group.phonemes.includes(phoneme));
-          return renderPhonemeButton(phoneme, group);
-        })}
-      </Grid>
+            alignContent: 'center',
+            height: 'auto',
+            maxHeight: '100%',
+            transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            touchAction: 'manipulation',
+            '& .MuiGrid-item': {
+              width: '60px !important',
+              height: '60px !important',  
+              padding: '0 !important',
+              margin: '0 !important',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              touchAction: 'manipulation'
+            }
+          }}
+        >
+          {getOrderedPhonemes().map((phoneme) => {
+            const group = Object.values(phoneticData[selectedLanguage].groups).find(group => group.phonemes.includes(phoneme));
+            return renderPhonemeButton(phoneme, group);
+          })}
+        </Grid>
+      </Box>
 
       {mode === 'edit' && (
         <Box sx={{ 
@@ -1150,7 +1166,8 @@ const IPAKeyboard = ({
           boxShadow: 3,
           p: 1,
           display: 'flex',
-          gap: 1
+          gap: 1,
+          flexShrink: 0
         }}>
           <Button
             variant={editMode === 'move' ? 'contained' : 'outlined'}
