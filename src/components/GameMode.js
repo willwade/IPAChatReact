@@ -284,13 +284,19 @@ const GameMode = ({
     
     // Play the word audio for audio-enabled difficulty levels
     if (currentWord && newDifficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
-      playSound(getCurrentWord());
+      // Use onSpeakRequest for whole words
+      onSpeakRequest(getCurrentWord());
     }
   };
 
   const playSound = async (text) => {
     try {
-      console.log('Making TTS request:', {
+      // Only use playSound for phonemes, not whole words
+      if (text === getCurrentWord()) {
+        return onSpeakRequest(text);
+      }
+
+      console.log('Making TTS request for phoneme:', {
         text,
         voice: selectedVoice,
         language: selectedLanguage
@@ -299,7 +305,8 @@ const GameMode = ({
       const response = await config.api.post('/api/tts', { 
         text,
         voice: selectedVoice,
-        language: selectedLanguage
+        language: selectedLanguage,
+        usePhonemes: true  // Always true here since this function now only handles phonemes
       });
       
       console.log('TTS response:', response.data);

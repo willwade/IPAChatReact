@@ -452,13 +452,15 @@ const App = () => {
       console.log('Making TTS request:', {
         text,
         voice: selectedVoice,
-        language: selectedLanguage
+        language: selectedLanguage,
+        usePhonemes: false
       });
 
       const response = await config.api.post('/api/tts', { 
         text,
         voice: selectedVoice,
-        language: selectedLanguage
+        language: selectedLanguage,
+        usePhonemes: false  // Explicitly set to false for natural word pronunciation
       });
       
       console.log('TTS response:', response.data);
@@ -525,24 +527,30 @@ const App = () => {
       console.log('Phonemize response:', response.data);
 
       if (response.data && response.data.ipa) {
-        // Remove stress marks and split into array of phonemes
-        const phonemes = response.data.ipa
-          .replace(/ˈ/g, '')  // Remove primary stress
-          .replace(/ˌ/g, '')  // Remove secondary stress
+        // Process the IPA string into phonemes
+        const processedPhonemes = response.data.ipa
+          .replace(/[ˈˌ]/g, '')  // Remove stress markers
           .split('')
-          .reduce((acc, curr) => {
-            // Combine with previous char if it's a length mark or second part of a digraph
-            if (['ː', 'ʊ'].includes(curr) && acc.length > 0) {
+          .reduce((acc, curr, idx, arr) => {
+            // Check if current char is part of a multi-char phoneme
+            if (curr === 'ː' && acc.length > 0) {
+              // Combine length marker with previous phoneme
+              acc[acc.length - 1] += curr;
+            } else if (['ʊ', 'ə', 'ɪ'].includes(curr) && 
+                      acc.length > 0 && 
+                      /[aeiouɑɔəʊɪʊ]/.test(acc[acc.length - 1])) {
+              // Combine second part of diphthong with first part
               acc[acc.length - 1] += curr;
             } else {
+              // Add as new phoneme
               acc.push(curr);
             }
             return acc;
           }, [])
-          .filter(p => p.trim()); // Remove empty strings
+          .filter(p => p.trim()); // Remove any empty strings
 
-        console.log('Processed phonemes:', phonemes);
-        setTargetPhonemes(phonemes);
+        console.log('Processed phonemes:', processedPhonemes);
+        setTargetPhonemes(processedPhonemes);
         setCurrentPhonemeIndex(0);
         setSearchDialogOpen(false);
         setMessage('');

@@ -230,12 +230,13 @@ app.post('/api/tts', async (req, res) => {
     text: req.body.text,
     voice: req.body.voice,
     language: req.body.language,
+    usePhonemes: req.body.usePhonemes,
     hasKey: !!AZURE_KEY,
     hasRegion: !!AZURE_REGION,
     region: AZURE_REGION
   });
 
-  const { text, voice, language } = req.body;
+  const { text, voice, language, usePhonemes = true } = req.body;
 
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
@@ -254,8 +255,8 @@ app.post('/api/tts', async (req, res) => {
     const tts_endpoint = `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
     console.log('Using TTS endpoint:', tts_endpoint);
 
-    // Create SSML with proper language context
-    const ssml = `
+    // Generate SSML based on usePhonemes flag
+    const ssml = usePhonemes ? `
       <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
         <voice name="${voice}">
           <prosody rate="slow" pitch="medium">
@@ -263,6 +264,12 @@ app.post('/api/tts', async (req, res) => {
               ${text === 'p' ? 'puh' : text === 'f' ? 'fuh' : '_'}
             </phoneme>
           </prosody>
+        </voice>
+      </speak>
+    `.trim() : `
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+        <voice name="${voice}">
+          ${text}
         </voice>
       </speak>
     `.trim();
