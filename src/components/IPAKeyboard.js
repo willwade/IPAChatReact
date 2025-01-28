@@ -31,6 +31,7 @@ const IPAKeyboard = ({
   dwellIndicatorColor = 'primary',
   hapticFeedback = false,
   showStressors: propShowStressors = true,
+  gestureControl: propGestureControl = true,
 }) => {
   const [customizations, setCustomizations] = useState({});
   const [calculatedScale, setCalculatedScale] = useState(buttonScale);
@@ -66,6 +67,15 @@ const IPAKeyboard = ({
     const saved = localStorage.getItem('showStressors');
     return saved ? JSON.parse(saved) : propShowStressors;
   });
+  const [gestureControl, setGestureControl] = useState(() => {
+    const saved = localStorage.getItem('gestureControl');
+    return saved ? JSON.parse(saved) : propGestureControl;
+  });
+  const [gestureStart, setGestureStart] = useState(null);
+  const [gesturePhoneme, setGesturePhoneme] = useState(null);
+  const gestureTimeout = useRef(null);
+  const [activeButton, setActiveButton] = useState(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const calculateOptimalGrid = useCallback(() => {
     const container = containerRef.current;
@@ -271,6 +281,24 @@ const IPAKeyboard = ({
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    // Update gestureControl when localStorage changes
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('gestureControl');
+      if (saved !== null) {
+        setGestureControl(JSON.parse(saved));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Add touch detection on mount
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window);
+  }, []);
+
   const triggerHapticFeedback = () => {
     if (hapticFeedback && window.navigator.vibrate) {
       window.navigator.vibrate(50); // Short vibration
@@ -436,60 +464,353 @@ const IPAKeyboard = ({
     }
   };
 
+  const handleGesture = (endX, endY, phoneme) => {
+    if (!gestureStart || !gesturePhoneme || gesturePhoneme !== phoneme) return;
+
+    const dx = endX - gestureStart.x;
+    const dy = endY - gestureStart.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Reset visual feedback
+    const buttons = document.querySelectorAll('[data-phoneme]');
+    buttons.forEach(button => {
+      button.style.transform = '';
+    });
+
+    // Calculate angle of movement
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+    
+    // Provide haptic feedback for gesture recognition
+    if (hapticFeedback && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+
+    // If distance is very small, treat as a regular click
+    if (distance < 10) {
+      return; // Let the click handler handle it
+    }
+
+    // Determine gesture based on angle
+    let modifiedPhoneme = phoneme;
+    // Upward movement (-45 to -135 degrees)
+    if (angle < -45 && angle > -135) {
+      modifiedPhoneme = phoneme + 'ˈ';
+    }
+    // Downward movement (45 to 135 degrees)
+    else if (angle > 45 && angle < 135) {
+      modifiedPhoneme = phoneme + 'ˌ';
+    }
+    // Right movement (-45 to 45 degrees)
+    else if (angle > -45 && angle < 45) {
+      modifiedPhoneme = phoneme + 'ː';
+    }
+
+    // Only trigger if the phoneme was actually modified
+    if (modifiedPhoneme !== phoneme) {
+      onPhonemeClick?.(modifiedPhoneme);
+    }
+
+    // Reset gesture state
+    setGestureStart(null);
+    setGesturePhoneme(null);
+  };
+
   const handleTouchStart = (event, phoneme) => {
-    // For non-edit modes, immediately trigger the click
-    if (mode !== 'edit') {
-      event.preventDefault(); // Prevent the subsequent click event
-      // Set a flag to prevent double triggering
-      setTouchPosition({ x: event.touches[0].clientX, y: event.touches[0].clientY });
-      handlePhonemeClick(phoneme, event);
+    // Mark that we're handling touch events
+    setIsTouchDevice(true);
+
+    if (!gestureControl || mode === 'edit') {
+      // Existing edit mode handling
+      if (mode === 'edit') {
+        if (editMode === 'move') {
+          event.preventDefault();
+          const touch = event.touches[0];
+          const element = event.currentTarget;
+          setTouchPosition({ x: touch.clientX, y: touch.clientY });
+          const dummyEvent = {
+            preventDefault: () => {},
+            stopPropagation: () => {},
+            dataTransfer: null,
+            touches: [touch]
+          };
+          handleDragStart(dummyEvent, phoneme, element);
+        }
+        return;
+      }
+      return; // Allow normal click behavior when gesture control is disabled
+    }
+
+    event.preventDefault(); // Prevent default to avoid double triggers
+
+    // Store reference to the button
+    const button = event.currentTarget;
+    setActiveButton(button);
+
+    // Start gesture tracking
+    const touch = event.touches[0];
+    setGestureStart({ x: touch.clientX, y: touch.clientY });
+    setGesturePhoneme(phoneme);
+    
+    // Set a timeout for the hold-and-move gesture
+    gestureTimeout.current = setTimeout(() => {
+      // Visual feedback that gesture is active
+      if (button) {
+        button.style.transform = 'scale(0.95)';
+        // Only prevent scrolling after the gesture timeout
+        document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none';
+        document.body.style.userSelect = 'none';
+      }
+    }, 100);
+  };
+
+  const handleTouchMove = (event) => {
+    if (!gestureControl || mode === 'edit') {
+      // Existing edit mode handling
+      if (isDragging && editMode === 'move') {
+        event.preventDefault();
+        const touch = event.touches[0];
+        const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (!targetElement) return;
+
+        const targetButton = targetElement.closest('[data-phoneme]');
+        if (!targetButton) return;
+
+        const targetPhoneme = targetButton.dataset.phoneme;
+        if (targetPhoneme !== draggedPhoneme) {
+          setHoveredPhoneme(targetPhoneme);
+        }
+      }
       return;
     }
 
-    // Edit mode handling
-    if (editMode === 'move') {
-      event.preventDefault(); // Prevent default on the actual event
-      const touch = event.touches[0];
-      const element = event.currentTarget;
-      setTouchPosition({ x: touch.clientX, y: touch.clientY });
-      // Create a dummy event object with only the methods we need
-      const dummyEvent = {
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        dataTransfer: null,
-        touches: [touch]
-      };
-      handleDragStart(dummyEvent, phoneme, element);
-    } else if (touchDwellEnabled) {
-      const touch = event.touches[0];
-      setTouchStartTime(Date.now());
-      setTouchPosition({ x: touch.clientX, y: touch.clientY });
-      setCurrentPhoneme(phoneme);
-      setIsSelecting(true);
-      setDwellProgress(0);
+    // Always prevent default when gesture control is active
+    event.preventDefault();
 
-      const animate = () => {
-        const now = Date.now();
-        const elapsed = now - touchStartTime;
-        const progress = Math.min(elapsed / touchDwellTime, 1);
-        setDwellProgress(progress);
-
-        if (progress < 1) {
-          animationFrameRef.current = requestAnimationFrame(animate);
+    // Handle gesture movement
+    if (gestureStart && gesturePhoneme && activeButton) {
+      const touch = event.touches[0];
+      const dx = touch.clientX - gestureStart.x;
+      const dy = touch.clientY - gestureStart.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Show visual feedback for gesture direction
+      if (distance > 10) {
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        
+        // Update transform based on gesture direction
+        if (angle < -45 && angle > -135) {
+          activeButton.style.transform = 'translateY(-5px) scale(0.95)';
+        } else if (angle > 45 && angle < 135) {
+          activeButton.style.transform = 'translateY(5px) scale(0.95)';
+        } else if (angle > -45 && angle < 45) {
+          activeButton.style.transform = 'translateX(5px) scale(0.95)';
         } else {
-          handlePhonemeClick(phoneme);
-          setIsSelecting(false);
-          setDwellProgress(0);
+          activeButton.style.transform = 'translateX(-5px) scale(0.95)';
         }
-      };
+      }
+    }
+  };
 
-      animationFrameRef.current = requestAnimationFrame(animate);
+  const handleTouchEnd = (event) => {
+    // Clear the gesture timeout
+    if (gestureTimeout.current) {
+      clearTimeout(gestureTimeout.current);
+    }
+
+    // Re-enable scrolling and text selection
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.body.style.userSelect = '';
+
+    if (!gestureControl || mode === 'edit') {
+      // Existing edit mode handling
+      return;
+    }
+
+    event.preventDefault(); // Prevent default to avoid double triggers
+
+    // Reset button transform
+    if (activeButton) {
+      activeButton.style.transform = '';
+    }
+
+    // Process the gesture if we have a start position
+    if (gestureStart && gesturePhoneme) {
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - gestureStart.x;
+      const dy = touch.clientY - gestureStart.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < 10) {
+        // This was a simple tap
+        onPhonemeClick?.(gesturePhoneme);
+      } else {
+        // This was a gesture
+        handleGesture(touch.clientX, touch.clientY, gesturePhoneme);
+      }
+    }
+
+    // Reset gesture state
+    setGestureStart(null);
+    setGesturePhoneme(null);
+    setActiveButton(null);
+  };
+
+  const handleLongPress = (phoneme) => {
+    if (mode === 'edit') {
+      setIsJiggling(true);
+      // Clear any existing timers
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    }
+  };
+
+  const handleMouseDown = (e, phoneme) => {
+    if (!gestureControl || mode === 'edit') {
+      if (mode === 'edit') {
+        e.preventDefault();
+        e.stopPropagation();
+        setCurrentPhoneme(phoneme);
+        longPressTimer.current = setTimeout(() => handleLongPress(phoneme), 500);
+      }
+      return;
+    }
+
+    // Prevent scrolling and text selection when gesture control is active
+    document.body.style.overflow = 'hidden';
+    document.body.style.userSelect = 'none';
+
+    // Store reference to the button
+    const button = e.currentTarget;
+    setActiveButton(button);
+
+    e.preventDefault();
+    setGestureStart({ x: e.clientX, y: e.clientY });
+    setGesturePhoneme(phoneme);
+    
+    // Set a timeout for the hold-and-move gesture
+    gestureTimeout.current = setTimeout(() => {
+      // Visual feedback that gesture is active
+      if (button) {
+        button.style.transform = 'scale(0.95)';
+      }
+    }, 200);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!gestureControl || mode === 'edit') {
+      // Existing edit mode handling
+      return;
+    }
+
+    // Handle gesture movement
+    if (gestureStart && gesturePhoneme && activeButton) {
+      e.preventDefault();
+      const dx = e.clientX - gestureStart.x;
+      const dy = e.clientY - gestureStart.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Show visual feedback for gesture direction
+      if (distance > 10) {
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        
+        // Update transform based on gesture direction
+        if (angle < -45 && angle > -135) {
+          activeButton.style.transform = 'translateY(-5px) scale(0.95)';
+        } else if (angle > 45 && angle < 135) {
+          activeButton.style.transform = 'translateY(5px) scale(0.95)';
+        } else if (angle > -45 && angle < 45) {
+          activeButton.style.transform = 'translateX(5px) scale(0.95)';
+        } else {
+          activeButton.style.transform = 'translateX(-5px) scale(0.95)';
+        }
+      }
+    }
+  };
+
+  const handleMouseUp = (e) => {
+    // Re-enable scrolling and text selection
+    document.body.style.overflow = '';
+    document.body.style.userSelect = '';
+
+    if (!gestureControl || mode === 'edit') {
+      if (mode === 'edit') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+        }
+        setCurrentPhoneme(null);
+      }
+      return;
+    }
+
+    // Clear the gesture timeout
+    if (gestureTimeout.current) {
+      clearTimeout(gestureTimeout.current);
+    }
+
+    // Reset button transform
+    if (activeButton) {
+      activeButton.style.transform = '';
+    }
+    
+    // Process the gesture if we have a start position
+    if (gestureStart && gesturePhoneme) {
+      handleGesture(e.clientX, e.clientY, gesturePhoneme);
+    } else {
+      // Handle normal click if no gesture was performed
+      const phoneme = e.target.closest('[data-phoneme]')?.dataset.phoneme;
+      if (phoneme) {
+        onPhonemeClick?.(phoneme);
+      }
+    }
+
+    // Reset gesture state
+    setGestureStart(null);
+    setGesturePhoneme(null);
+    setActiveButton(null);
+  };
+
+  const handleMouseLeave = (e) => {
+    // Re-enable scrolling and text selection
+    document.body.style.overflow = '';
+    document.body.style.userSelect = '';
+
+    if (!gestureControl || mode === 'edit') {
+      if (mode === 'edit') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+        }
+        setCurrentPhoneme(null);
+      }
+      return;
+    }
+
+    // Clear gesture state when mouse leaves
+    if (gestureStart && gesturePhoneme) {
+      // Reset button transform
+      if (activeButton) {
+        activeButton.style.transform = '';
+      }
+
+      setGestureStart(null);
+      setGesturePhoneme(null);
+      setActiveButton(null);
+      if (gestureTimeout.current) {
+        clearTimeout(gestureTimeout.current);
+      }
     }
   };
 
   const handlePhonemeClick = (phoneme, e) => {
-    // Don't handle click if it was triggered by touch
-    if (touchPosition) {
+    // Skip click handling on touch devices to prevent double triggers
+    if (isTouchDevice || gestureControl) {
       return;
     }
 
@@ -512,131 +833,6 @@ const IPAKeyboard = ({
       if (hapticFeedback && window.navigator.vibrate) {
         window.navigator.vibrate(50);
       }
-    }
-  };
-
-  // Simplify touch move to only handle drag in edit mode
-  const handleTouchMove = (event) => {
-    if (mode !== 'edit') return;
-
-    if (isDragging && editMode === 'move') {
-      event.preventDefault();
-      const touch = event.touches[0];
-      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (!targetElement) return;
-
-      const targetButton = targetElement.closest('[data-phoneme]');
-      if (!targetButton) return;
-
-      const targetPhoneme = targetButton.dataset.phoneme;
-      if (targetPhoneme !== draggedPhoneme) {
-        setHoveredPhoneme(targetPhoneme);
-      }
-    }
-  };
-
-  // Update the button component to clear touchPosition on touch end
-  const handleTouchEnd = (event) => {
-    // Clear touch position after a short delay to prevent double triggers
-    setTimeout(() => {
-      setTouchPosition(null);
-    }, 100);
-
-    if (mode !== 'edit') return;
-
-    if (isDragging && editMode === 'move') {
-      event.preventDefault();
-      const touch = event.changedTouches[0];
-      const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (!targetElement) return;
-
-      const targetButton = targetElement.closest('[data-phoneme]');
-      if (!targetButton) return;
-
-      const targetPhoneme = targetButton.dataset.phoneme;
-      if (targetPhoneme !== draggedPhoneme) {
-        onPhonemeSwap?.(draggedPhoneme, targetPhoneme);
-      }
-
-      setIsDragging(false);
-      setDraggedPhoneme(null);
-      setDraggedElement(null);
-      setHoveredPhoneme(null);
-    }
-
-    cancelDwell();
-  };
-
-  const handleLongPress = (phoneme) => {
-    if (mode === 'edit') {
-      setIsJiggling(true);
-      // Clear any existing timers
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
-    }
-  };
-
-  const handleMouseDown = (e, phoneme) => {
-    if (mode === 'edit') {
-      e.preventDefault();
-      e.stopPropagation();
-      setCurrentPhoneme(phoneme);
-      longPressTimer.current = setTimeout(() => handleLongPress(phoneme), 500);
-    }
-  };
-
-  const handleMouseUp = (e) => {
-    if (mode === 'edit') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-      }
-      setCurrentPhoneme(null);
-    }
-  };
-
-  const handleMouseLeave = (e) => {
-    if (mode === 'edit') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-      }
-      setCurrentPhoneme(null);
-    }
-  };
-
-  const handleButtonClick = (phoneme) => {
-    // Don't handle click if it was triggered by touch
-    if (touchPosition) {
-      setTouchPosition(null);
-      return;
-    }
-
-    if (mode === 'edit') {
-      if (editMode === 'customize') {
-        setSelectedPhoneme(phoneme);
-        setEditDialogOpen(true);
-      } else if (editMode === 'move') {
-        // Handle move mode if needed
-      }
-    } else {
-      // Play audio immediately
-      onPhonemeClick?.(phoneme);
-      
-      // Visual feedback after audio starts
-      requestAnimationFrame(() => {
-        const button = document.querySelector(`[data-phoneme="${phoneme}"]`);
-        if (button) {
-          button.style.transform = 'scale(0.95)';
-          setTimeout(() => {
-            button.style.transform = 'none';
-          }, 100);
-        }
-      });
     }
   };
 
@@ -936,6 +1132,17 @@ const IPAKeyboard = ({
       return customization.hideButton ? 0 : (isDisabled ? 0.5 : 1);
     };
 
+    // Add visual feedback for gesture state
+    const getGestureStyles = (phoneme) => {
+      if (gesturePhoneme === phoneme && gestureStart) {
+        return {
+          transform: 'scale(0.95)',
+          transition: 'transform 0.1s ease-in-out',
+        };
+      }
+      return {};
+    };
+
     return (
       <Button
         key={phoneme}
@@ -944,9 +1151,10 @@ const IPAKeyboard = ({
         onTouchStart={(e) => handleTouchStart(e, phoneme)}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onMouseDown={(e) => handleMouseDown(e, phoneme)}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
+        onMouseDown={(e) => !isTouchDevice && handleMouseDown(e, phoneme)}
+        onMouseMove={(e) => !isTouchDevice && handleMouseMove(e)}
+        onMouseUp={(e) => !isTouchDevice && handleMouseUp(e)}
+        onMouseLeave={(e) => !isTouchDevice && handleMouseLeave(e)}
         disabled={isDisabled}
         disableRipple={true}
         sx={(theme) => ({
@@ -979,6 +1187,7 @@ const IPAKeyboard = ({
             backgroundColor: color,
           },
           ...getDwellStyles(phoneme),
+          ...getGestureStyles(phoneme),
         })}
       >
         {renderButtonContent(phoneme, customization, getOpacity)}
@@ -993,10 +1202,6 @@ const IPAKeyboard = ({
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
-    const [localShowStressors, setLocalShowStressors] = useState(() => {
-      const saved = localStorage.getItem('showStressors');
-      return saved ? JSON.parse(saved) : true;
-    });
 
     const handleSave = () => {
       const newCustomization = {
@@ -1045,14 +1250,6 @@ const IPAKeyboard = ({
       setCustomColor(color.hex);
     };
 
-    const handleStressorsToggle = (event) => {
-      const newValue = event.target.checked;
-      setLocalShowStressors(newValue);
-      localStorage.setItem('showStressors', JSON.stringify(newValue));
-      // Force a re-render of the keyboard
-      window.location.reload();
-    };
-
     return (
       <Dialog open={open} onClose={onClose}>
         <DialogTitle>Customize Phoneme: {phoneme}</DialogTitle>
@@ -1065,11 +1262,6 @@ const IPAKeyboard = ({
             <FormControlLabel
               control={<Switch checked={hideButton} onChange={(e) => setHideButton(e.target.checked)} />}
               label="Hide Button"
-            />
-            <Divider />
-            <FormControlLabel
-              control={<Switch checked={localShowStressors} onChange={handleStressorsToggle} />}
-              label="Show Stress & Intonation Markers"
             />
             
             {/* Image Upload Section */}
@@ -1138,60 +1330,49 @@ const IPAKeyboard = ({
   };
 
   return (
-    <Box 
+    <Box
       ref={containerRef}
-      sx={{ 
-        height: '100%',
-        width: '100%',
-        overflow: 'hidden',
+      sx={{
         position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        touchAction: 'manipulation',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden', // Prevent scrolling
+        touchAction: 'none', // Disable browser touch handling
+        userSelect: 'none', // Prevent text selection
         ...dragDropStyles
       }}
     >
-      {/* Remove spacer since we're keeping message bar */}
-      <Box sx={{
-        flex: 1,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-        p: Math.round(buttonSpacing)
-      }}>
-        <Grid 
-          container
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${gridColumns}, ${60}px)`,
-            gap: `${Math.round(buttonSpacing)}px`,
+      <Grid
+        container
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${gridColumns}, ${60}px)`,
+          gap: `${Math.round(buttonSpacing)}px`,
+          justifyContent: 'center',
+          alignContent: 'center',
+          height: 'auto',
+          maxHeight: '100%',
+          transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
+          transformOrigin: 'center center',
+          willChange: 'transform',
+          touchAction: 'none',
+          '& .MuiGrid-item': {
+            width: '60px !important',
+            height: '60px !important',  
+            padding: '0 !important',
+            margin: '0 !important',
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
-            alignContent: 'center',
-            height: 'auto',
-            maxHeight: '100%',
-            transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
-            transformOrigin: 'center center',
-            willChange: 'transform',
-            touchAction: 'manipulation',
-            '& .MuiGrid-item': {
-              width: '60px !important',
-              height: '60px !important',  
-              padding: '0 !important',
-              margin: '0 !important',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              touchAction: 'manipulation'
-            }
-          }}
-        >
-          {getOrderedPhonemes().map((phoneme) => {
-            const group = Object.values(phoneticData[selectedLanguage].groups).find(group => group.phonemes.includes(phoneme));
-            return renderPhonemeButton(phoneme, group);
-          })}
-        </Grid>
-      </Box>
+            touchAction: 'none'
+          }
+        }}
+      >
+        {getOrderedPhonemes().map((phoneme) => {
+          const group = Object.values(phoneticData[selectedLanguage].groups).find(group => group.phonemes.includes(phoneme));
+          return renderPhonemeButton(phoneme, group);
+        })}
+      </Grid>
 
       {mode === 'edit' && (
         <Box sx={{ 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
@@ -63,6 +63,10 @@ const App = () => {
   const [showWelcome, setShowWelcome] = useState(() => {
     return localStorage.getItem('hasVisitedBefore') !== 'true';
   });
+  const [gestureControl, setGestureControl] = useState(() => {
+    const saved = localStorage.getItem('gestureControl');
+    return saved ? JSON.parse(saved) : true;
+  });
 
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
@@ -77,10 +81,12 @@ const App = () => {
     try {
       const response = await config.api.get('/api/voices');
       if (response.data) {
-        setAvailableVoices(response.data);
+        // Ensure we have the correct data structure
+        const voicesData = response.data;
+        setAvailableVoices(voicesData);
         // Set default voice if available
-        if (response.data.length > 0) {
-          setSelectedVoice(response.data[0].name);
+        if (voicesData[selectedLanguage]?.length > 0) {
+          setSelectedVoice(voicesData[selectedLanguage][0].name);
         }
         setVoicesLoading(false);
       }
@@ -315,88 +321,63 @@ const App = () => {
   const handlePhonemeSpeak = async (text) => {
     if (!text || !selectedVoice) return;
 
-    // Skip only special marks
-    if (/[↗↘↑↓|‖]/.test(text)) {
-      return;
-    }
+    let retryCount = 0;
+    const maxRetries = 3;
 
-    // Check if the text is a valid IPA phoneme
-    const isIpaPhoneme = Object.values(phoneticData[selectedLanguage].groups)
-      .some(group => group.phonemes.includes(text));
-
-    if (!isIpaPhoneme) {
-      // If it's not an IPA phoneme, use the TTS API directly
+    while (retryCount < maxRetries) {
       try {
+        console.log('Making TTS request:', {
+          text,
+          voice: selectedVoice,
+          language: selectedLanguage,
+          usePhonemes: true
+        });
+
         const response = await config.api.post('/api/tts', { 
           text,
           voice: selectedVoice,
-          language: selectedLanguage
+          language: selectedLanguage,
+          usePhonemes: true
+        }, {
+          timeout: 20000 // Increase timeout to 20 seconds
         });
         
+        console.log('TTS response:', response.data);
+        
         if (response.data && response.data.audio) {
+          console.log('Creating audio from base64');
           const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+          console.log('Playing audio');
           await audio.play();
+          console.log('Audio playback complete');
+          return; // Success, exit the retry loop
+        } else {
+          console.error('No audio data in response:', response.data);
+          throw new Error('No audio data in response');
         }
       } catch (error) {
-        console.warn('Error in speech synthesis:', error);
-      }
-      return;
-    }
-
-    // For non-complex phonemes, use the cached audio files
-    const isComplex = /^[aeiouɑɔəʊɪʊ][ɪʊə]$|ː/.test(text);
-    if (!isComplex) {
-      if (audioCache[text]) {
-        try {
-          // Clone the audio to allow multiple simultaneous playback
-          const audioClone = audioCache[text].cloneNode();
-          await audioClone.play();
-          return;
-        } catch (error) {
-          console.warn('Error playing cached audio:', error);
-        }
-      }
-
-      // Try to load from pre-generated files if not in cache
-      try {
-        const fileName = getPhonemeFileName(text, selectedVoice);
-        const audio = await loadAudioFile(fileName);
-        await audio.play();
-        return;
-      } catch (primaryError) {
-        console.warn('Error playing primary voice audio:', primaryError);
+        console.error(`TTS attempt ${retryCount + 1} failed:`, error);
         
-        // Try fallback voices
-        const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
-          .filter(v => v !== selectedVoice);
-        
-        for (const fallbackVoice of fallbackVoices) {
-          try {
-            const fallbackFileName = getPhonemeFileName(text, fallbackVoice);
-            const audio = await loadAudioFile(fallbackFileName);
-            await audio.play();
-            return;
-          } catch (fallbackError) {
-            console.warn(`Fallback ${fallbackVoice} failed:`, fallbackError);
+        // If this is a network error or timeout, wait and retry
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout') || error.message.includes('ENOTFOUND')) {
+          retryCount++;
+          if (retryCount < maxRetries) {
+            console.log(`Retrying TTS request in ${retryCount * 2} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
+            continue;
           }
         }
+        
+        // For other errors or if we've exhausted retries, show an error message
+        console.error('Error in speech synthesis:', error);
+        if (error.response) {
+          console.error('Error response:', error.response.data);
+        }
+        
+        // Show error to user
+        alert('Unable to play audio. Please check your internet connection and try again.');
+        break;
       }
-    }
-
-    // For complex phonemes or if all else fails, use Azure TTS
-    try {
-      const response = await config.api.post('/api/tts', { 
-        text,
-        voice: selectedVoice,
-        language: selectedLanguage
-      });
-      
-      if (response.data && response.data.audio) {
-        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-        await audio.play();
-      }
-    } catch (error) {
-      console.warn('Error in speech synthesis:', error);
     }
   };
 
@@ -513,6 +494,26 @@ const App = () => {
     setAutoScale(autoScale);
   };
 
+  const handleTouchDwellEnabledChange = (enabled) => {
+    setTouchDwellEnabled(enabled);
+  };
+
+  const handleTouchDwellTimeChange = (time) => {
+    setTouchDwellTime(time);
+  };
+
+  const handleDwellIndicatorTypeChange = (type) => {
+    setDwellIndicatorType(type);
+  };
+
+  const handleDwellIndicatorColorChange = (color) => {
+    setDwellIndicatorColor(color);
+  };
+
+  const handleHapticFeedbackChange = (enabled) => {
+    setHapticFeedback(enabled);
+  };
+
   const handleSearchSubmit = async () => {
     try {
       const langCode = selectedLanguage === 'en-GB' ? 'en' : selectedLanguage.toLowerCase();
@@ -597,6 +598,11 @@ const App = () => {
     localStorage.setItem('hasVisitedBefore', 'true');
     setShowWelcome(false);
   };
+
+  const handleGestureControlChange = useCallback((enabled) => {
+    setGestureControl(enabled);
+    localStorage.setItem('gestureControl', JSON.stringify(enabled));
+  }, []);
 
   return (
     <ThemeProvider theme={theme}>
@@ -827,6 +833,8 @@ const App = () => {
               onDwellIndicatorColorChange={setDwellIndicatorColor}
               hapticFeedback={hapticFeedback}
               onHapticFeedbackChange={setHapticFeedback}
+              gestureControl={gestureControl}
+              onGestureControlChange={handleGestureControlChange}
               voices={availableVoices[selectedLanguage] || []}
             />
 

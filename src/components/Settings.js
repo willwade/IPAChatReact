@@ -46,6 +46,8 @@ const Settings = ({
   onDwellIndicatorColorChange,
   hapticFeedback,
   onHapticFeedbackChange,
+  gestureControl,
+  onGestureControlChange,
   voices = [],
 }) => {
   const handleLanguageChange = (event) => {
@@ -94,10 +96,16 @@ const Settings = ({
             <FormControl fullWidth>
               <InputLabel>Voice</InputLabel>
               <Select value={selectedVoice} onChange={handleVoiceChange} label="Voice">
-                {Array.isArray(voices) && voices.map((voice) => (
+                {Array.isArray(voices) ? voices.map((voice) => (
                   <MenuItem key={voice.name} value={voice.name}>
                     {voice.name}
                   </MenuItem>
+                )) : Object.entries(voices).map(([language, languageVoices]) => (
+                  languageVoices.map((voice) => (
+                    <MenuItem key={voice.name} value={voice.name}>
+                      {voice.name}
+                    </MenuItem>
+                  ))
                 ))}
               </Select>
             </FormControl>
@@ -152,6 +160,22 @@ const Settings = ({
           <Divider />
 
           {/* Accessibility Settings */}
+          <ListItem>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={gestureControl}
+                  onChange={(e) => {
+                    if (onGestureControlChange) {
+                      onGestureControlChange(e.target.checked);
+                    }
+                  }}
+                />
+              }
+              label="Enable Gesture Control"
+            />
+          </ListItem>
+
           <ListItem>
             <FormControlLabel
               control={
