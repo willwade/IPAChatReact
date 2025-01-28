@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { ChromePicker } from 'react-color';
@@ -30,6 +30,7 @@ const IPAKeyboard = ({
   dwellIndicatorType = 'border',
   dwellIndicatorColor = 'primary',
   hapticFeedback = false,
+  showStressors: propShowStressors = true,
 }) => {
   const [customizations, setCustomizations] = useState({});
   const [calculatedScale, setCalculatedScale] = useState(buttonScale);
@@ -61,6 +62,10 @@ const IPAKeyboard = ({
   const [draggedPhoneme, setDraggedPhoneme] = useState(null);
   const [draggedElement, setDraggedElement] = useState(null);
   const [gridColumns, setGridColumns] = useState(8);
+  const [showStressors, setShowStressors] = useState(() => {
+    const saved = localStorage.getItem('showStressors');
+    return saved ? JSON.parse(saved) : propShowStressors;
+  });
 
   const calculateOptimalGrid = useCallback(() => {
     const container = containerRef.current;
@@ -252,6 +257,19 @@ const IPAKeyboard = ({
       clearTimeout(initialTimer);
     };
   }, [autoScale, buttonScale, buttonSpacing, selectedLanguage, mode]);
+
+  useEffect(() => {
+    // Update showStressors when localStorage changes
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('showStressors');
+      if (saved !== null) {
+        setShowStressors(JSON.parse(saved));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const triggerHapticFeedback = () => {
     if (hapticFeedback && window.navigator.vibrate) {
@@ -626,6 +644,10 @@ const IPAKeyboard = ({
     // Get all phonemes in their original group order
     const allPhonemes = [];
     Object.values(phoneticData[language].groups).forEach(group => {
+      // Skip stress group if stressors are hidden
+      if (!showStressors && group.title === 'Stress & Intonation') {
+        return;
+      }
       allPhonemes.push(...group.phonemes);
     });
     return allPhonemes;
@@ -971,6 +993,10 @@ const IPAKeyboard = ({
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
+    const [localShowStressors, setLocalShowStressors] = useState(() => {
+      const saved = localStorage.getItem('showStressors');
+      return saved ? JSON.parse(saved) : true;
+    });
 
     const handleSave = () => {
       const newCustomization = {
@@ -1019,6 +1045,14 @@ const IPAKeyboard = ({
       setCustomColor(color.hex);
     };
 
+    const handleStressorsToggle = (event) => {
+      const newValue = event.target.checked;
+      setLocalShowStressors(newValue);
+      localStorage.setItem('showStressors', JSON.stringify(newValue));
+      // Force a re-render of the keyboard
+      window.location.reload();
+    };
+
     return (
       <Dialog open={open} onClose={onClose}>
         <DialogTitle>Customize Phoneme: {phoneme}</DialogTitle>
@@ -1031,6 +1065,11 @@ const IPAKeyboard = ({
             <FormControlLabel
               control={<Switch checked={hideButton} onChange={(e) => setHideButton(e.target.checked)} />}
               label="Hide Button"
+            />
+            <Divider />
+            <FormControlLabel
+              control={<Switch checked={localShowStressors} onChange={handleStressorsToggle} />}
+              label="Show Stress & Intonation Markers"
             />
             
             {/* Image Upload Section */}
@@ -1167,7 +1206,8 @@ const IPAKeyboard = ({
           p: 1,
           display: 'flex',
           gap: 1,
-          flexShrink: 0
+          flexShrink: 0,
+          alignItems: 'center'
         }}>
           <Button
             variant={editMode === 'move' ? 'contained' : 'outlined'}
@@ -1187,6 +1227,22 @@ const IPAKeyboard = ({
           >
             Customize
           </Button>
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+          <FormControlLabel
+            control={
+              <Switch 
+                size="small"
+                checked={showStressors}
+                onChange={(e) => {
+                  const newValue = e.target.checked;
+                  setShowStressors(newValue);
+                  localStorage.setItem('showStressors', JSON.stringify(newValue));
+                }}
+              />
+            }
+            label="Stress Markers"
+            sx={{ ml: 0 }}
+          />
         </Box>
       )}
 
