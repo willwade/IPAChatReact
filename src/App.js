@@ -21,6 +21,9 @@ import Settings from './components/Settings';
 import GameMode from './components/GameMode';
 import { phonemeToFilename } from './data/phonemeFilenames';
 import axios from 'axios';
+import WelcomeModal from './components/WelcomeModal';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { theme } from './theme';
 
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
@@ -57,6 +60,9 @@ const App = () => {
   const [currentPhonemeIndex, setCurrentPhonemeIndex] = useState(0);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [includeStressMarkers, setIncludeStressMarkers] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    return localStorage.getItem('hasVisitedBefore') !== 'true';
+  });
 
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
@@ -587,271 +593,288 @@ const App = () => {
     }
   };
 
-  return (
-    <Box sx={{ 
-      height: '100vh', 
-      display: 'flex',
-      overflow: 'hidden'
-    }}>
-      {/* Vertical navigation sidebar */}
-      <Box sx={{
-        width: '48px',
-        borderRight: 1,
-        borderColor: 'divider',
-        backgroundColor: 'background.paper',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        py: 1
-      }}>
-        {/* Mode selection */}
-        <Box sx={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          width: '100%'
-        }}>
-          {actions.map((action) => (
-            <Tooltip key={action.name} title={action.name} placement="right">
-              <IconButton
-                onClick={action.onClick}
-                color={mode === action.name.toLowerCase().split(' ')[0] ? 'primary' : 'default'}
-                sx={{
-                  mb: 1,
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'transparent',
-                  '&:hover': {
-                    backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'action.hover'
-                  }
-                }}
-              >
-                {action.icon}
-              </IconButton>
-            </Tooltip>
-          ))}
-        </Box>
+  const handleCloseWelcome = () => {
+    localStorage.setItem('hasVisitedBefore', 'true');
+    setShowWelcome(false);
+  };
 
-        {/* Game mode controls */}
-        {mode === 'game' && (
-          <Box sx={{ 
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {/* Welcome Modal */}
+        <WelcomeModal 
+          open={showWelcome} 
+          onClose={handleCloseWelcome} 
+        />
+        
+        {/* Existing content */}
+        <Box sx={{ 
+          height: '100vh', 
+          display: 'flex',
+          overflow: 'hidden'
+        }}>
+          {/* Vertical navigation sidebar */}
+          <Box sx={{
+            width: '48px',
+            borderRight: 1,
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            width: '100%',
-            mt: 'auto'
+            py: 1
           }}>
-            <Divider sx={{ width: '80%', my: 1 }} />
-            <Tooltip title="Help" placement="right">
-              <IconButton 
-                onClick={() => window.dispatchEvent(new CustomEvent('openGameHelp'))}
-                sx={{ mb: 1, width: '40px', height: '40px' }}
-              >
-                <HelpOutlineIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Settings" placement="right">
-              <IconButton 
-                onClick={() => window.dispatchEvent(new CustomEvent('openGameSettings'))}
-                sx={{ width: '40px', height: '40px' }}
-              >
-                <SchoolIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
-      </Box>
-
-      {/* Main content area */}
-      <Box sx={{ 
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
-        {/* Message bar - always visible but disabled in edit mode */}
-        {(mode === 'build' || mode === 'search' || mode === 'babble' || mode === 'edit') && (
-          <Box sx={{ 
-            p: 1.5, 
-            display: 'flex', 
-            gap: 2,
-            borderBottom: 1,
-            borderColor: 'divider',
-            backgroundColor: 'background.paper',
-            height: '56px'  
-          }}>
-            <TextField
-              fullWidth
-              value={message}
-              onChange={(e) => mode === 'build' && setMessage(e.target.value)}
-              placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
-              disabled={mode === 'babble' || mode === 'search' || mode === 'edit'}
-              size="small"
-              sx={{
-                '& .MuiInputBase-input.Mui-disabled': {
-                  WebkitTextFillColor: mode === 'edit' ? 'transparent' : 'text.primary',
-                  opacity: mode === 'edit' ? 0 : 0.7,
-                }
-              }}
-            />
-            <Button 
-              variant="contained" 
-              onClick={speak}
-              disabled={!message || mode === 'babble' || mode === 'edit'}
-              size="small"
-              sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
-            >
-              <VolumeUpIcon />
-            </Button>
-            <Button 
-              variant="outlined" 
-              onClick={() => {
-                setMessage('');
-                if (mode === 'search') {
-                  setCurrentPhonemeIndex(0);
-                }
-              }}
-              disabled={!message || mode === 'babble' || mode === 'edit'}
-              size="small"
-              sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
-            >
-              <ClearIcon />
-            </Button>
-          </Box>
-        )}
-
-        {/* Content */}
-        <Box sx={{ flex: 1, minHeight: 0 }}>
-          {mode === 'edit' ? (
-            <Box sx={{ height: '100%' }}>
-              <IPAKeyboard
-                mode="edit"
-                onPhonemeClick={handlePhonemeClick}
-                buttonScale={buttonScale}
-                buttonSpacing={buttonSpacing}
-                selectedLanguage={selectedLanguage}
-                autoScale={autoScale}
-                touchDwellEnabled={touchDwellEnabled}
-                touchDwellTime={touchDwellTime}
-                dwellIndicatorType={dwellIndicatorType}
-                dwellIndicatorColor={dwellIndicatorColor}
-                hapticFeedback={hapticFeedback}
-              />
+            {/* Mode selection */}
+            <Box sx={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              width: '100%'
+            }}>
+              {actions.map((action) => (
+                <Tooltip key={action.name} title={action.name} placement="right">
+                  <IconButton
+                    onClick={action.onClick}
+                    color={mode === action.name.toLowerCase().split(' ')[0] ? 'primary' : 'default'}
+                    sx={{
+                      mb: 1,
+                      width: '40px',
+                      height: '40px',
+                      backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'action.hover'
+                      }
+                    }}
+                  >
+                    {action.icon}
+                  </IconButton>
+                </Tooltip>
+              ))}
             </Box>
-          ) : mode === 'game' ? (
-            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <GameMode
-                onPhonemeClick={handlePhonemeClick}
-                onSpeakRequest={handleSpeakRequest}
-                selectedLanguage={selectedLanguage}
-                selectedRegion={selectedRegion}
-                voices={availableVoices}
-                onLanguageChange={handleLanguageChange}
-                onVoiceChange={handleVoiceChange}
-                selectedVoice={selectedVoice}
-              />
-            </Box>
-          ) : (
-            <IPAKeyboard
-              mode={mode}
-              onPhonemeClick={handlePhonemeClick}
-              buttonScale={buttonScale}
-              buttonSpacing={buttonSpacing}
-              selectedLanguage={selectedLanguage}
-              autoScale={autoScale}
-              touchDwellEnabled={touchDwellEnabled}
-              touchDwellTime={touchDwellTime}
-              dwellIndicatorType={dwellIndicatorType}
-              dwellIndicatorColor={dwellIndicatorColor}
-              hapticFeedback={hapticFeedback}
-              disabledPhonemes={mode === 'search' ? 
-                Object.values(phoneticData[selectedLanguage].groups)
-                  .flatMap(group => group.phonemes)
-                  .filter(p => {
-                    // If we're including stress markers, check if the current target is a stress marker
-                    if (includeStressMarkers && /[ˈˌ]/.test(targetPhonemes[currentPhonemeIndex])) {
-                      return p !== targetPhonemes[currentPhonemeIndex];
-                    }
-                    // Otherwise, enable the next expected phoneme
-                    return p !== targetPhonemes[currentPhonemeIndex];
-                  })
-                : []}
-            />
-          )}
-        </Box>
 
-        {/* Settings dialog */}
-        <Settings
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          selectedLanguage={selectedLanguage}
-          selectedRegion={selectedRegion}
-          selectedVoice={selectedVoice}
-          onLanguageChange={handleLanguageChange}
-          onRegionChange={handleRegionChange}
-          onVoiceChange={handleVoiceChange}
-          buttonScale={buttonScale}
-          onButtonScaleChange={setButtonScale}
-          buttonSpacing={buttonSpacing}
-          onButtonSpacingChange={setButtonSpacing}
-          autoScale={autoScale}
-          onAutoScaleChange={setAutoScale}
-          touchDwellEnabled={touchDwellEnabled}
-          onTouchDwellEnabledChange={setTouchDwellEnabled}
-          touchDwellTime={touchDwellTime}
-          onTouchDwellTimeChange={setTouchDwellTime}
-          dwellIndicatorType={dwellIndicatorType}
-          onDwellIndicatorTypeChange={setDwellIndicatorType}
-          dwellIndicatorColor={dwellIndicatorColor}
-          onDwellIndicatorColorChange={setDwellIndicatorColor}
-          hapticFeedback={hapticFeedback}
-          onHapticFeedbackChange={setHapticFeedback}
-          voices={availableVoices[selectedLanguage] || []}
-        />
-
-        {/* Search dialog */}
-        <Dialog open={searchDialogOpen} onClose={() => setSearchDialogOpen(false)}>
-          <DialogTitle>Search Word</DialogTitle>
-          <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Enter a word"
-              fullWidth
-              variant="outlined"
-              value={searchWord}
-              onChange={(e) => setSearchWord(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearchSubmit();
-                }
-              }}
-            />
-            <FormControl component="fieldset" sx={{ mt: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={includeStressMarkers}
-                      onChange={(e) => setIncludeStressMarkers(e.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label="Include stress markers"
-                />
-                <Tooltip title="Toggle whether to include stress markers (ˈ, ˌ) in the phoneme sequence" sx={{ ml: 1 }}>
-                  <HelpOutlineIcon color="action" fontSize="small" />
+            {/* Game mode controls */}
+            {mode === 'game' && (
+              <Box sx={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                width: '100%',
+                mt: 'auto'
+              }}>
+                <Divider sx={{ width: '80%', my: 1 }} />
+                <Tooltip title="Help" placement="right">
+                  <IconButton 
+                    onClick={() => window.dispatchEvent(new CustomEvent('openGameHelp'))}
+                    sx={{ mb: 1, width: '40px', height: '40px' }}
+                  >
+                    <HelpOutlineIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Settings" placement="right">
+                  <IconButton 
+                    onClick={() => window.dispatchEvent(new CustomEvent('openGameSettings'))}
+                    sx={{ width: '40px', height: '40px' }}
+                  >
+                    <SchoolIcon />
+                  </IconButton>
                 </Tooltip>
               </Box>
-            </FormControl>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setSearchDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSearchSubmit}>Search</Button>
-          </DialogActions>
-        </Dialog>
+            )}
+          </Box>
+
+          {/* Main content area */}
+          <Box sx={{ 
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Message bar - always visible but disabled in edit mode */}
+            {(mode === 'build' || mode === 'search' || mode === 'babble' || mode === 'edit') && (
+              <Box sx={{ 
+                p: 1.5, 
+                display: 'flex', 
+                gap: 2,
+                borderBottom: 1,
+                borderColor: 'divider',
+                backgroundColor: 'background.paper',
+                height: '56px'  
+              }}>
+                <TextField
+                  fullWidth
+                  value={message}
+                  onChange={(e) => mode === 'build' && setMessage(e.target.value)}
+                  placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
+                  disabled={mode === 'babble' || mode === 'search' || mode === 'edit'}
+                  size="small"
+                  sx={{
+                    '& .MuiInputBase-input.Mui-disabled': {
+                      WebkitTextFillColor: mode === 'edit' ? 'transparent' : 'text.primary',
+                      opacity: mode === 'edit' ? 0 : 0.7,
+                    }
+                  }}
+                />
+                <Button 
+                  variant="contained" 
+                  onClick={speak}
+                  disabled={!message || mode === 'babble' || mode === 'edit'}
+                  size="small"
+                  sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
+                >
+                  <VolumeUpIcon />
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  onClick={() => {
+                    setMessage('');
+                    if (mode === 'search') {
+                      setCurrentPhonemeIndex(0);
+                    }
+                  }}
+                  disabled={!message || mode === 'babble' || mode === 'edit'}
+                  size="small"
+                  sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
+                >
+                  <ClearIcon />
+                </Button>
+              </Box>
+            )}
+
+            {/* Content */}
+            <Box sx={{ flex: 1, minHeight: 0 }}>
+              {mode === 'edit' ? (
+                <Box sx={{ height: '100%' }}>
+                  <IPAKeyboard
+                    mode="edit"
+                    onPhonemeClick={handlePhonemeClick}
+                    buttonScale={buttonScale}
+                    buttonSpacing={buttonSpacing}
+                    selectedLanguage={selectedLanguage}
+                    autoScale={autoScale}
+                    touchDwellEnabled={touchDwellEnabled}
+                    touchDwellTime={touchDwellTime}
+                    dwellIndicatorType={dwellIndicatorType}
+                    dwellIndicatorColor={dwellIndicatorColor}
+                    hapticFeedback={hapticFeedback}
+                  />
+                </Box>
+              ) : mode === 'game' ? (
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <GameMode
+                    onPhonemeClick={handlePhonemeClick}
+                    onSpeakRequest={handleSpeakRequest}
+                    selectedLanguage={selectedLanguage}
+                    selectedRegion={selectedRegion}
+                    voices={availableVoices}
+                    onLanguageChange={handleLanguageChange}
+                    onVoiceChange={handleVoiceChange}
+                    selectedVoice={selectedVoice}
+                  />
+                </Box>
+              ) : (
+                <IPAKeyboard
+                  mode={mode}
+                  onPhonemeClick={handlePhonemeClick}
+                  buttonScale={buttonScale}
+                  buttonSpacing={buttonSpacing}
+                  selectedLanguage={selectedLanguage}
+                  autoScale={autoScale}
+                  touchDwellEnabled={touchDwellEnabled}
+                  touchDwellTime={touchDwellTime}
+                  dwellIndicatorType={dwellIndicatorType}
+                  dwellIndicatorColor={dwellIndicatorColor}
+                  hapticFeedback={hapticFeedback}
+                  disabledPhonemes={mode === 'search' ? 
+                    Object.values(phoneticData[selectedLanguage].groups)
+                      .flatMap(group => group.phonemes)
+                      .filter(p => {
+                        // If we're including stress markers, check if the current target is a stress marker
+                        if (includeStressMarkers && /[ˈˌ]/.test(targetPhonemes[currentPhonemeIndex])) {
+                          return p !== targetPhonemes[currentPhonemeIndex];
+                        }
+                        // Otherwise, enable the next expected phoneme
+                        return p !== targetPhonemes[currentPhonemeIndex];
+                      })
+                    : []}
+                />
+              )}
+            </Box>
+
+            {/* Settings dialog */}
+            <Settings
+              open={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              selectedLanguage={selectedLanguage}
+              selectedRegion={selectedRegion}
+              selectedVoice={selectedVoice}
+              onLanguageChange={handleLanguageChange}
+              onRegionChange={handleRegionChange}
+              onVoiceChange={handleVoiceChange}
+              buttonScale={buttonScale}
+              onButtonScaleChange={setButtonScale}
+              buttonSpacing={buttonSpacing}
+              onButtonSpacingChange={setButtonSpacing}
+              autoScale={autoScale}
+              onAutoScaleChange={setAutoScale}
+              touchDwellEnabled={touchDwellEnabled}
+              onTouchDwellEnabledChange={setTouchDwellEnabled}
+              touchDwellTime={touchDwellTime}
+              onTouchDwellTimeChange={setTouchDwellTime}
+              dwellIndicatorType={dwellIndicatorType}
+              onDwellIndicatorTypeChange={setDwellIndicatorType}
+              dwellIndicatorColor={dwellIndicatorColor}
+              onDwellIndicatorColorChange={setDwellIndicatorColor}
+              hapticFeedback={hapticFeedback}
+              onHapticFeedbackChange={setHapticFeedback}
+              voices={availableVoices[selectedLanguage] || []}
+            />
+
+            {/* Search dialog */}
+            <Dialog open={searchDialogOpen} onClose={() => setSearchDialogOpen(false)}>
+              <DialogTitle>Search Word</DialogTitle>
+              <DialogContent>
+                <TextField
+                  autoFocus
+                  margin="dense"
+                  label="Enter a word"
+                  fullWidth
+                  variant="outlined"
+                  value={searchWord}
+                  onChange={(e) => setSearchWord(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearchSubmit();
+                    }
+                  }}
+                />
+                <FormControl component="fieldset" sx={{ mt: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={includeStressMarkers}
+                          onChange={(e) => setIncludeStressMarkers(e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label="Include stress markers"
+                    />
+                    <Tooltip title="Toggle whether to include stress markers (ˈ, ˌ) in the phoneme sequence" sx={{ ml: 1 }}>
+                      <HelpOutlineIcon color="action" fontSize="small" />
+                    </Tooltip>
+                  </Box>
+                </FormControl>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setSearchDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSearchSubmit}>Search</Button>
+              </DialogActions>
+            </Dialog>
+          </Box>
+        </Box>
       </Box>
-    </Box>
+    </ThemeProvider>
   );
 };
 
