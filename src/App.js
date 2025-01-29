@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch } from '@mui/material';
+import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, CircularProgress } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -11,8 +11,7 @@ import ChildCareIcon from '@mui/icons-material/ChildCare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
-import { voicesByLanguage } from './data/phonemes';
-import { phoneticData } from './data/phonemes';
+import { voicesByLanguage, detailedPhoneticData as phoneticData } from './data/phoneticData';
 import { config } from './config';
 import { regions } from './data/gamePhases';
 import IPAKeyboard from './components/IPAKeyboard';
@@ -27,7 +26,10 @@ import { theme } from './theme';
 
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
-  const [selectedLanguage, setSelectedLanguage] = useState(() => localStorage.getItem('selectedLanguage') || 'en-GB');
+  const [selectedLanguage, setSelectedLanguage] = useState(() => {
+    const saved = localStorage.getItem('selectedLanguage');
+    return saved && phoneticData[saved]?.groups ? saved : 'en-GB';
+  });
   const [selectedRegion, setSelectedRegion] = useState(() => {
     const savedRegion = localStorage.getItem('selectedRegion');
     if (savedRegion) return savedRegion;
@@ -63,10 +65,61 @@ const App = () => {
   const [showWelcome, setShowWelcome] = useState(() => {
     return localStorage.getItem('hasVisitedBefore') !== 'true';
   });
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState(null);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    const initializeData = () => {
+      if (!phoneticData) {
+        console.error('phoneticData is not loaded');
+        setError('Failed to load phonetic data');
+        setDataLoading(false);
+        return;
+      }
+
+      // Validate the data structure
+      if (!phoneticData[selectedLanguage]?.groups) {
+        console.warn(`No valid data found for language: ${selectedLanguage}`);
+        // Try to fall back to en-GB
+        if (phoneticData['en-GB']?.groups) {
+          setSelectedLanguage('en-GB');
+        } else {
+          setError('No valid phonetic data available');
+          setDataLoading(false);
+          return;
+        }
+      }
+
+      // Data is valid, set the states
+      setIsDataLoaded(true);
+      setIsInitialized(true);
+      setDataLoading(false);
+      setError(null);
+    };
+
+    initializeData();
+  }, [selectedLanguage]);
+
+  useEffect(() => {
+    if (isInitialized && selectedVoice && isDataLoaded) {
+      cachePhonemeAudio();
+    }
+  }, [selectedVoice, isInitialized, isDataLoaded]);
+
+  const handleSearchModeClick = () => {
+    if (!isInitialized || !isDataLoaded) {
+      alert('Please wait for the application to finish loading.');
+      return;
+    }
+    setMode('search');
+    setSearchDialogOpen(true);
+  };
 
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
-    { icon: <SearchIcon />, name: 'Search Mode', onClick: () => { setMode('search'); setSearchDialogOpen(true); } },
+    { icon: <SearchIcon />, name: 'Search Mode', onClick: handleSearchModeClick },
     { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble') },
     { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit') },
     { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game') },
@@ -209,7 +262,15 @@ const App = () => {
   };
 
   const cachePhonemeAudio = async () => {
-    if (!selectedVoice || cacheLoading) return;
+    if (!selectedVoice || cacheLoading) {
+      console.warn('Cannot cache audio: voice not selected or already caching');
+      return;
+    }
+
+    if (!phoneticData?.[selectedLanguage]?.groups) {
+      console.warn('Cannot cache audio: language data not loaded');
+      return;
+    }
     
     setCacheLoading(true);
     // Clear existing cache when voice changes
@@ -222,15 +283,21 @@ const App = () => {
     const phonemes = Object.values(phoneticData[selectedLanguage].groups)
       .flatMap(group => {
         // Skip the stress group and filter out problematic characters
-        if (group.title === 'Stress & Intonation') return [];
+        if (!group || !group.phonemes || group.title === 'Stress & Intonation') return [];
         return group.phonemes;
       })
       .filter(phoneme => 
         // Include all IPA characters but exclude arrows, special marks, and problematic characters
-        !/[↗↘↑↓|‖]/.test(phoneme) && 
+        phoneme && !/[↗↘↑↓|‖]/.test(phoneme) && 
         // Ensure the phoneme is properly encoded
         encodeURIComponent(phoneme) !== '%EF%BF%BD'
       );
+
+    if (phonemes.length === 0) {
+      console.warn('No valid phonemes found to cache');
+      setCacheLoading(false);
+      return;
+    }
 
     console.log(`Starting cache for ${phonemes.length} phonemes with voice: ${selectedVoice}`);
     
@@ -514,6 +581,17 @@ const App = () => {
   };
 
   const handleSearchSubmit = async () => {
+    if (!searchWord.trim()) {
+      alert('Please enter a word to search');
+      return;
+    }
+
+    if (!phoneticData?.[selectedLanguage]?.groups) {
+      console.warn('Cannot search: missing required data');
+      alert('Error: Language data not loaded. Please try again.');
+      return;
+    }
+
     try {
       const langCode = selectedLanguage === 'en-GB' ? 'en' : selectedLanguage.toLowerCase();
       const apiUrl = `${process.env.REACT_APP_PHONEMIZE_API}/phonemize`;
@@ -597,6 +675,46 @@ const App = () => {
     localStorage.setItem('hasVisitedBefore', 'true');
     setShowWelcome(false);
   };
+
+  // Add debug logging
+  useEffect(() => {
+    console.log('Current phoneticData:', phoneticData);
+    console.log('Selected language:', selectedLanguage);
+    if (phoneticData && phoneticData[selectedLanguage]) {
+      console.log('Language data:', phoneticData[selectedLanguage]);
+    }
+  }, [selectedLanguage]);
+
+  if (dataLoading) {
+    return (
+      <Box 
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center" 
+        height="100vh"
+        gap={2}
+      >
+        <CircularProgress />
+        <Typography>Loading phonetic data...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box 
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center" 
+        height="100vh"
+        gap={2}
+      >
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>

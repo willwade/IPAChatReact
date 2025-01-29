@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { ChromePicker } from 'react-color';
-import { phoneticData } from '../data/phonemes';
+import { detailedPhoneticData as phoneticData } from '../data/phoneticData';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
@@ -66,10 +66,13 @@ const IPAKeyboard = ({
     const saved = localStorage.getItem('showStressors');
     return saved ? JSON.parse(saved) : propShowStressors;
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [validLanguage, setValidLanguage] = useState('en-GB');
 
   const calculateOptimalGrid = useCallback(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !phoneticData || !phoneticData[validLanguage]) return;
 
     const rect = container.getBoundingClientRect();
     const containerWidth = rect.width;
@@ -80,8 +83,10 @@ const IPAKeyboard = ({
     const effectiveHeight = containerHeight - (buttonSpacing * 4);
     
     // Get total number of buttons
-    const totalButtons = Object.values(phoneticData[selectedLanguage].groups)
+    const totalButtons = Object.values(phoneticData[validLanguage]?.groups || {})
       .reduce((sum, group) => sum + group.phonemes.length, 0);
+
+    if (totalButtons === 0) return;
 
     // Calculate button size including spacing
     const buttonSizeWithSpacing = 60 + (buttonSpacing * 2);
@@ -112,7 +117,7 @@ const IPAKeyboard = ({
     const gridHeight = rows * buttonSizeWithSpacing;
     
     setGridColumns(bestColumns);
-  }, [buttonSpacing, selectedLanguage]);
+  }, [buttonSpacing, validLanguage]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
@@ -175,76 +180,78 @@ const IPAKeyboard = ({
     }
   }, [buttonSpacing, gridColumns]);
 
+  const updateScale = useCallback(() => {
+    if (!containerRef.current || !phoneticData || !phoneticData[validLanguage]?.groups) {
+      return;
+    }
+
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    const padding = Math.round(buttonSpacing);
+    const containerWidth = Math.floor(rect.width - (padding * 2));
+    const containerHeight = Math.floor(rect.height - (padding * 2));
+
+    if (containerWidth <= 0 || containerHeight <= 0) return;
+
+    // Get total buttons for the current language
+    const totalButtons = Object.values(phoneticData[validLanguage].groups)
+      .reduce((sum, group) => {
+        if (!group || !group.phonemes || group.title === 'Stress & Intonation') return sum;
+        return sum + group.phonemes.length;
+      }, 0);
+
+    if (totalButtons === 0) return;
+
+    // Calculate grid dimensions
+    const buttonWidth = 60;
+    const buttonHeight = 60;
+    const gap = Math.round(buttonSpacing);
+    
+    // Calculate optimal grid based on container size
+    const maxPossibleCols = Math.floor((containerWidth + gap) / (buttonWidth + gap));
+    
+    // Try to make grid more square-like for better visual appearance
+    const targetAspectRatio = containerWidth / containerHeight;
+    const cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
+    const rows = Math.ceil(totalButtons / cols);
+
+    // Calculate total grid size including gaps
+    const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
+    const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
+    
+    // Calculate the maximum possible scale
+    const scaleX = containerWidth / totalGridWidth;
+    const scaleY = containerHeight / totalGridHeight;
+    
+    // Use the smaller scale with a safety margin
+    const newScale = Math.min(scaleX, scaleY) * 0.95;  // 0.95 safety margin
+    
+    console.log('Scale calculation:', {
+      containerWidth,
+      containerHeight,
+      totalGridWidth,
+      totalGridHeight,
+      cols,
+      rows,
+      scaleX,
+      scaleY,
+      newScale,
+      gap
+    });
+
+    setCalculatedScale(newScale);
+    setGridColumns(cols);
+  }, [buttonSpacing, validLanguage]);
+
   useEffect(() => {
     if (!autoScale) {
       setCalculatedScale(buttonScale);
       return;
     }
 
-    const updateScale = () => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      // Get container dimensions
-      const rect = container.getBoundingClientRect();
-      const padding = Math.round(buttonSpacing);
-      const containerWidth = Math.floor(rect.width - (padding * 2));
-      const containerHeight = Math.floor(rect.height - (padding * 2));
-
-      if (containerWidth <= 0 || containerHeight <= 0) return;
-
-      // Get total buttons for the current language
-      const totalButtons = Object.values(phoneticData[selectedLanguage].groups)
-        .reduce((sum, group) => sum + group.phonemes.length, 0);
-
-      if (totalButtons <= 0) return;
-
-      // Calculate grid dimensions
-      const buttonWidth = 60;
-      const buttonHeight = 60;  // Changed from 40 to match actual button height
-      const gap = Math.round(buttonSpacing);
-      
-      // Calculate optimal grid based on container size
-      const maxPossibleCols = Math.floor((containerWidth + gap) / (buttonWidth + gap));
-      
-      // Try to make grid more square-like for better visual appearance
-      const targetAspectRatio = containerWidth / containerHeight;
-      const cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
-      const rows = Math.ceil(totalButtons / cols);
-
-      // Calculate total grid size including gaps
-      const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
-      const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
-
-      // Calculate the maximum possible scale
-      const scaleX = containerWidth / totalGridWidth;
-      const scaleY = containerHeight / totalGridHeight;
-      
-      // Use the smaller scale with a safety margin
-      const newScale = Math.min(scaleX, scaleY) * 0.95;  // Increased safety margin from 0.98 to 0.95
-      
-      console.log('Scale calculation:', {
-        containerWidth,
-        containerHeight,
-        totalGridWidth,
-        totalGridHeight,
-        cols,
-        rows,
-        scaleX,
-        scaleY,
-        newScale,
-        gap
-      });
-
-      requestAnimationFrame(() => {
-        setCalculatedScale(newScale);
-        setGridColumns(cols);
-      });
-    };
-
     const debouncedUpdateScale = debounce(updateScale, 150);
 
-    // Initial scale calculation with a small delay to ensure container is ready
+    // Initial scale calculation with a delay to ensure container is ready
     const initialTimer = setTimeout(() => {
       updateScale();
     }, 100);
@@ -256,7 +263,18 @@ const IPAKeyboard = ({
       window.removeEventListener('resize', debouncedUpdateScale);
       clearTimeout(initialTimer);
     };
-  }, [autoScale, buttonScale, buttonSpacing, selectedLanguage, mode]);
+  }, [updateScale, autoScale, buttonScale, buttonSpacing, selectedLanguage, mode]);
+
+  // Add an additional effect to handle container mounting
+  useEffect(() => {
+    if (autoScale && containerRef.current) {
+      // Force a recalculation after a short delay to ensure container is properly sized
+      const timer = setTimeout(() => {
+        updateScale();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [containerRef.current, autoScale]);
 
   useEffect(() => {
     // Update showStressors when localStorage changes
@@ -270,6 +288,26 @@ const IPAKeyboard = ({
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  useEffect(() => {
+    // Validate phoneticData and language on mount and when selectedLanguage changes
+    if (!phoneticData || !phoneticData[selectedLanguage]) {
+      setError('Loading phonetic data...');
+      setIsLoading(true);
+      return;
+    }
+
+    const newValidLanguage = phoneticData[selectedLanguage] ? selectedLanguage : 'en-GB';
+    if (newValidLanguage !== validLanguage) {
+      setValidLanguage(newValidLanguage);
+    }
+    
+    // Only set loading to false if we have valid data
+    if (phoneticData[newValidLanguage]?.groups) {
+      setIsLoading(false);
+      setError(null);
+    }
+  }, [selectedLanguage, phoneticData]);
 
   const triggerHapticFeedback = () => {
     if (hapticFeedback && window.navigator.vibrate) {
@@ -641,10 +679,16 @@ const IPAKeyboard = ({
   };
 
   const getAllPhonemes = (language) => {
-    // Get all phonemes in their original group order
+    // Use validLanguage instead of directly accessing with language parameter
+    const languageData = phoneticData[validLanguage];
+    
+    if (!languageData || !languageData.groups) {
+      console.warn(`No phonetic data found for language: ${language}`);
+      return [];
+    }
+
     const allPhonemes = [];
-    Object.values(phoneticData[language].groups).forEach(group => {
-      // Skip stress group if stressors are hidden
+    Object.values(languageData.groups).forEach(group => {
       if (!showStressors && group.title === 'Stress & Intonation') {
         return;
       }
@@ -654,12 +698,17 @@ const IPAKeyboard = ({
   };
 
   const getOrderedPhonemes = () => {
-    // Use saved order if available, otherwise use default group order
-    return phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
+    const savedOrder = phonemeOrder[validLanguage];
+    if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
+      return savedOrder;
+    }
+    return getAllPhonemes(validLanguage);
   };
 
   const getPhonemeColor = (phoneme) => {
-    const groups = phoneticData[selectedLanguage].groups;
+    const groups = phoneticData[validLanguage]?.groups;
+    if (!groups) return 'inherit';
+    
     for (const group of Object.values(groups)) {
       if (group.phonemes.includes(phoneme)) {
         return group.color;
@@ -1137,6 +1186,38 @@ const IPAKeyboard = ({
     );
   };
 
+  // Update the loading UI
+  if (isLoading) {
+    return (
+      <Box 
+        display="flex" 
+        flexDirection="column"
+        justifyContent="center" 
+        alignItems="center" 
+        minHeight="200px"
+        gap={2}
+      >
+        <CircularProgress />
+        <div>Loading phonetic keyboard...</div>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box 
+        display="flex" 
+        flexDirection="column"
+        justifyContent="center" 
+        alignItems="center" 
+        minHeight="200px"
+        gap={2}
+      >
+        <div>{error}</div>
+      </Box>
+    );
+  }
+
   return (
     <Box 
       ref={containerRef}
@@ -1186,8 +1267,8 @@ const IPAKeyboard = ({
             }
           }}
         >
-          {getOrderedPhonemes().map((phoneme) => {
-            const group = Object.values(phoneticData[selectedLanguage].groups).find(group => group.phonemes.includes(phoneme));
+          {phoneticData && phoneticData[validLanguage]?.groups && getOrderedPhonemes().map((phoneme) => {
+            const group = Object.values(phoneticData[validLanguage]?.groups || {}).find(group => group.phonemes.includes(phoneme));
             return renderPhonemeButton(phoneme, group);
           })}
         </Grid>
