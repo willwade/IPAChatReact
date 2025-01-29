@@ -13,8 +13,10 @@ import {
 } from '@mui/material';
 import { SketchPicker } from 'react-color';
 import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
-const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaultColor }) => {
+const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaultColor, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight }) => {
   const [label, setLabel] = useState(currentCustomization?.label || phoneme);
   const [hideLabel, setHideLabel] = useState(currentCustomization?.hideLabel || false);
   const [hidden, setHidden] = useState(currentCustomization?.hidden || false);
@@ -50,7 +52,23 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6">Edit Button: {phoneme}</Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            <IconButton 
+              onClick={onMoveLeft} 
+              disabled={!canMoveLeft}
+              size="small"
+            >
+              <KeyboardArrowLeftIcon />
+            </IconButton>
+            <Typography variant="h6">Edit Button: {phoneme}</Typography>
+            <IconButton 
+              onClick={onMoveRight} 
+              disabled={!canMoveRight}
+              size="small"
+            >
+              <KeyboardArrowRightIcon />
+            </IconButton>
+          </Box>
           <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress, Typography } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { ChromePicker } from 'react-color';
 import { detailedPhoneticData as phoneticData } from '../data/phoneticData';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import CloseIcon from '@mui/icons-material/Close';
 
 const debounce = (func, wait) => {
   let timeout;
@@ -911,8 +912,7 @@ const IPAKeyboard = ({
         }}>
           {!customization.hideLabel && phoneme}
           {canMoveLeft && (
-            <IconButton
-              size="small"
+            <Box
               onClick={(e) => {
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'left');
@@ -922,23 +922,31 @@ const IPAKeyboard = ({
                 top: '50%',
                 left: -12,
                 transform: 'translateY(-50%)',
-                backgroundColor: 'background.paper',
-                boxShadow: 1,
-                opacity: 0.8,
-                zIndex: 2,
+                backgroundColor: 'white',
+                boxShadow: 2,
+                opacity: 1,
+                zIndex: 10,
                 padding: '4px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.primary',
+                border: '1px solid',
+                borderColor: 'divider',
                 '&:hover': { 
-                  backgroundColor: 'background.paper',
-                  opacity: 1 
+                  backgroundColor: 'white',
+                  opacity: 0.9,
+                  boxShadow: 3
                 }
               }}
             >
               <KeyboardArrowLeftIcon fontSize="small" />
-            </IconButton>
+            </Box>
           )}
           {canMoveRight && (
-            <IconButton
-              size="small"
+            <Box
               onClick={(e) => {
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'right');
@@ -948,19 +956,28 @@ const IPAKeyboard = ({
                 top: '50%',
                 right: -12,
                 transform: 'translateY(-50%)',
-                backgroundColor: 'background.paper',
-                boxShadow: 1,
-                opacity: 0.8,
-                zIndex: 2,
+                backgroundColor: 'white',
+                boxShadow: 2,
+                opacity: 1,
+                zIndex: 10,
                 padding: '4px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.primary',
+                border: '1px solid',
+                borderColor: 'divider',
                 '&:hover': { 
-                  backgroundColor: 'background.paper',
-                  opacity: 1 
+                  backgroundColor: 'white',
+                  opacity: 0.9,
+                  boxShadow: 3
                 }
               }}
             >
               <KeyboardArrowRightIcon fontSize="small" />
-            </IconButton>
+            </Box>
           )}
         </Box>
       );
@@ -1047,6 +1064,24 @@ const IPAKeyboard = ({
       return saved ? JSON.parse(saved) : true;
     });
 
+    // Get current order and position for move controls
+    const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
+    const currentIndex = currentOrder.indexOf(phoneme);
+    const canMoveLeft = currentIndex > 0;
+    const canMoveRight = currentIndex < currentOrder.length - 1;
+
+    const handleMoveLeft = () => {
+      if (canMoveLeft) {
+        handlePhonemeMove(phoneme, 'left');
+      }
+    };
+
+    const handleMoveRight = () => {
+      if (canMoveRight) {
+        handlePhonemeMove(phoneme, 'right');
+      }
+    };
+
     const handleSave = () => {
       const newCustomization = {
         hideLabel,
@@ -1104,7 +1139,30 @@ const IPAKeyboard = ({
 
     return (
       <Dialog open={open} onClose={onClose}>
-        <DialogTitle>Customize Phoneme: {phoneme}</DialogTitle>
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box display="flex" alignItems="center" gap={1}>
+              <IconButton 
+                onClick={handleMoveLeft} 
+                disabled={!canMoveLeft}
+                size="small"
+              >
+                <KeyboardArrowLeftIcon />
+              </IconButton>
+              <Typography variant="h6">Customize Phoneme: {phoneme}</Typography>
+              <IconButton 
+                onClick={handleMoveRight} 
+                disabled={!canMoveRight}
+                size="small"
+              >
+                <KeyboardArrowRightIcon />
+              </IconButton>
+            </Box>
+            <IconButton onClick={onClose}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: '300px', mt: 2 }}>
             <FormControlLabel
