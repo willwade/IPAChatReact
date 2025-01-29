@@ -480,31 +480,48 @@ const App = () => {
         setMessage(prev => prev + phoneme);
         setCurrentPhonemeIndex(prev => prev + 1);
         // Play the phoneme
-        if (audioCache[phoneme]) {
-          const audioClone = audioCache[phoneme].cloneNode();
-          audioClone.play().catch(error => {
-            console.warn('Error playing cached audio:', error);
-            handlePhonemeSpeak(phoneme);
-          });
-        } else {
-          handlePhonemeSpeak(phoneme);
-        }
+        playPhoneme(phoneme);
       }
       return;
     }
     
-    // In babble mode, play audio immediately from cache if available
+    // In babble mode, play audio immediately from cache
     if (mode === 'babble') {
-      if (audioCache[phoneme]) {
-        const audioClone = audioCache[phoneme].cloneNode();
-        audioClone.play().catch(error => {
-          console.warn('Error playing cached audio:', error);
-          handlePhonemeSpeak(phoneme);
-        });
-      } else {
-        handlePhonemeSpeak(phoneme);
-      }
+      playPhoneme(phoneme);
     }
+  };
+
+  // New helper function for playing phonemes
+  const playPhoneme = (phoneme) => {
+    // Skip special marks
+    if (/[↗↘↑↓|‖]/.test(phoneme)) {
+      return;
+    }
+
+    // First try to play from cache
+    if (audioCache[phoneme]) {
+      const audioClone = audioCache[phoneme].cloneNode();
+      audioClone.play().catch(error => {
+        console.warn('Error playing cached audio:', error);
+        // Only fallback to TTS if cache play fails
+        handlePhonemeSpeak(phoneme);
+      });
+      return;
+    }
+
+    // If not in cache, try to load from pre-generated files
+    const fileName = getPhonemeFileName(phoneme, selectedVoice);
+    loadAudioFile(fileName)
+      .then(audio => {
+        // Add to cache for future use
+        audioCache[phoneme] = audio;
+        return audio.play();
+      })
+      .catch(error => {
+        console.warn('Error loading audio file:', error);
+        // Only use TTS as last resort
+        handlePhonemeSpeak(phoneme);
+      });
   };
 
   const handleModeChange = (event) => {

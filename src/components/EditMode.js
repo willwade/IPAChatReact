@@ -17,9 +17,8 @@ import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
 const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaultColor, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight }) => {
-  const [label, setLabel] = useState(currentCustomization?.label || phoneme);
-  const [hideLabel, setHideLabel] = useState(currentCustomization?.hideLabel || false);
-  const [hidden, setHidden] = useState(currentCustomization?.hidden || false);
+  const [hideLabel, setHideLabel] = useState(currentCustomization?.label || false);
+  const [hideButton, setHideButton] = useState(currentCustomization?.hidden || false);
   const [imageUrl, setImageUrl] = useState(currentCustomization?.image || '');
   const [selectedFile, setSelectedFile] = useState(null);
   const [customColor, setCustomColor] = useState(currentCustomization?.customColor || defaultColor);
@@ -39,9 +38,9 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
 
   const handleSave = () => {
     onSave({
-      label,
+      label: hideLabel,
       hideLabel,
-      hidden,
+      hidden: hideButton,
       image: imageUrl,
       customColor,
     });
@@ -76,14 +75,6 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2 }}>
-          <TextField
-            fullWidth
-            label="Custom Label"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-
           <FormControlLabel
             control={
               <Switch
@@ -98,8 +89,8 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
           <FormControlLabel
             control={
               <Switch
-                checked={hidden}
-                onChange={(e) => setHidden(e.target.checked)}
+                checked={hideButton}
+                onChange={(e) => setHideButton(e.target.checked)}
               />
             }
             label="Hide this IPA Character"
