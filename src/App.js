@@ -11,7 +11,7 @@ import ChildCareIcon from '@mui/icons-material/ChildCare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
-import { voicesByLanguage, detailedPhoneticData as phoneticData } from './data/phoneticData';
+import { voicesByLanguage, detailedPhoneticData as phoneticData, normalizePhoneme } from './data/phoneticData';
 import { config } from './config';
 import { regions } from './data/gamePhases';
 import IPAKeyboard from './components/IPAKeyboard';
@@ -61,7 +61,10 @@ const App = () => {
   const [targetPhonemes, setTargetPhonemes] = useState([]);
   const [currentPhonemeIndex, setCurrentPhonemeIndex] = useState(0);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
-  const [includeStressMarkers, setIncludeStressMarkers] = useState(false);
+  const [showStressMarkers, setShowStressMarkers] = useState(() => {
+    const saved = localStorage.getItem('showStressMarkers');
+    return saved ? JSON.parse(saved) : true;
+  });
   const [showWelcome, setShowWelcome] = useState(() => {
     return localStorage.getItem('hasVisitedBefore') !== 'true';
   });
@@ -476,7 +479,9 @@ const App = () => {
     
     // In search mode, check if it's the correct next phoneme
     if (mode === 'search' && targetPhonemes.length > 0) {
-      if (phoneme === targetPhonemes[currentPhonemeIndex]) {
+      const normalizedInput = normalizePhoneme(phoneme);
+      // Target phonemes are already normalized
+      if (normalizedInput === targetPhonemes[currentPhonemeIndex]) {
         setMessage(prev => prev + phoneme);
         setCurrentPhonemeIndex(prev => prev + 1);
         // Play the phoneme
@@ -631,49 +636,105 @@ const App = () => {
         let currentPhoneme = '';
         const ipa = response.data.ipa;
         
+        console.log('Starting IPA processing. Full IPA string:', ipa);
+        console.log('Include stress markers:', showStressMarkers);
+        
+        // Get all phonemes including their normalized versions
+        const allPhonemes = Object.values(phoneticData[selectedLanguage].groups)
+          .flatMap(group => {
+            // Skip stress markers if they're not included
+            if (!showStressMarkers && group.title === 'Stress & Intonation') {
+              return [];
+            }
+            return group.phonemes;
+          })
+          .reduce((acc, p) => {
+            acc.add(p);
+            acc.add(normalizePhoneme(p));
+            return acc;
+          }, new Set());
+        
+        // Get valid diphthongs from the phonetic data
+        const validDiphthongs = phoneticData[selectedLanguage].groups.diphthongs?.phonemes || [];
+        
         // Process the IPA string character by character
         for (let i = 0; i < ipa.length; i++) {
           const char = ipa[i];
+          const normalizedChar = normalizePhoneme(char);
+          const isStressMarker = /[ˈˌ]/.test(char);
           
-          // Handle stress markers
-          if (/[ˈˌ]/.test(char)) {
-            if (includeStressMarkers) {
-              if (currentPhoneme) {
-                phonemeArray.push(currentPhoneme);
-                currentPhoneme = '';
-              }
+          const exists = allPhonemes.has(char) || allPhonemes.has(normalizedChar);
+          
+          console.log(`Processing character at position ${i}:`, {
+            char,
+            normalizedChar,
+            currentPhoneme,
+            isStressMarker,
+            isLengthMarker: char === 'ː',
+            isDiphthongPart: ['ʊ', 'ə', 'ɪ'].includes(normalizedChar),
+            existsInPhoneticData: exists,
+            currentArray: [...phonemeArray]
+          });
+          
+          // Handle stress markers based on includeStressMarkers setting
+          if (isStressMarker) {
+            console.log('Found stress marker:', char);
+            if (currentPhoneme) {
+              const normalizedPhoneme = normalizePhoneme(currentPhoneme);
+              console.log('Adding current phoneme before stress marker:', currentPhoneme);
+              phonemeArray.push(normalizedPhoneme);
+              currentPhoneme = '';
+            }
+            if (showStressMarkers) {
+              console.log('Including stress marker in array');
               phonemeArray.push(char);
+            } else {
+              console.log('Skipping stress marker (not included)');
             }
             continue;
           }
           
           // Handle length markers
           if (char === 'ː') {
+            console.log('Found length marker');
             if (currentPhoneme) {
               currentPhoneme += char;
+              console.log('Added length marker to current phoneme:', currentPhoneme);
             }
             continue;
           }
           
           // Handle diphthongs and other multi-character phonemes
-          if (['ʊ', 'ə', 'ɪ'].includes(char) && 
-              currentPhoneme && 
-              /[aeiouɑɔəʊɪʊ]/.test(currentPhoneme)) {
-            currentPhoneme += char;
+          const potentialDiphthong = currentPhoneme + char;
+          if (currentPhoneme && validDiphthongs.includes(potentialDiphthong)) {
+            currentPhoneme = potentialDiphthong;
+            console.log('Added to diphthong:', currentPhoneme);
           } else {
             if (currentPhoneme) {
-              phonemeArray.push(currentPhoneme);
+              const normalizedPhoneme = normalizePhoneme(currentPhoneme);
+              if (allPhonemes.has(normalizedPhoneme)) {
+                console.log('Adding completed phoneme:', currentPhoneme, 'normalized to:', normalizedPhoneme);
+                phonemeArray.push(normalizedPhoneme);
+              }
             }
             currentPhoneme = char;
+            console.log('Started new phoneme:', currentPhoneme);
           }
         }
         
         // Add the last phoneme if there is one
         if (currentPhoneme) {
-          phonemeArray.push(currentPhoneme);
+          const normalizedPhoneme = normalizePhoneme(currentPhoneme);
+          if (allPhonemes.has(normalizedPhoneme)) {
+            console.log('Adding final phoneme:', currentPhoneme, 'normalized to:', normalizedPhoneme);
+            phonemeArray.push(normalizedPhoneme);
+          }
         }
 
-        console.log('Processed phonemes:', phonemeArray);
+        // Filter out any empty strings that might have been added
+        phonemeArray = phonemeArray.filter(p => p.trim());
+
+        console.log('Final processed phonemes:', phonemeArray);
         setTargetPhonemes(phonemeArray);
         setCurrentPhonemeIndex(0);
         setSearchDialogOpen(false);
@@ -701,6 +762,17 @@ const App = () => {
       console.log('Language data:', phoneticData[selectedLanguage]);
     }
   }, [selectedLanguage]);
+
+  // Update localStorage when showStressMarkers changes
+  useEffect(() => {
+    localStorage.setItem('showStressMarkers', JSON.stringify(showStressMarkers));
+  }, [showStressMarkers]);
+
+  const handleStressMarkersChange = (newValue) => {
+    console.log('Changing stress markers to:', newValue);
+    setShowStressMarkers(newValue);
+    localStorage.setItem('showStressMarkers', JSON.stringify(newValue));
+  };
 
   if (dataLoading) {
     return (
@@ -892,6 +964,8 @@ const App = () => {
                     dwellIndicatorType={dwellIndicatorType}
                     dwellIndicatorColor={dwellIndicatorColor}
                     hapticFeedback={hapticFeedback}
+                    showStressMarkers={showStressMarkers}
+                    onStressMarkersChange={handleStressMarkersChange}
                   />
                 </Box>
               ) : mode === 'game' ? (
@@ -905,6 +979,8 @@ const App = () => {
                     onLanguageChange={handleLanguageChange}
                     onVoiceChange={handleVoiceChange}
                     selectedVoice={selectedVoice}
+                    audioCache={audioCache}
+                    showStressMarkers={showStressMarkers}
                   />
                 </Box>
               ) : (
@@ -924,14 +1000,14 @@ const App = () => {
                     Object.values(phoneticData[selectedLanguage].groups)
                       .flatMap(group => group.phonemes)
                       .filter(p => {
-                        // If we're including stress markers, check if the current target is a stress marker
-                        if (includeStressMarkers && /[ˈˌ]/.test(targetPhonemes[currentPhonemeIndex])) {
+                        if (showStressMarkers && /[ˈˌ]/.test(targetPhonemes[currentPhonemeIndex])) {
                           return p !== targetPhonemes[currentPhonemeIndex];
                         }
-                        // Otherwise, enable the next expected phoneme
                         return p !== targetPhonemes[currentPhonemeIndex];
                       })
                     : []}
+                  showStressMarkers={showStressMarkers}
+                  onStressMarkersChange={handleStressMarkersChange}
                 />
               )}
             </Box>
@@ -988,14 +1064,14 @@ const App = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={includeStressMarkers}
-                          onChange={(e) => setIncludeStressMarkers(e.target.checked)}
+                          checked={showStressMarkers}
+                          onChange={(e) => handleStressMarkersChange(e.target.checked)}
                           color="primary"
                         />
                       }
-                      label="Include stress markers"
+                      label="Show Stress Markers"
                     />
-                    <Tooltip title="Toggle whether to include stress markers (ˈ, ˌ) in the phoneme sequence" sx={{ ml: 1 }}>
+                    <Tooltip title="Toggle whether to show stress markers (ˈ, ˌ) in the phoneme sequence" sx={{ ml: 1 }}>
                       <HelpOutlineIcon color="action" fontSize="small" />
                     </Tooltip>
                   </Box>

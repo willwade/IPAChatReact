@@ -208,7 +208,7 @@ export const variantsMap = {
   
   // Consonants (limited variation)
   'ɹ': ['r'],         // Approximant vs. trill for "r"
-  'ʃ': ['s'],         // Palatal vs. simpler transcriptions
+  's': ['ʃ'],         // Simple vs. palatal transcriptions
   
   // Diphthong simplifications
   'eɪ': ['ɛɪ'],       // Slight variations in diphthong starting point
