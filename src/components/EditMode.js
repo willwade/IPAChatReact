@@ -56,6 +56,13 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
               onClick={onMoveLeft} 
               disabled={!canMoveLeft}
               size="small"
+              sx={{ 
+                width: '24px', 
+                height: '24px',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '16px'
+                }
+              }}
             >
               <KeyboardArrowLeftIcon />
             </IconButton>
@@ -64,6 +71,13 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
               onClick={onMoveRight} 
               disabled={!canMoveRight}
               size="small"
+              sx={{ 
+                width: '24px', 
+                height: '24px',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '16px'
+                }
+              }}
             >
               <KeyboardArrowRightIcon />
             </IconButton>

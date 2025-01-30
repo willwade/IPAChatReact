@@ -31,7 +31,7 @@ const IPAKeyboard = ({
   dwellIndicatorType = 'border',
   dwellIndicatorColor = 'primary',
   hapticFeedback = false,
-  showStressors: propShowStressors = true,
+  showStressors: propShowStressors = false,
 }) => {
   const [customizations, setCustomizations] = useState({});
   const [calculatedScale, setCalculatedScale] = useState(buttonScale);
@@ -690,6 +690,7 @@ const IPAKeyboard = ({
 
     const allPhonemes = [];
     Object.values(languageData.groups).forEach(group => {
+      // Skip stress & intonation group if showStressors is false
       if (!showStressors && group.title === 'Stress & Intonation') {
         return;
       }
@@ -920,13 +921,13 @@ const IPAKeyboard = ({
               sx={{ 
                 position: 'absolute',
                 top: '50%',
-                left: -12,
+                left: -9,
                 transform: 'translateY(-50%)',
                 backgroundColor: 'white',
                 boxShadow: 2,
                 opacity: 1,
                 zIndex: 10,
-                padding: '4px',
+                padding: '3px',
                 borderRadius: '50%',
                 cursor: 'pointer',
                 display: 'flex',
@@ -935,6 +936,11 @@ const IPAKeyboard = ({
                 color: 'text.primary',
                 border: '1px solid',
                 borderColor: 'divider',
+                width: '18px',
+                height: '18px',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '14px'
+                },
                 '&:hover': { 
                   backgroundColor: 'white',
                   opacity: 0.9,
@@ -954,13 +960,13 @@ const IPAKeyboard = ({
               sx={{ 
                 position: 'absolute',
                 top: '50%',
-                right: -12,
+                right: -9,
                 transform: 'translateY(-50%)',
                 backgroundColor: 'white',
                 boxShadow: 2,
                 opacity: 1,
                 zIndex: 10,
-                padding: '4px',
+                padding: '3px',
                 borderRadius: '50%',
                 cursor: 'pointer',
                 display: 'flex',
@@ -969,6 +975,11 @@ const IPAKeyboard = ({
                 color: 'text.primary',
                 border: '1px solid',
                 borderColor: 'divider',
+                width: '18px',
+                height: '18px',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '14px'
+                },
                 '&:hover': { 
                   backgroundColor: 'white',
                   opacity: 0.9,
@@ -1059,10 +1070,6 @@ const IPAKeyboard = ({
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
-    const [localShowStressors, setLocalShowStressors] = useState(() => {
-      const saved = localStorage.getItem('showStressors');
-      return saved ? JSON.parse(saved) : true;
-    });
 
     // Get current order and position for move controls
     const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
@@ -1129,14 +1136,6 @@ const IPAKeyboard = ({
       setCustomColor(color.hex);
     };
 
-    const handleStressorsToggle = (event) => {
-      const newValue = event.target.checked;
-      setLocalShowStressors(newValue);
-      localStorage.setItem('showStressors', JSON.stringify(newValue));
-      // Force a re-render of the keyboard
-      window.location.reload();
-    };
-
     return (
       <Dialog open={open} onClose={onClose}>
         <DialogTitle>
@@ -1174,10 +1173,6 @@ const IPAKeyboard = ({
               label="Hide Button"
             />
             <Divider />
-            <FormControlLabel
-              control={<Switch checked={localShowStressors} onChange={handleStressorsToggle} />}
-              label="Show Stress & Intonation Markers"
-            />
             
             {/* Image Upload Section */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -1376,6 +1371,12 @@ const IPAKeyboard = ({
                   const newValue = e.target.checked;
                   setShowStressors(newValue);
                   localStorage.setItem('showStressors', JSON.stringify(newValue));
+                  // Force a re-render by updating the phoneme order
+                  const newOrder = getAllPhonemes(validLanguage);
+                  setPhonemeOrder(prev => ({
+                    ...prev,
+                    [validLanguage]: newOrder
+                  }));
                 }}
               />
             }
