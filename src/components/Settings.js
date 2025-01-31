@@ -20,11 +20,14 @@ import {
   FormHelperText,
   CircularProgress,
   Alert,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
 import { regions } from '../data/gamePhases';
 import BackupIcon from '@mui/icons-material/Backup';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { phoneticData } from '../data/phonemes';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const Settings = ({
   open,
@@ -52,6 +55,8 @@ const Settings = ({
   hapticFeedback,
   onHapticFeedbackChange,
   voices = [],
+  showIpaToText,
+  onShowIpaToTextChange,
 }) => {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
@@ -384,7 +389,32 @@ const Settings = ({
 
             <Divider />
 
-            {/* Accessibility Settings */}
+            {/* Add IPA-to-Text toggle before the Accessibility section */}
+            <Box sx={{ mt: 3, mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Display Settings
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showIpaToText}
+                      onChange={(e) => onShowIpaToTextChange(e.target.checked)}
+                    />
+                  }
+                  label="Show text conversion"
+                />
+                <Tooltip title="Display converted text when speaking IPA symbols">
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+
+            <Typography variant="h6" gutterBottom>Accessibility</Typography>
+
             <ListItem>
               <FormControlLabel
                 control={

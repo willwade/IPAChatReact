@@ -72,6 +72,11 @@ const App = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [convertedText, setConvertedText] = useState('');
+  const [showIpaToText, setShowIpaToText] = useState(() => {
+    const saved = localStorage.getItem('showIpaToText');
+    return saved ? JSON.parse(saved) : true;
+  });
 
   useEffect(() => {
     const initializeData = () => {
@@ -537,7 +542,26 @@ const App = () => {
     }
   };
 
-  const speak = () => {
+  const speak = async () => {
+    // Only fetch conversion if the feature is enabled
+    if (showIpaToText) {
+      try {
+        const response = await axios.post('https://dolphin-app-62ztl.ondigitalocean.app/ipa-to-text', {
+          ipa: message
+        });
+        
+        if (response.data && response.data.text) {
+          setConvertedText(response.data.text);
+        }
+      } catch (error) {
+        console.warn('Error converting IPA to text:', error);
+        setConvertedText('');
+      }
+    } else {
+      setConvertedText('');
+    }
+
+    // Then speak the IPA as before
     handlePhonemeSpeak(message);
   };
 
@@ -774,6 +798,11 @@ const App = () => {
     localStorage.setItem('showStressMarkers', JSON.stringify(newValue));
   };
 
+  // Add effect to save showIpaToText to localStorage
+  useEffect(() => {
+    localStorage.setItem('showIpaToText', JSON.stringify(showIpaToText));
+  }, [showIpaToText]);
+
   if (dataLoading) {
     return (
       <Box 
@@ -908,20 +937,46 @@ const App = () => {
                 backgroundColor: 'background.paper',
                 height: '56px'  
               }}>
-                <TextField
-                  fullWidth
-                  value={message}
-                  onChange={(e) => mode === 'build' && setMessage(e.target.value)}
-                  placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
-                  disabled={mode === 'babble' || mode === 'search' || mode === 'edit'}
-                  size="small"
-                  sx={{
-                    '& .MuiInputBase-input.Mui-disabled': {
-                      WebkitTextFillColor: mode === 'edit' ? 'transparent' : 'text.primary',
-                      opacity: mode === 'edit' ? 0 : 0.7,
-                    }
-                  }}
-                />
+                <Box sx={{ 
+                  position: 'relative', 
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <TextField
+                    fullWidth
+                    value={message}
+                    onChange={(e) => mode === 'build' && setMessage(e.target.value)}
+                    placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
+                    disabled={mode === 'babble' || mode === 'search' || mode === 'edit'}
+                    size="small"
+                    sx={{
+                      '& .MuiInputBase-input.Mui-disabled': {
+                        WebkitTextFillColor: mode === 'edit' ? 'transparent' : 'text.primary',
+                        opacity: mode === 'edit' ? 0 : 0.7,
+                      }
+                    }}
+                  />
+                  {showIpaToText && convertedText && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        position: 'absolute',
+                        right: 14,
+                        color: 'text.disabled',  // Make the text lighter
+                        pointerEvents: 'none',
+                        maxWidth: '40%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.85em',  // Make the text slightly smaller
+                        fontStyle: 'italic'  // Add italic style to differentiate it
+                      }}
+                    >
+                      {convertedText}
+                    </Typography>
+                  )}
+                </Box>
                 <Button 
                   variant="contained" 
                   onClick={speak}
@@ -935,6 +990,7 @@ const App = () => {
                   variant="outlined" 
                   onClick={() => {
                     setMessage('');
+                    setConvertedText(''); // Clear converted text when clearing message
                     if (mode === 'search') {
                       setCurrentPhonemeIndex(0);
                     }
@@ -1039,6 +1095,8 @@ const App = () => {
               hapticFeedback={hapticFeedback}
               onHapticFeedbackChange={setHapticFeedback}
               voices={availableVoices[selectedLanguage] || []}
+              showIpaToText={showIpaToText}
+              onShowIpaToTextChange={setShowIpaToText}
             />
 
             {/* Search dialog */}
