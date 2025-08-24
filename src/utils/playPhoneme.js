@@ -5,7 +5,7 @@ export const playPhoneme = (phoneme, {
   handlePhonemeSpeak,
   selectedVoice
 }) => {
-  if (/[↗↘↑↓|‖]/.test(phoneme)) {
+  if (/[↗↘↑↓|‖ˈˌ]/.test(phoneme)) {
     return Promise.resolve();
   }
 

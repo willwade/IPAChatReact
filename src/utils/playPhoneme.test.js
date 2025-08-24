@@ -42,7 +42,10 @@ describe('playPhoneme', () => {
       handlePhonemeSpeak: jest.fn(),
       selectedVoice: 'voice'
     };
-    await playPhoneme('↑', deps);
+    const marks = ['↑', 'ˈ', 'ˌ'];
+    for (const mark of marks) {
+      await playPhoneme(mark, deps);
+    }
     expect(deps.loadAudioFile).not.toHaveBeenCalled();
     expect(deps.handlePhonemeSpeak).not.toHaveBeenCalled();
   });

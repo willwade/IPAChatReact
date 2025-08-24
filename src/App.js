@@ -567,11 +567,15 @@ const App = () => {
       console.log('TTS response:', response.data);
       
       if (response.data && response.data.audio) {
-        console.log('Creating audio from base64');
         const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-        console.log('Playing audio');
-        await audio.play();
-        console.log('Audio playback complete');
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            if (err.name !== 'NotAllowedError') {
+              console.error('Error in speech synthesis:', err);
+            }
+          });
+        }
       } else {
         console.error('No audio data in response:', response.data);
       }
