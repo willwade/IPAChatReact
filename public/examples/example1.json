@@ -1,9 +1,211 @@
 {
-  "selectedLanguage": "en-GB",
-  "selectedVoice": "Default",
-  "selectedRegion": "en-GB",
-  "buttonScale": 1,
+  "ipaCustomizations": {
+    "ɑː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1b629b"
+    },
+    "ɜː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1c5d90"
+    },
+    "iː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1e537e"
+    },
+    "ɔː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#194d78"
+    },
+    "uː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1c4d74"
+    },
+    "æ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "ʌ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "i": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "ʊ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "ɐ": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "ˈ": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "ˌ": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↘": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↗": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↑": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↓": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "|": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "‖": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "p": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "ʊə": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "h": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#673ab7"
+    },
+    "l": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#673ab7"
+    }
+  },
+  "dwellIndicatorColor": "primary",
+  "touchDwellEnabled": false,
   "buttonSpacing": 4,
+  "dwellIndicatorType": "border",
+  "selectedLanguage": "en-GB",
+  "touchDwellTime": 800,
   "autoScale": true,
-  "name": "Example 1"
+  "buttonScale": 1.6,
+  "hasVisitedBefore": true,
+  "ipaMode": "babble",
+  "selectedRegion": "en-GB-london",
+  "wordMastery": {
+    "mum": 1
+  },
+  "showStressors": true,
+  "hapticFeedback": false,
+  "selectedVoice": "en-GB-LibbyNeural",
+  "phonemeOrder": {
+    "en-GB": [
+      "æ",
+      "e",
+      "ɪ",
+      "ɒ",
+      "ʊ",
+      "ʌ",
+      "ə",
+      "tʃ",
+      "m",
+      "ɹ",
+      "i",
+      "ɑː",
+      "ɜː",
+      "iː",
+      "ɔː",
+      "uː",
+      "ɐ",
+      "dʒ",
+      "n",
+      "j",
+      "eɪ",
+      "aɪ",
+      "ɔɪ",
+      "əʊ",
+      "aʊ",
+      "ɪə",
+      "eə",
+      "ʊə",
+      "ŋ",
+      "w",
+      "ʃ",
+      "ʒ",
+      "θ",
+      "ð",
+      "s",
+      "z",
+      "f",
+      "v",
+      "ˈ",
+      "l",
+      "b",
+      "p",
+      "t",
+      "d",
+      "k",
+      "g",
+      "ˌ",
+      "↘",
+      "↓",
+      "h",
+      "↗",
+      "↑",
+      "|",
+      "‖"
+    ]
+  }
 }
