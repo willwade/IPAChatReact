@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, CircularProgress } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
@@ -18,6 +18,7 @@ import IPAKeyboard from './components/IPAKeyboard';
 import EditMode from './components/EditMode';
 import Settings from './components/Settings';
 import GameMode from './components/GameMode';
+import { playPhoneme as playPhonemeUtil } from './utils/playPhoneme';
 import { phonemeToFilename } from './data/phonemeFilenames';
 import axios from 'axios';
 import WelcomeModal from './components/WelcomeModal';
@@ -502,37 +503,17 @@ const App = () => {
   };
 
   // New helper function for playing phonemes
-  const playPhoneme = (phoneme) => {
-    // Skip special marks
-    if (/[↗↘↑↓|‖]/.test(phoneme)) {
-      return;
-    }
-
-    // First try to play from cache
-    if (audioCache[phoneme]) {
-      const audioClone = audioCache[phoneme].cloneNode();
-      audioClone.play().catch(error => {
-        console.warn('Error playing cached audio:', error);
-        // Only fallback to TTS if cache play fails
-        handlePhonemeSpeak(phoneme);
-      });
-      return;
-    }
-
-    // If not in cache, try to load from pre-generated files
-    const fileName = getPhonemeFileName(phoneme, selectedVoice);
-    loadAudioFile(fileName)
-      .then(audio => {
-        // Add to cache for future use
-        audioCache[phoneme] = audio;
-        return audio.play();
-      })
-      .catch(error => {
-        console.warn('Error loading audio file:', error);
-        // Only use TTS as last resort
-        handlePhonemeSpeak(phoneme);
-      });
-  };
+  const playPhoneme = useCallback(
+    (phoneme) =>
+      playPhonemeUtil(phoneme, {
+        audioCache,
+        getPhonemeFileName,
+        loadAudioFile,
+        handlePhonemeSpeak,
+        selectedVoice,
+      }),
+    [audioCache, getPhonemeFileName, loadAudioFile, handlePhonemeSpeak, selectedVoice]
+  );
 
   const handleModeChange = (event) => {
     setMode(event.target.value);
