@@ -39,6 +39,12 @@ Each IPA button can be customized with:
 - Hidden labels
 - Different colors or styles
 
+## Example Presets
+
+Four sample configurations are bundled with the app. You can load any of these
+from the Settings screen or the onboarding dialog to quickly explore different
+phoneme layouts.
+
 ## Technology Stack
 
 - React 18
