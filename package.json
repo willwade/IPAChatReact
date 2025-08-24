@@ -35,7 +35,8 @@
     "dev:frontend": "react-scripts start",
     "restart": "lsof -ti:3000,3001 | xargs -r kill -9 && npm run dev",
     "clean": "rm -rf node_modules/.cache build && rm -rf cache/* && echo 'Cleaned build cache, logs, and cache directories'",
-    "generate-audio": "node scripts/generate-phoneme-audio.js"
+    "generate-audio": "node scripts/generate-phoneme-audio.js",
+    "lint": "npx eslint src --ext .js,.jsx"
   },
   "eslintConfig": {
     "extends": [
