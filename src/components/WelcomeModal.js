@@ -20,8 +20,8 @@ import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 
 const WelcomeModal = ({ open, onClose }) => {
   const examples = [
-    { name: 'Example 1', file: 'example1', thumb: '/examples/example1.svg' },
-    { name: 'Example 2', file: 'example2', thumb: '/examples/example2.svg' },
+    { name: 'Example 1', file: 'example1', thumb: '/examples/example1.png' },
+    { name: 'Example 2', file: 'example2', thumb: '/examples/example2.png' },
     { name: 'Example 3', file: 'example3', thumb: '/examples/example3.svg' },
     { name: 'Example 4', file: 'example4', thumb: '/examples/example4.svg' }
   ];
