@@ -263,6 +263,26 @@ const Settings = ({
     }
   };
 
+  const handleExampleLoad = async (example) => {
+    try {
+      const response = await fetch(`/examples/${example}.json`);
+      const data = await response.json();
+      validateBackupData(data);
+      Object.entries(data).forEach(([key, value]) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch {
+          localStorage.setItem(key, value);
+        }
+      });
+      applySettings(data);
+      alert('Example loaded successfully!');
+    } catch (error) {
+      console.error('Error loading example:', error);
+      alert('Failed to load example.');
+    }
+  };
+
   const handleRestoreCancel = () => {
     setRestoreDialogOpen(false);
     setRestoreFile(null);
@@ -294,6 +314,26 @@ const Settings = ({
                 >
                   Restore Settings
                 </Button>
+              </Box>
+            </ListItem>
+
+            <ListItem>
+              <Box sx={{ width: '100%', display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                {['example1', 'example2', 'example3', 'example4'].map((ex, idx) => (
+                  <Box
+                    key={ex}
+                    onClick={() => handleExampleLoad(ex)}
+                    sx={{ cursor: 'pointer', textAlign: 'center' }}
+                  >
+                    <img
+                      src={`/examples/${ex}.svg`}
+                      alt={`Example ${idx + 1}`}
+                      width={64}
+                      height={64}
+                    />
+                    <Typography variant="caption">Example {idx + 1}</Typography>
+                  </Box>
+                ))}
               </Box>
             </ListItem>
 
