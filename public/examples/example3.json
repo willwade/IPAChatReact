@@ -1,0 +1,193 @@
+{
+  "ipaCustomizations": {
+    "ɑː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1b629b"
+    },
+    "ɜː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1c5d90"
+    },
+    "iː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1e537e"
+    },
+    "ɔː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#194d78"
+    },
+    "uː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1c4d74"
+    },
+    "æ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "ʌ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "i": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "ʊ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "ɐ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    },
+    "ˈ": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "ˌ": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↘": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↗": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↑": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "↓": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "|": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "‖": {
+      "hideLabel": false,
+      "hideButton": true,
+      "image": "",
+      "customColor": null
+    },
+    "p": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": null
+    }
+  },
+  "dwellIndicatorColor": "primary",
+  "touchDwellEnabled": false,
+  "buttonSpacing": 4,
+  "dwellIndicatorType": "border",
+  "selectedLanguage": "en-GB",
+  "touchDwellTime": 800,
+  "autoScale": true,
+  "buttonScale": 1,
+  "hasVisitedBefore": true,
+  "ipaMode": "edit",
+  "selectedRegion": "en-GB-london",
+  "wordMastery": {
+    "mum": 1
+  },
+  "showStressors": true,
+  "hapticFeedback": false,
+  "selectedVoice": "en-GB-LibbyNeural",
+  "phonemeOrder": {
+    "en-GB": [
+      "æ",
+      "e",
+      "ɪ",
+      "ɒ",
+      "ʊ",
+      "ə",
+      "i",
+      "ɐ",
+      "ʌ",
+      "ˈ",
+      "ˌ",
+      "ɑː",
+      "ɜː",
+      "iː",
+      "ɔː",
+      "uː",
+      "↘",
+      "↗",
+      "↑",
+      "↓",
+      "|",
+      "‖",
+      "eɪ",
+      "aɪ",
+      "ɔɪ",
+      "əʊ",
+      "aʊ",
+      "ɪə",
+      "eə",
+      "ʊə",
+      "m",
+      "n",
+      "ŋ",
+      "ʃ",
+      "ʒ",
+      "θ",
+      "ð",
+      "s",
+      "z",
+      "f",
+      "v",
+      "h",
+      "tʃ",
+      "dʒ",
+      "p",
+      "b",
+      "t",
+      "d",
+      "k",
+      "g",
+      "ɹ",
+      "j",
+      "w",
+      "l"
+    ]
+  }
+}
