@@ -1027,7 +1027,6 @@ const App = () => {
               ) : mode === 'game' ? (
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <GameMode
-                    onPhonemeClick={handlePhonemeClick}
                     onSpeakRequest={handleSpeakRequest}
                     selectedLanguage={selectedLanguage}
                     selectedRegion={selectedRegion}
@@ -1035,6 +1034,7 @@ const App = () => {
                     onLanguageChange={handleLanguageChange}
                     onVoiceChange={handleVoiceChange}
                     selectedVoice={selectedVoice}
+                    playPhoneme={playPhoneme}
                     audioCache={audioCache}
                     showStressMarkers={showStressMarkers}
                   />

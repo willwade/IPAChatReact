@@ -34,7 +34,6 @@ import {
   HelpOutline as HelpOutlineIcon
 } from '@mui/icons-material';
 import IPAKeyboard from './IPAKeyboard';
-import { config } from '../config';
 import Confetti from 'react-confetti';
 import { gamePhases, getWordVariation, isCorrectIPA } from '../data/gamePhases';
 
@@ -46,15 +45,15 @@ const DIFFICULTY_LEVELS = {
   LEVEL5: { id: 5, name: "Audio Only", description: "Audio cues only" }
 };
 
-const GameMode = ({ 
-  onPhonemeClick, 
-  onSpeakRequest, 
-  selectedLanguage, 
-  selectedRegion, 
-  voices, 
-  onLanguageChange, 
-  onVoiceChange, 
-  selectedVoice 
+const GameMode = ({
+  onSpeakRequest,
+  selectedLanguage,
+  selectedRegion,
+  voices,
+  onLanguageChange,
+  onVoiceChange,
+  selectedVoice,
+  playPhoneme
 }) => {
   const [currentPhase, setCurrentPhase] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -106,8 +105,8 @@ const GameMode = ({
   const handlePhonemeClick = async (phoneme) => {
     if (!currentWord) return;
 
-    // Always speak the phoneme when clicked
-    await playSound(phoneme);
+    // Always speak the phoneme using shared playback logic
+    playPhoneme(phoneme);
 
     const newInput = userInput + phoneme;
     setUserInput(newInput);
@@ -160,7 +159,7 @@ const GameMode = ({
       setStreakCount(newStreak);
       
       // Play the complete word
-      await playSound(getCurrentWord());
+      await playWord(getCurrentWord());
       
       // Hide confetti after animation
       setTimeout(() => {
@@ -235,7 +234,7 @@ const GameMode = ({
       
       // Play the word audio based on difficulty level
       if (difficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
-        playSound(getCurrentWord());
+        playWord(getCurrentWord());
       }
     }
   }, [gameStarted, currentWord, difficulty]);
@@ -289,37 +288,9 @@ const GameMode = ({
     }
   };
 
-  const playSound = async (text) => {
+  const playWord = async (text) => {
     try {
-      // Only use playSound for phonemes, not whole words
-      if (text === getCurrentWord()) {
-        return onSpeakRequest(text);
-      }
-
-      console.log('Making TTS request for phoneme:', {
-        text,
-        voice: selectedVoice,
-        language: selectedLanguage
-      });
-
-      const response = await config.api.post('/api/tts', { 
-        text,
-        voice: selectedVoice,
-        language: selectedLanguage,
-        usePhonemes: true  // Always true here since this function now only handles phonemes
-      });
-      
-      console.log('TTS response:', response.data);
-      
-      if (response.data && response.data.audio) {
-        console.log('Creating audio from base64');
-        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
-        console.log('Playing audio');
-        await audio.play();
-        console.log('Audio playback complete');
-      } else {
-        console.error('No audio data in response:', response.data);
-      }
+      await onSpeakRequest(text);
     } catch (error) {
       console.error('Error in speech synthesis:', error);
       if (error.response) {
@@ -462,7 +433,7 @@ const GameMode = ({
                 {getCurrentWord()}
                 <IconButton
                   size="small"
-                  onClick={() => playSound(getCurrentWord())}
+                  onClick={() => playWord(getCurrentWord())}
                 >
                   <VolumeUpIcon fontSize="small" />
                 </IconButton>
