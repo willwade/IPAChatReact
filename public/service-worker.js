@@ -10,6 +10,11 @@ const urlsToCache = [
   '/favicon.ico'
 ];
 
+// Detect development mode without relying on Node's `process` variable,
+// which isn't available in the service worker runtime.
+const isDevelopment = typeof process !== 'undefined' &&
+  process.env && process.env.NODE_ENV === 'development';
+
 // Install a service worker
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -44,7 +49,7 @@ self.addEventListener('activate', event => {
 // Cache and return requests
 self.addEventListener('fetch', event => {
   // Skip caching in development
-  if (process.env.NODE_ENV === 'development') {
+  if (isDevelopment) {
     return fetch(event.request);
   }
 
