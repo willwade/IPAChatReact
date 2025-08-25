@@ -19,5 +19,10 @@ export const exampleLayouts = [
     name: 'Example 4', 
     file: 'example4', 
     thumb: '/examples/example4.svg' 
+  },
+  { 
+    name: 'QWERTY Layout', 
+    file: 'example5', 
+    thumb: '/examples/example5.svg' 
   }
 ];

@@ -1,0 +1,55 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="100" height="100" fill="#f5f5f5" rx="8"/>
+  
+  <!-- QWERTY keyboard representation -->
+  <!-- Row 1 -->
+  <rect x="8" y="15" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="18" y="15" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="28" y="15" width="8" height="8" fill="#ACDFE1" rx="1"/>
+  <rect x="38" y="15" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="48" y="15" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="58" y="15" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="68" y="15" width="8" height="8" fill="#ACDFE1" rx="1"/>
+  <rect x="78" y="15" width="8" height="8" fill="#ACDFE1" rx="1"/>
+  <rect x="88" y="15" width="8" height="8" fill="#ACDFE1" rx="1"/>
+  
+  <!-- Row 2 -->
+  <rect x="12" y="28" width="8" height="8" fill="#A1DC7A" rx="1"/>
+  <rect x="22" y="28" width="8" height="8" fill="#fcd668" rx="1"/>
+  <rect x="32" y="28" width="8" height="8" fill="#A1DC7A" rx="1"/>
+  <rect x="42" y="28" width="8" height="8" fill="#A1DC7A" rx="1"/>
+  <rect x="52" y="28" width="8" height="8" fill="#C05D54" rx="1"/>
+  <rect x="62" y="28" width="8" height="8" fill="#C05D54" rx="1"/>
+  <rect x="72" y="28" width="8" height="8" fill="#ACDFE1" rx="1"/>
+  <rect x="82" y="28" width="8" height="8" fill="#fcd668" rx="1"/>
+  
+  <!-- Row 3 -->
+  <rect x="10" y="41" width="8" height="8" fill="#ACDFE1" rx="1"/>
+  <rect x="20" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="30" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="40" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="50" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="60" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="70" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="80" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="90" y="41" width="8" height="8" fill="#E18676" rx="1"/>
+  
+  <!-- Row 4 -->
+  <rect x="14" y="54" width="8" height="8" fill="#C05D54" rx="1"/>
+  <rect x="24" y="54" width="8" height="8" fill="#C05D54" rx="1"/>
+  <rect x="34" y="54" width="8" height="8" fill="#C05D54" rx="1"/>
+  <rect x="54" y="54" width="8" height="8" fill="#C05D54" rx="1"/>
+  
+  <!-- Row 5 -->
+  <rect x="8" y="67" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="18" y="67" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="28" y="67" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="38" y="67" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="48" y="67" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="58" y="67" width="8" height="8" fill="#E18676" rx="1"/>
+  <rect x="68" y="67" width="8" height="8" fill="#E18676" rx="1"/>
+  
+  <!-- Title text -->
+  <text x="50" y="90" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#333">QWERTY</text>
+</svg>

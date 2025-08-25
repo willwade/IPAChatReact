@@ -1,0 +1,311 @@
+{
+  "ipaCustomizations": {
+    "iː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/sea.png",
+      "customColor": "#A1DC7A"
+    },
+    "ɪə": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/deer.jpg",
+      "customColor": "#fcd668"
+    },
+    "ʊə": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/manure.jpg",
+      "customColor": "#fcd668"
+    },
+    "ə": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/the.png",
+      "customColor": "#ACDFE1"
+    },
+    "ɪʊ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/music.png",
+      "customColor": "#fcd668"
+    },
+    "ɔɪ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/boy.png",
+      "customColor": "#fcd668"
+    },
+    "əʊ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/bow.png",
+      "customColor": "#fcd668"
+    },
+    "aʊ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/out.png",
+      "customColor": "#fcd668"
+    },
+    "uː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/two.png",
+      "customColor": "#A1DC7A"
+    },
+    "kw": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "w": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "e": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#ACDFE1"
+    },
+    "r": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "t": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "j": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "ʌ": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#ACDFE1"
+    },
+    "ɪ": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#ACDFE1"
+    },
+    "ɒ": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#ACDFE1"
+    },
+    "p": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "ɑː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/car.png",
+      "customColor": "#A1DC7A"
+    },
+    "eɪ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/eight.png",
+      "customColor": "#fcd668"
+    },
+    "eə": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/pear.png",
+      "customColor": "#A1DC7A"
+    },
+    "ɜː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/shirt.jpg",
+      "customColor": "#A1DC7A"
+    },
+    "ð": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/this.png",
+      "customColor": "#C05D54"
+    },
+    "θ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/thumb2.jpeg",
+      "customColor": "#C05D54"
+    },
+    "ʊ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/book2.png",
+      "customColor": "#ACDFE1"
+    },
+    "aɪ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/eye.jpg",
+      "customColor": "#fcd668"
+    },
+    "ɔː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/four.jpg",
+      "customColor": "#A1DC7A"
+    },
+    "æ": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#ACDFE1"
+    },
+    "s": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "d": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "f": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "g": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "h": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "dʒ": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "k": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "l": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "ʒ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/measure.png",
+      "customColor": "#C05D54"
+    },
+    "ʃ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/shhh.png",
+      "customColor": "#C05D54"
+    },
+    "t͡ʃ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/chair.png",
+      "customColor": "#C05D54"
+    },
+    "ŋ": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "/examples/example5/sing.jpg",
+      "customColor": "#C05D54"
+    },
+    "z": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "ks": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "v": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "b": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "n": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    },
+    "m": {
+      "hideLabel": true,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#E18676"
+    }
+  },
+  "dwellIndicatorColor": "primary",
+  "touchDwellEnabled": false,
+  "buttonSpacing": 4,
+  "dwellIndicatorType": "border",
+  "selectedLanguage": "en-GB",
+  "touchDwellTime": 800,
+  "autoScale": true,
+  "buttonScale": 1.2,
+  "hasVisitedBefore": true,
+  "ipaMode": "build",
+  "selectedRegion": "en-GB-london",
+  "wordMastery": {},
+  "showStressors": false,
+  "hapticFeedback": false,
+  "selectedVoice": "en-GB-LibbyNeural",
+  "phonemeOrder": {
+    "en-GB": [
+      "kw", "w", "e", "r", "t", "j", "ʌ", "ɪ", "ɒ", "p",
+      "ɑː", "eɪ", "eə", "ɜː", "ð", "θ", "ʊ", "aɪ", "ɔː",
+      "æ", "s", "d", "f", "g", "h", "dʒ", "k", "l",
+      "ʒ", "ʃ", "t͡ʃ", "ŋ",
+      "z", "ks", "v", "b", "n", "m",
+      "iː", "ɪə", "ʊə", "ə", "ɪʊ", "ɔɪ", "əʊ", "aʊ", "uː"
+    ]
+  }
+}
