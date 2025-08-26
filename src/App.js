@@ -135,7 +135,7 @@ const App = () => {
     { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) }
   ];
 
-  const testApiConnectivity = async () => {
+  const testApiConnectivity = useCallback(async () => {
     try {
       console.log('🔍 Testing API connectivity...');
       const response = await config.api.get('/api/test');
@@ -150,9 +150,9 @@ const App = () => {
       });
       return false;
     }
-  };
+  }, []);
 
-  const fetchVoices = async () => {
+  const fetchVoices = useCallback(async () => {
     try {
       console.log('🎤 Attempting to fetch voices from:', config.apiUrl + '/api/voices');
 
@@ -207,7 +207,7 @@ const App = () => {
       }
       setVoicesLoading(false);
     }
-  };
+  }, [selectedLanguage, testApiConnectivity]);
 
   useEffect(() => {
     fetchVoices();
