@@ -646,13 +646,15 @@ const App = () => {
   };
 
   const speak = async () => {
+    if (!message) return;
+
     // Only fetch conversion if the feature is enabled
     if (showIpaToText) {
       try {
         const response = await axios.post('https://dolphin-app-62ztl.ondigitalocean.app/ipa-to-text', {
           ipa: message
         });
-        
+
         if (response.data && response.data.text) {
           setConvertedText(response.data.text);
         }
@@ -664,8 +666,18 @@ const App = () => {
       setConvertedText('');
     }
 
-    // Then speak the IPA as before
-    handlePhonemeSpeak(message);
+    // For longer messages, use the whole utterance function with retry logic
+    if (message.length > 5) {
+      try {
+        await speakWholeUtteranceText(message);
+      } catch (error) {
+        console.warn('Whole utterance failed, falling back to handlePhonemeSpeak:', error);
+        await handlePhonemeSpeak(message);
+      }
+    } else {
+      // For short messages, use the regular phoneme speak function
+      await handlePhonemeSpeak(message);
+    }
   };
 
   const handleSpeakRequest = async (text) => {
@@ -990,7 +1002,7 @@ const App = () => {
           console.log('Attempting individual phoneme playback as final fallback');
           try {
             for (const char of text) {
-              if (char.trim() && !/[↗↘↑↓|‖]/.test(char)) {
+              if (char.trim() && !/[↗��↑↓|‖]/.test(char)) {
                 await handlePhonemeSpeak(char);
                 await new Promise(resolve => setTimeout(resolve, 300)); // Small delay between phonemes
               }
