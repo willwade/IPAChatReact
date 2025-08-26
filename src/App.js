@@ -875,6 +875,18 @@ const App = () => {
     localStorage.setItem('speakWholeUtterance', JSON.stringify(speakWholeUtterance));
   }, [speakWholeUtterance]);
 
+  // Add effect to speak whole utterance when message changes in build mode
+  useEffect(() => {
+    if (speakWholeUtterance && mode === 'build' && message) {
+      // Add a small delay to avoid speaking on every character when typing
+      const timeoutId = setTimeout(() => {
+        handlePhonemeSpeak(message);
+      }, 500); // 500ms delay
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [message, speakWholeUtterance, mode, handlePhonemeSpeak]);
+
   if (dataLoading) {
     return (
       <Box 
