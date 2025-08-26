@@ -1,22 +1,14 @@
 import axios from 'axios';
 
 const getApiUrl = () => {
-  // Get the current hostname (will be IP address when testing on mobile)
-  const hostname = window.location.hostname;
-  const port = '3001'; // Backend port
-
-  let apiUrl; // Declare apiUrl variable
-
   if (process.env.NODE_ENV === 'production') {
-    apiUrl = `${window.location.protocol}//${window.location.host}`;
+    // In production, use the same origin
+    return `${window.location.protocol}//${window.location.host}`;
+  } else {
+    // In development, use the proxy on the same origin
+    // The proxy should route API calls to the backend
+    return `${window.location.protocol}//${window.location.host}`;
   }
-  
-  // In development, use the same hostname (IP address) but different port
-  else {
-    apiUrl = `${window.location.protocol}//${hostname}:${port}`;
-  }
-
-  return apiUrl;
 };
 
 // Create axios instance with base URL
