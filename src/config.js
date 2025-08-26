@@ -5,9 +5,9 @@ const getApiUrl = () => {
     // In production, use the same origin
     return `${window.location.protocol}//${window.location.host}`;
   } else {
-    // In development, use the proxy on the same origin
-    // The proxy should route API calls to the backend
-    return `${window.location.protocol}//${window.location.host}`;
+    // In development, connect directly to the backend on port 3001
+    const hostname = window.location.hostname;
+    return `${window.location.protocol}//${hostname}:3001`;
   }
 };
 
