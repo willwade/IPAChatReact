@@ -321,34 +321,80 @@ app.post('/api/tts', async (req, res) => {
       audio: base64Audio
     });
   } catch (error) {
-    // Log the full error object
-    console.error('Full error object:', JSON.stringify(error, null, 2));
-    
-    // Log detailed error information
-    console.error('Error in TTS:', {
+    // Create detailed error information
+    const errorInfo = {
       message: error.message,
       code: error.code,
-      response: {
-        data: error.response?.data ? error.response.data.toString() : null,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        headers: error.response?.headers
-      },
+      name: error.name,
+      stack: error.stack?.split('\n')[0], // First line of stack trace
+      isTimeoutError: error.code === 'ECONNABORTED' || error.message.includes('timeout'),
+      isNetworkError: error.code === 'ERR_NETWORK' || error.code === 'ENOTFOUND',
+      response: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data ? (
+          Buffer.isBuffer(error.response.data) ?
+            `Buffer(${error.response.data.length} bytes)` :
+            error.response.data.toString().substring(0, 500) // Limit data length
+        ) : null,
+        headers: error.response.headers
+      } : null,
+      config: error.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        timeout: error.config.timeout,
+        headers: {
+          'Content-Type': error.config.headers['Content-Type'],
+          'X-Microsoft-OutputFormat': error.config.headers['X-Microsoft-OutputFormat']
+        }
+      } : null,
       requestData: {
         text: text,
         voice: voice,
         language: language,
+        usePhonemes: req.body.usePhonemes,
         endpoint: `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`
       }
-    });
+    };
 
-    res.status(500).json({ 
-      error: 'Speech synthesis failed',
-      details: error.response?.data ? error.response.data.toString() : error.message,
+    console.error('TTS Error Details:', errorInfo);
+
+    // Determine error type and message
+    let errorMessage = 'Speech synthesis failed';
+    let errorDetails = error.message;
+
+    if (errorInfo.isTimeoutError) {
+      errorMessage = 'Request timed out';
+      errorDetails = `TTS request timed out after ${(error.config?.timeout || 25000) / 1000} seconds`;
+      console.error('🕐 Timeout Error:', errorDetails);
+    } else if (errorInfo.isNetworkError) {
+      errorMessage = 'Network error';
+      errorDetails = 'Cannot reach Azure TTS service';
+      console.error('🌐 Network Error:', errorDetails);
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Authentication failed';
+      errorDetails = 'Invalid Azure credentials';
+      console.error('🔑 Auth Error:', errorDetails);
+    } else if (error.response?.status === 429) {
+      errorMessage = 'Rate limit exceeded';
+      errorDetails = 'Too many requests to Azure TTS';
+      console.error('⚡ Rate Limit Error:', errorDetails);
+    } else if (error.response?.status >= 500) {
+      errorMessage = 'Azure service error';
+      errorDetails = `Azure TTS service returned ${error.response.status}`;
+      console.error('🔧 Service Error:', errorDetails);
+    }
+
+    res.status(500).json({
+      error: errorMessage,
+      details: errorDetails,
+      code: error.code,
+      statusCode: error.response?.status,
       requestInfo: {
         text: text,
         voice: voice,
-        language: language
+        language: language,
+        usePhonemes: req.body.usePhonemes
       }
     });
   }
