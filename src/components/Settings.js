@@ -270,15 +270,41 @@ const Settings = ({
       const response = await fetch(`/examples/${example}.json`);
       const data = await response.json();
       validateBackupData(data);
+
+      // First update language and essential settings
+      if (data.selectedLanguage) {
+        localStorage.setItem('selectedLanguage', JSON.stringify(data.selectedLanguage));
+        onLanguageChange(data.selectedLanguage);
+      }
+
+      // Wait a moment for language change to take effect
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Then update the rest of localStorage
       Object.entries(data).forEach(([key, value]) => {
-        try {
-          localStorage.setItem(key, JSON.stringify(value));
-        } catch {
-          localStorage.setItem(key, value);
+        if (key !== 'selectedLanguage') { // Skip language since we already set it
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+          } catch {
+            localStorage.setItem(key, value);
+          }
         }
       });
+
+      // Then update the state through props
       applySettings(data);
-      alert('Example loaded successfully!');
+
+      // Close settings dialog if open
+      onClose();
+
+      // Show success message
+      alert('Example loaded successfully! The page will now reload to apply all changes.');
+
+      // Reload the page after a delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 200);
+
     } catch (error) {
       console.error('Error loading example:', error);
       alert('Failed to load example.');
