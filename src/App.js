@@ -505,7 +505,7 @@ const App = () => {
     cachePhonemeAudio();
   }, [selectedVoice, selectedLanguage]);
 
-  const handlePhonemeSpeak = async (text) => {
+  const handlePhonemeSpeak = useCallback(async (text) => {
     if (!text || !selectedVoice) return;
 
     // Skip only special marks
@@ -520,12 +520,12 @@ const App = () => {
     if (!isIpaPhoneme) {
       // If it's not an IPA phoneme, use the TTS API directly
       try {
-        const response = await config.api.post('/api/tts', { 
+        const response = await config.api.post('/api/tts', {
           text,
           voice: selectedVoice,
           language: selectedLanguage
         });
-        
+
         if (response.data && response.data.audio) {
           const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
           await audio.play();
@@ -558,11 +558,11 @@ const App = () => {
         return;
       } catch (primaryError) {
         console.warn('Error playing primary voice audio:', primaryError);
-        
+
         // Try fallback voices
         const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
           .filter(v => v !== selectedVoice);
-        
+
         for (const fallbackVoice of fallbackVoices) {
           try {
             const fallbackFileName = getPhonemeFileName(text, fallbackVoice);
@@ -578,12 +578,12 @@ const App = () => {
 
     // For complex phonemes or if all else fails, use Azure TTS
     try {
-      const response = await config.api.post('/api/tts', { 
+      const response = await config.api.post('/api/tts', {
         text,
         voice: selectedVoice,
         language: selectedLanguage
       });
-      
+
       if (response.data && response.data.audio) {
         const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
         await audio.play();
@@ -591,7 +591,7 @@ const App = () => {
     } catch (error) {
       console.warn('Error in speech synthesis:', error);
     }
-  };
+  }, [selectedVoice, selectedLanguage, audioCache, getPhonemeFileName, loadAudioFile]);
 
   const handlePhonemeClick = (phoneme) => {
     // In build mode, update the message
