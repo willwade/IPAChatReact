@@ -22,6 +22,8 @@ import {
   Alert,
   Tooltip,
   IconButton,
+  Card,
+  CardContent,
 } from '@mui/material';
 import { regions } from '../data/gamePhases';
 import BackupIcon from '@mui/icons-material/Backup';
@@ -268,15 +270,41 @@ const Settings = ({
       const response = await fetch(`/examples/${example}.json`);
       const data = await response.json();
       validateBackupData(data);
+
+      // First update language and essential settings
+      if (data.selectedLanguage) {
+        localStorage.setItem('selectedLanguage', JSON.stringify(data.selectedLanguage));
+        onLanguageChange(data.selectedLanguage);
+      }
+
+      // Wait a moment for language change to take effect
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Then update the rest of localStorage
       Object.entries(data).forEach(([key, value]) => {
-        try {
-          localStorage.setItem(key, JSON.stringify(value));
-        } catch {
-          localStorage.setItem(key, value);
+        if (key !== 'selectedLanguage') { // Skip language since we already set it
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+          } catch {
+            localStorage.setItem(key, value);
+          }
         }
       });
+
+      // Then update the state through props
       applySettings(data);
-      alert('Example loaded successfully!');
+
+      // Close settings dialog if open
+      onClose();
+
+      // Show success message
+      alert('Example loaded successfully! The page will now reload to apply all changes.');
+
+      // Reload the page after a delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 200);
+
     } catch (error) {
       console.error('Error loading example:', error);
       alert('Failed to load example.');
@@ -318,22 +346,100 @@ const Settings = ({
             </ListItem>
 
             <ListItem>
-              <Box sx={{ width: '100%', display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                {['example1', 'example2', 'example3', 'example4'].map((ex, idx) => (
-                  <Box
-                    key={ex}
-                    onClick={() => handleExampleLoad(ex)}
-                    sx={{ cursor: 'pointer', textAlign: 'center' }}
-                  >
-                    <img
-                      src={`/examples/${ex}.svg`}
-                      alt={`Example ${idx + 1}`}
-                      width={64}
-                      height={64}
-                    />
-                    <Typography variant="caption">Example {idx + 1}</Typography>
-                  </Box>
-                ))}
+              <Box sx={{ width: '100%' }}>
+                <Card
+                  variant="outlined"
+                  sx={{
+                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+                  }}
+                >
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        textAlign: 'center',
+                        fontSize: '1.1rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      📁 Load Example Configurations
+                    </Typography>
+
+                    <Box sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: 1.5,
+                      justifyItems: 'center',
+                      '@media (max-width: 600px)': {
+                        gridTemplateColumns: 'repeat(2, 1fr)'
+                      }
+                    }}>
+                      {[
+                        { name: 'Example 1', file: 'example1', thumb: '/examples/example1.png' },
+                        { name: 'Example 2', file: 'example2', thumb: '/examples/example2.png' },
+                        { name: 'Example 3', file: 'example3', thumb: '/examples/example3.svg' },
+                        { name: 'Example 4', file: 'example4', thumb: '/examples/example4.svg' }
+                      ].map((ex, idx) => (
+                        <Box
+                          key={ex.file}
+                          onClick={() => handleExampleLoad(ex.file)}
+                          sx={{
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'transform 0.2s',
+                            '&:hover': {
+                              transform: 'scale(1.05)'
+                            },
+                            '&:active': {
+                              transform: 'scale(0.95)'
+                            }
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 70,
+                              height: 70,
+                              borderRadius: 2,
+                              overflow: 'hidden',
+                              mb: 0.5,
+                              border: '2px solid',
+                              borderColor: 'primary.light',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: 'background.paper',
+                              '@media (max-width: 600px)': {
+                                width: 60,
+                                height: 60
+                              }
+                            }}
+                          >
+                            <img
+                              src={ex.thumb}
+                              alt={ex.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}
+                          >
+                            {ex.name}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
               </Box>
             </ListItem>
 

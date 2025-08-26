@@ -135,26 +135,91 @@ const App = () => {
     { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) }
   ];
 
-  const fetchVoices = async () => {
-    try {
-      const response = await config.api.get('/api/voices');
-      if (response.data) {
-        setAvailableVoices(response.data);
-        // Set default voice if available
-        if (response.data.length > 0) {
-          setSelectedVoice(response.data[0].name);
+  useEffect(() => {
+    const testApiConnectivity = async () => {
+      try {
+        console.log('🔍 Testing API connectivity to:', config.apiUrl + '/api/test');
+        const response = await config.api.get('/api/test');
+        console.log('✅ API connectivity test passed:', response.data);
+        return true;
+      } catch (error) {
+        console.error('❌ API connectivity test failed:', error.message);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+        });
+        return false;
+      }
+    };
+
+    const fetchVoices = async () => {
+      try {
+        console.log('🎤 Attempting to fetch voices from:', config.apiUrl + '/api/voices');
+        setVoicesLoading(true);
+
+        // Test basic connectivity first
+        const isConnected = await testApiConnectivity();
+        if (!isConnected) {
+          throw new Error('API connectivity test failed');
         }
+
+        const response = await config.api.get('/api/voices');
+        console.log('✅ Voice fetch response:', response.status, response.data);
+
+        if (response.data && typeof response.data === 'object') {
+          console.log('📋 Voices data received:', response.data);
+          setAvailableVoices(response.data);
+          // Set default voice if available and none is currently selected
+          if (selectedLanguage && response.data[selectedLanguage]?.length > 0 && !selectedVoice) {
+            setSelectedVoice(response.data[selectedLanguage][0].name);
+          }
+        } else {
+          throw new Error('Invalid voice data received');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching voices:', error.message);
+        console.error('Full error:', {
+          message: error.message,
+          code: error.code,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          timeout: error.code === 'ECONNABORTED',
+          networkError: error.code === 'ERR_NETWORK'
+        });
+
+        // Fallback to static voice data if network fails
+        console.log('🔄 Using fallback voice data...');
+        const fallbackVoices = {
+          'en-GB': [
+            { name: 'en-GB-LibbyNeural', displayName: 'Libby (Female)', locale: 'en-GB' },
+            { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)', locale: 'en-GB' },
+            { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)', locale: 'en-GB' },
+          ],
+          'en-US': [
+            { name: 'en-US-JennyNeural', displayName: 'Jenny (Female)', locale: 'en-US' },
+            { name: 'en-US-GuyNeural', displayName: 'Guy (Male)', locale: 'en-US' },
+            { name: 'en-US-AriaNeural', displayName: 'Aria (Female)', locale: 'en-US' },
+          ],
+        };
+
+        setAvailableVoices(fallbackVoices);
+        if (selectedLanguage && fallbackVoices[selectedLanguage]?.length > 0 && !selectedVoice) {
+          setSelectedVoice(fallbackVoices[selectedLanguage][0].name);
+        }
+      } finally {
         setVoicesLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching voices:', error);
-      setVoicesLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
-    fetchVoices();
-  }, []);
+    // Only fetch voices if we don't have them yet or if language changed
+    if (voicesLoading || Object.keys(availableVoices).length === 0) {
+      fetchVoices();
+    }
+  }, [selectedLanguage, voicesLoading, availableVoices, selectedVoice, config.apiUrl]);
 
   // Set initial voice when language changes
   useEffect(() => {
