@@ -198,6 +198,11 @@ const Settings = ({
     if (typeof backupData.speakWholeUtterance === 'boolean') {
       onSpeakWholeUtteranceChange(backupData.speakWholeUtterance);
     }
+
+    // Update mode
+    if (backupData.ipaMode) {
+      onModeChange(backupData.ipaMode);
+    }
   };
 
   const handleRestoreClick = () => {
