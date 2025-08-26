@@ -1,16 +1,12 @@
 import axios from 'axios';
 
 const getApiUrl = () => {
-  // Check if we're in a local development environment or cloud dev environment
-  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const isCloudDev = window.location.hostname.includes('fly.dev') && !process.env.REACT_APP_BUILD_MODE;
-
-  if (isLocalDev || isCloudDev) {
-    // In development (local or cloud), use same origin (proxy will handle routing to backend)
-    return '';
-  } else {
+  if (process.env.NODE_ENV === 'production') {
     // In production, use the same origin
     return `${window.location.protocol}//${window.location.host}`;
+  } else {
+    // In development, proxy API calls to backend on port 3001
+    return '/api-proxy';
   }
 };
 
