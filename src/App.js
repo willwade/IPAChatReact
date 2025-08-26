@@ -346,16 +346,16 @@ const App = () => {
     localStorage.setItem('selectedRegion', region);
   };
 
-  const loadAudioFile = async (fileName) => {
+  const loadAudioFile = useCallback(async (fileName) => {
     return new Promise((resolve, reject) => {
       const audio = new Audio();
-      
+
       const onLoad = () => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
         resolve(audio);
       };
-      
+
       const onError = (e) => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
@@ -363,18 +363,18 @@ const App = () => {
         console.error(`Full URL: ${new URL(`/audio/phonemes/${fileName}`, window.location.href).href}`);
         reject(new Error(`Failed to load audio: ${e.message}`));
       };
-      
+
       audio.addEventListener('canplaythrough', onLoad);
       audio.addEventListener('error', onError);
-      
+
       const url = `/audio/phonemes/${fileName}`;
       console.log(`Attempting to load audio from: ${url}`);
       audio.src = url;
       audio.preload = 'auto';
     });
-  };
+  }, []);
 
-  const getPhonemeFileName = (phoneme, voice) => {
+  const getPhonemeFileName = useCallback((phoneme, voice) => {
     // Use URL-friendly name if available, otherwise use URL-encoded phoneme
     const filenamePart = phonemeToFilename[phoneme] || encodeURIComponent(phoneme);
     const fileName = `${filenamePart}_${voice}.mp3`;
@@ -385,7 +385,7 @@ const App = () => {
     }
 
     return fileName;
-  };
+  }, []);
 
   const cachePhonemeAudio = async () => {
     if (!selectedVoice || cacheLoading) {
