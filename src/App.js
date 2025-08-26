@@ -1185,6 +1185,8 @@ const App = () => {
               onSpeakOnButtonPressChange={setSpeakOnButtonPress}
               speakWholeUtterance={speakWholeUtterance}
               onSpeakWholeUtteranceChange={setSpeakWholeUtterance}
+              mode={mode}
+              onModeChange={setMode}
             />
 
             {/* Search dialog */}
