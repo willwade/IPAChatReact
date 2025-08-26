@@ -26,7 +26,17 @@ import { ThemeProvider, CssBaseline } from '@mui/material';
 import { theme } from './theme';
 
 const App = () => {
-  const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
+  const [mode, setMode] = useState(() => {
+    const saved = localStorage.getItem('ipaMode');
+    if (!saved) return 'build';
+
+    // Try to parse as JSON first (for legacy format), fallback to string
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return saved;
+    }
+  });
   const [selectedLanguage, setSelectedLanguage] = useState(() => {
     const saved = localStorage.getItem('selectedLanguage');
     return saved && phoneticData[saved]?.groups ? saved : 'en-GB';
