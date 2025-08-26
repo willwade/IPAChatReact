@@ -63,14 +63,24 @@ const IPAKeyboard = ({
   const [isDragging, setIsDragging] = useState(false);
   const [draggedPhoneme, setDraggedPhoneme] = useState(null);
   const [draggedElement, setDraggedElement] = useState(null);
-  const [gridColumns, setGridColumns] = useState(8);
+  const [gridColumns, setGridColumnsState] = useState(8);
+  
+  const setGridColumns = setGridColumnsState;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [validLanguage, setValidLanguage] = useState('en-GB');
+  const [gridConfig, setGridConfig] = useState(null);
 
   const calculateOptimalGrid = useCallback(() => {
     const container = containerRef.current;
     if (!container || !phoneticData || !phoneticData[validLanguage]) return;
+
+    // Check if there's a custom grid configuration for this language
+    const customConfig = gridConfig?.[validLanguage];
+    if (customConfig?.columns) {
+      setGridColumns(customConfig.columns);
+      return;
+    }
 
     const rect = container.getBoundingClientRect();
     const containerWidth = rect.width;
@@ -115,12 +125,16 @@ const IPAKeyboard = ({
     const gridHeight = rows * buttonSizeWithSpacing;
     
     setGridColumns(bestColumns);
-  }, [buttonSpacing, validLanguage]);
+  }, [buttonSpacing, validLanguage, gridConfig]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
       requestAnimationFrame(() => {
-        calculateOptimalGrid();
+        // Only recalculate on resize if we don't have custom columns
+        const customConfig = gridConfig?.[validLanguage];
+        if (!customConfig?.columns) {
+          calculateOptimalGrid();
+        }
       });
     });
 
@@ -134,11 +148,15 @@ const IPAKeyboard = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [calculateOptimalGrid]);
+  }, [calculateOptimalGrid, gridConfig, validLanguage]);
 
   useEffect(() => {
-    calculateOptimalGrid();
-  }, [calculateOptimalGrid, autoScale, buttonScale]);
+    // Only recalculate when scaling changes if we don't have custom columns
+    const customConfig = gridConfig?.[validLanguage];
+    if (!customConfig?.columns) {
+      calculateOptimalGrid();
+    }
+  }, [calculateOptimalGrid, autoScale, buttonScale, gridConfig, validLanguage]);
 
   useEffect(() => {
     const saved = localStorage.getItem('ipaCustomizations');
@@ -150,7 +168,30 @@ const IPAKeyboard = ({
         console.error('Error loading customizations:', e);
       }
     }
+
+    // Load grid configuration
+    const savedGridConfig = localStorage.getItem('gridConfig');
+    if (savedGridConfig) {
+      try {
+        const parsedGridConfig = JSON.parse(savedGridConfig);
+        setGridConfig(parsedGridConfig);
+      } catch (e) {
+        console.error('Error loading grid config:', e);
+      }
+    }
   }, []);
+
+  // Apply grid configuration when it changes
+  useEffect(() => {
+    if (gridConfig) {
+      const customConfig = gridConfig[validLanguage];
+      if (customConfig?.columns) {
+        setGridColumns(customConfig.columns);
+      } else {
+        calculateOptimalGrid();
+      }
+    }
+  }, [gridConfig, validLanguage, calculateOptimalGrid]);
 
   useEffect(() => {
     // Reset jiggling state when mode changes
@@ -182,6 +223,43 @@ const IPAKeyboard = ({
     if (!containerRef.current || !phoneticData || !phoneticData[validLanguage]?.groups) {
       return;
     }
+
+    // Check if there's a custom grid configuration for this language
+    const customConfig = gridConfig?.[validLanguage];
+    if (customConfig?.columns) {
+      // Still calculate scale but don't override custom columns
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const padding = Math.round(buttonSpacing);
+      const containerWidth = Math.floor(rect.width - (padding * 2));
+      const containerHeight = Math.floor(rect.height - (padding * 2));
+
+      if (containerWidth <= 0 || containerHeight <= 0) return;
+
+      // Get total buttons for the current language (avoid dependency on getOrderedPhonemes)
+      const languageData = phoneticData[validLanguage];
+      if (!languageData?.groups) return;
+      const allPhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
+      const totalButtons = allPhonemes.length;
+      if (totalButtons === 0) return;
+
+      const buttonWidth = 60;
+      const buttonHeight = 60;
+      const gap = Math.round(buttonSpacing);
+      const cols = customConfig.columns;
+      const rows = Math.ceil(totalButtons / cols);
+
+      const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
+      const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
+      
+      const scaleX = containerWidth / totalGridWidth;
+      const scaleY = containerHeight / totalGridHeight;
+      const newScale = Math.min(scaleX, scaleY) * 0.95;
+
+      setCalculatedScale(newScale);
+      return;
+    }
+
 
     const container = containerRef.current;
     const rect = container.getBoundingClientRect();
@@ -224,26 +302,20 @@ const IPAKeyboard = ({
     // Use the smaller scale with a safety margin
     const newScale = Math.min(scaleX, scaleY) * 0.95;  // 0.95 safety margin
     
-    console.log('Scale calculation:', {
-      containerWidth,
-      containerHeight,
-      totalGridWidth,
-      totalGridHeight,
-      cols,
-      rows,
-      scaleX,
-      scaleY,
-      newScale,
-      gap
-    });
 
     setCalculatedScale(newScale);
     setGridColumns(cols);
-  }, [buttonSpacing, validLanguage]);
+  }, [buttonSpacing, validLanguage, gridConfig]);
 
   useEffect(() => {
     if (!autoScale) {
       setCalculatedScale(buttonScale);
+      return;
+    }
+
+    // Don't run updateScale if we have custom grid config - it's handled separately
+    const customConfig = gridConfig?.[validLanguage];
+    if (customConfig?.columns) {
       return;
     }
 
@@ -261,18 +333,24 @@ const IPAKeyboard = ({
       window.removeEventListener('resize', debouncedUpdateScale);
       clearTimeout(initialTimer);
     };
-  }, [updateScale, autoScale, buttonScale, buttonSpacing, selectedLanguage, mode]);
+  }, [updateScale, autoScale, buttonScale, gridConfig, validLanguage]);
 
   // Add an additional effect to handle container mounting
   useEffect(() => {
     if (autoScale && containerRef.current) {
+      // Don't run updateScale if we have custom grid config
+      const customConfig = gridConfig?.[validLanguage];
+      if (customConfig?.columns) {
+        return;
+      }
+      
       // Force a recalculation after a short delay to ensure container is properly sized
       const timer = setTimeout(() => {
         updateScale();
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [containerRef.current, autoScale]);
+  }, [containerRef.current, autoScale, gridConfig, validLanguage, updateScale]);
 
   useEffect(() => {
     // Validate phoneticData and language on mount and when selectedLanguage changes
@@ -713,6 +791,10 @@ const IPAKeyboard = ({
       basePhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
     }
 
+    // Check if blank cells are allowed for this language
+    const customConfig = gridConfig?.[validLanguage];
+    const allowBlankCells = customConfig?.allowBlankCells || false;
+
     // If showing stress markers, ensure they're included in the list
     if (showStressMarkers) {
       // Add any missing stress markers
@@ -726,10 +808,16 @@ const IPAKeyboard = ({
       basePhonemes = basePhonemes.filter(phoneme => !stressMarkers.includes(phoneme));
     }
 
+    // If blank cells are not allowed, filter out empty strings
+    if (!allowBlankCells) {
+      basePhonemes = basePhonemes.filter(phoneme => phoneme !== '');
+    }
+
     console.log('Showing stress markers:', showStressMarkers);
+    console.log('Allow blank cells:', allowBlankCells);
     console.log('Filtered phonemes:', basePhonemes);
     return basePhonemes;
-  }, [validLanguage, showStressMarkers, phonemeOrder]);
+  }, [validLanguage, showStressMarkers, phonemeOrder, gridConfig]);
 
   // Update effect to handle showStressMarkers changes
   useEffect(() => {
@@ -775,9 +863,12 @@ const IPAKeyboard = ({
       [validLanguage]: basePhonemes
     }));
 
-    // Force grid recalculation
-    calculateOptimalGrid();
-  }, [showStressMarkers, validLanguage]);
+    // Force grid recalculation only if not using custom config
+    const customConfig = gridConfig?.[validLanguage];
+    if (!customConfig?.columns) {
+      calculateOptimalGrid();
+    }
+  }, [showStressMarkers, validLanguage, gridConfig, calculateOptimalGrid]);
 
   const handlePhonemeMove = useCallback((phoneme, direction) => {
     const currentPhonemes = getOrderedPhonemes();
@@ -1074,6 +1165,20 @@ const IPAKeyboard = ({
   };
 
   const renderPhonemeButton = (phoneme, group) => {
+    // Handle blank cells - render invisible placeholder
+    if (phoneme === '') {
+      return (
+        <div
+          key={`blank-${Math.random()}`}
+          style={{
+            width: '60px',
+            height: '60px',
+            visibility: 'hidden',
+          }}
+        />
+      );
+    }
+
     const isDisabled = typeof disabledPhonemes === 'function' 
       ? disabledPhonemes(phoneme) 
       : disabledPhonemes?.includes(phoneme);
