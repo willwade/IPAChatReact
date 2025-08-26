@@ -390,41 +390,31 @@ app.post('/api/tts', async (req, res) => {
     let ssml;
 
     if (usePhonemes && isWholeUtterance) {
-      // For whole utterances, use proper SSML with spaced phonemes for blending
-      ssml = `
-        <speak version="1.0"
-               xmlns="http://www.w3.org/2001/10/synthesis"
-               xmlns:mstts="https://www.w3.org/2001/mstts"
-               xml:lang="${language}">
-          <voice name="${voice}">
-            <prosody rate="medium" pitch="medium">
-              <phoneme alphabet="ipa" ph="${text}"></phoneme>
-            </prosody>
-          </voice>
-        </speak>
-      `.trim();
+      // For whole utterances, use proper SSML with the IPA sequence for blending
+      // Don't put spaces in the ph attribute - Azure TTS handles blending internally
+      ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+  <voice name="${voice}">
+    <prosody rate="medium" pitch="medium">
+      <phoneme alphabet="ipa" ph="${text}"/>
+    </prosody>
+  </voice>
+</speak>`;
     } else if (usePhonemes) {
       // For individual phonemes, use simpler SSML
-      ssml = `
-        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
-          <voice name="${voice}">
-            <prosody rate="slow" pitch="medium">
-              <phoneme alphabet="ipa" ph="${text}">
-                ${text === 'p' ? 'puh' : text === 'f' ? 'fuh' : '_'}
-              </phoneme>
-            </prosody>
-          </voice>
-        </speak>
-      `.trim();
+      ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+  <voice name="${voice}">
+    <prosody rate="slow" pitch="medium">
+      <phoneme alphabet="ipa" ph="${text}"/>
+    </prosody>
+  </voice>
+</speak>`;
     } else {
       // For regular text
-      ssml = `
-        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
-          <voice name="${voice}">
-            ${text}
-          </voice>
-        </speak>
-      `.trim();
+      ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+  <voice name="${voice}">
+    ${text}
+  </voice>
+</speak>`;
     }
 
     console.log('Generated SSML:', ssml);
