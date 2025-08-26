@@ -22,6 +22,8 @@ import {
   Alert,
   Tooltip,
   IconButton,
+  Card,
+  CardContent,
 } from '@mui/material';
 import { regions } from '../data/gamePhases';
 import BackupIcon from '@mui/icons-material/Backup';
