@@ -59,6 +59,10 @@ const Settings = ({
   voices = [],
   showIpaToText,
   onShowIpaToTextChange,
+  speakOnButtonPress,
+  onSpeakOnButtonPressChange,
+  speakWholeUtterance,
+  onSpeakWholeUtteranceChange,
 }) => {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
