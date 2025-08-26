@@ -241,7 +241,12 @@ const Settings = ({
           Object.entries(backupData).forEach(([key, value]) => {
             if (key !== 'selectedLanguage') { // Skip language since we already set it
               try {
-                localStorage.setItem(key, JSON.stringify(value));
+                // Only JSON.stringify objects and booleans, store strings directly
+                if (typeof value === 'boolean' || typeof value === 'object') {
+                  localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                  localStorage.setItem(key, value);
+                }
               } catch {
                 localStorage.setItem(key, value);
               }
