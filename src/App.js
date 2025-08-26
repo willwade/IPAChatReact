@@ -211,7 +211,7 @@ const App = () => {
 
   useEffect(() => {
     fetchVoices();
-  }, []);
+  }, [fetchVoices]);
 
   // Set initial voice when language changes
   useEffect(() => {
