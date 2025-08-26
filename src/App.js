@@ -135,14 +135,38 @@ const App = () => {
     { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) }
   ];
 
+  const testApiConnectivity = async () => {
+    try {
+      console.log('🔍 Testing API connectivity...');
+      const response = await config.api.get('/api/test');
+      console.log('✅ API connectivity test passed:', response.data);
+      return true;
+    } catch (error) {
+      console.error('❌ API connectivity test failed:', {
+        message: error.message,
+        code: error.code,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+      });
+      return false;
+    }
+  };
+
   const fetchVoices = async () => {
     try {
-      console.log('Attempting to fetch voices from:', config.apiUrl + '/api/voices');
+      console.log('🎤 Attempting to fetch voices from:', config.apiUrl + '/api/voices');
+
+      // Test basic connectivity first
+      const isConnected = await testApiConnectivity();
+      if (!isConnected) {
+        throw new Error('No API connectivity');
+      }
+
       const response = await config.api.get('/api/voices');
-      console.log('Voice fetch response:', response);
+      console.log('✅ Voice fetch response:', response);
 
       if (response.data) {
-        console.log('Voices data received:', response.data);
+        console.log('📋 Voices data received:', response.data);
         setAvailableVoices(response.data);
         // Set default voice if available
         if (selectedLanguage && response.data[selectedLanguage]?.length > 0) {
@@ -151,18 +175,19 @@ const App = () => {
         setVoicesLoading(false);
       }
     } catch (error) {
-      console.error('Error fetching voices:', {
+      console.error('❌ Error fetching voices:', {
         message: error.message,
         code: error.code,
         url: error.config?.url,
         baseURL: error.config?.baseURL,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        timeout: error.code === 'ECONNABORTED'
+        timeout: error.code === 'ECONNABORTED',
+        networkError: error.code === 'ERR_NETWORK'
       });
 
       // Fallback to static voice data if network fails
-      console.log('Using fallback voice data...');
+      console.log('🔄 Using fallback voice data...');
       const fallbackVoices = {
         'en-GB': [
           { name: 'en-GB-LibbyNeural', displayName: 'Libby (Female)', locale: 'en-GB' },
