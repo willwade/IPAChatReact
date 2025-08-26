@@ -179,6 +179,7 @@ const IPAKeyboard = ({
         console.error('Error loading grid config:', e);
       }
     }
+
   }, []);
 
   // Apply grid configuration when it changes
@@ -1077,7 +1078,7 @@ const IPAKeyboard = ({
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          {!customization.hideLabel && phoneme}
+          {!customization.hideLabel && (customization.label || phoneme)}
           {canMoveLeft && (
             <Box
               onClick={(e) => {
@@ -1161,7 +1162,7 @@ const IPAKeyboard = ({
     }
 
     // If no image and not in move mode, show the phoneme text unless hideLabel is true
-    return !customization.hideLabel ? phoneme : null;
+    return !customization.hideLabel ? (customization.label || phoneme) : null;
   };
 
   const renderPhonemeButton = (phoneme, group) => {
@@ -1250,6 +1251,7 @@ const IPAKeyboard = ({
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
+    const [customLabel, setCustomLabel] = useState(customization.label || '');
 
     // Get current order and position for move controls
     const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
@@ -1275,6 +1277,7 @@ const IPAKeyboard = ({
         hideButton,
         image: previewSrc,
         customColor,
+        label: customLabel,
       };
       console.log('Saving new customization:', newCustomization);
       saveCustomization(phoneme, newCustomization);
@@ -1351,6 +1354,14 @@ const IPAKeyboard = ({
             <FormControlLabel
               control={<Switch checked={hideButton} onChange={(e) => setHideButton(e.target.checked)} />}
               label="Hide Button"
+            />
+            <TextField
+              label="Custom Label"
+              value={customLabel}
+              onChange={(e) => setCustomLabel(e.target.value)}
+              placeholder={`Default: ${phoneme}`}
+              fullWidth
+              size="small"
             />
             <Divider />
             
