@@ -1040,13 +1040,6 @@ const App = () => {
 
     console.log('Speaking whole utterance via TTS:', text);
 
-    // Format IPA string with spaces between phonemes for proper blending
-    const formatIpaForSpeech = (ipaText) => {
-      // Split the IPA into individual characters and add spaces between them
-      // This allows Azure TTS to properly blend the sounds together
-      return Array.from(ipaText).join(' ');
-    };
-
     const maxRetries = 2;
     const retryDelay = 1000; // 1 second
 
@@ -1054,13 +1047,10 @@ const App = () => {
     const makeTTSRequest = async (retryCount = 0) => {
       try {
         console.log(`TTS attempt ${retryCount + 1}/${maxRetries + 1} for whole utterance`);
-
-        // Format the IPA with spaces for proper blending
-        const spacedIpa = formatIpaForSpeech(text);
-        console.log('Formatted IPA with spaces:', spacedIpa);
+        console.log('IPA text to speak:', text);
 
         const response = await config.api.post('/api/tts', {
-          text: spacedIpa,
+          text: text,  // Send IPA as-is, Azure TTS will handle the blending
           voice: selectedVoice,
           language: selectedLanguage,
           usePhonemes: true,  // Always use phoneme mode for whole utterances
@@ -1108,23 +1098,10 @@ const App = () => {
         voice: selectedVoice
       });
 
-      // Final fallback: try to play individual phonemes for short utterances
-      if (text.length <= 10) {
-        console.log('Attempting individual phoneme playback as final fallback');
-        try {
-          for (const char of text) {
-            if (char.trim() && !/[↗↘↑↓|‖]/.test(char)) {
-              await handlePhonemeSpeak(char);
-              await new Promise(resolve => setTimeout(resolve, 300)); // Small delay between phonemes
-            }
-          }
-          console.log('Individual phoneme fallback completed');
-        } catch (phonemeError) {
-          console.error('Individual phoneme fallback also failed:', phonemeError);
-        }
-      }
+      // Rethrow so the speak function can handle the fallback
+      throw error;
     }
-  }, [selectedVoice, selectedLanguage, handlePhonemeSpeak]);
+  }, [selectedVoice, selectedLanguage]);
 
   // Add effect to speak whole utterance when message changes in build mode
   useEffect(() => {
