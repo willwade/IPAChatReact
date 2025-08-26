@@ -349,10 +349,15 @@ const Settings = ({
                         gridTemplateColumns: 'repeat(2, 1fr)'
                       }
                     }}>
-                      {['example1', 'example2', 'example3', 'example4'].map((ex, idx) => (
+                      {[
+                        { name: 'Example 1', file: 'example1', thumb: '/examples/example1.png' },
+                        { name: 'Example 2', file: 'example2', thumb: '/examples/example2.png' },
+                        { name: 'Example 3', file: 'example3', thumb: '/examples/example3.svg' },
+                        { name: 'Example 4', file: 'example4', thumb: '/examples/example4.svg' }
+                      ].map((ex, idx) => (
                         <Box
-                          key={ex}
-                          onClick={() => handleExampleLoad(ex)}
+                          key={ex.file}
+                          onClick={() => handleExampleLoad(ex.file)}
                           sx={{
                             cursor: 'pointer',
                             textAlign: 'center',
@@ -385,8 +390,8 @@ const Settings = ({
                             }}
                           >
                             <img
-                              src={`/examples/${ex}.svg`}
-                              alt={`Example ${idx + 1}`}
+                              src={ex.thumb}
+                              alt={ex.name}
                               style={{
                                 width: '100%',
                                 height: '100%',
@@ -402,7 +407,7 @@ const Settings = ({
                               fontWeight: 500
                             }}
                           >
-                            Example {idx + 1}
+                            {ex.name}
                           </Typography>
                         </Box>
                       ))}
