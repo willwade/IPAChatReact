@@ -139,6 +139,23 @@ const App = () => {
     initializeData();
   }, [selectedLanguage]);
 
+  // Clean up localStorage from any JSON-stringified simple values on app start
+  useEffect(() => {
+    const cleanupLocalStorage = () => {
+      const keysToClean = ['selectedVoice', 'ipaMode', 'selectedLanguage', 'selectedRegion'];
+
+      keysToClean.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value && value.startsWith('"') && value.endsWith('"')) {
+          // This is a JSON-stringified simple string, clean it up
+          localStorage.setItem(key, value.slice(1, -1));
+        }
+      });
+    };
+
+    cleanupLocalStorage();
+  }, []);
+
   useEffect(() => {
     if (isInitialized && selectedVoice && isDataLoaded) {
       cachePhonemeAudio();
