@@ -377,7 +377,14 @@ const App = () => {
   const getPhonemeFileName = (phoneme, voice) => {
     // Use URL-friendly name if available, otherwise use URL-encoded phoneme
     const filenamePart = phonemeToFilename[phoneme] || encodeURIComponent(phoneme);
-    return `${filenamePart}_${voice}.mp3`;
+    const fileName = `${filenamePart}_${voice}.mp3`;
+
+    // Debug logging to check for malformed filenames
+    if (voice.includes('"')) {
+      console.error('Voice name contains quotes:', voice);
+    }
+
+    return fileName;
   };
 
   const cachePhonemeAudio = async () => {
