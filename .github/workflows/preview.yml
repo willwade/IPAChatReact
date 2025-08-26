@@ -1,0 +1,92 @@
+name: DigitalOcean Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_API_TOKEN }}
+      - name: Generate app spec
+        id: spec
+        if: github.event.action != 'closed'
+        run: |
+          cat <<'SPEC' > do-app-template.yaml
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+envs:
+- key: REACT_APP_AZURE_KEY
+  scope: RUN_AND_BUILD_TIME
+  value: ${REACT_APP_AZURE_KEY}
+- key: REACT_APP_AZURE_REGION
+  scope: RUN_AND_BUILD_TIME
+  value: ${REACT_APP_AZURE_REGION}
+- key: REACT_APP_PHONEMIZE_API
+  scope: RUN_AND_BUILD_TIME
+  value: ${REACT_APP_PHONEMIZE_API}
+features:
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: ipachatreact
+    match:
+      path:
+        prefix: /
+name: ${APP_NAME}
+region: lon
+services:
+- environment_slug: node-js
+  github:
+    branch: ${GITHUB_BRANCH}
+    repo: willwade/IPAChatReact
+    deploy_on_push: false
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-1gb
+  name: ipachatreact
+  run_command: npm start
+  source_dir: /
+SPEC
+          APP_NAME=ipachat-pr-${{ github.event.number }} \
+          GITHUB_BRANCH=${{ github.head_ref }} \
+          REACT_APP_AZURE_KEY=${{ secrets.REACT_APP_AZURE_KEY }} \
+          REACT_APP_AZURE_REGION=${{ secrets.REACT_APP_AZURE_REGION }} \
+          REACT_APP_PHONEMIZE_API=${{ secrets.REACT_APP_PHONEMIZE_API }} \
+          envsubst < do-app-template.yaml > app.yaml
+      - name: Deploy preview
+        id: deploy
+        if: github.event.action != 'closed'
+        env:
+          APP_NAME: ipachat-pr-${{ github.event.number }}
+        run: |
+          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk -v app="$APP_NAME" '$2==app {print $1}')
+          if [ -z "$APP_ID" ]; then
+            APP_ID=$(doctl apps create --spec app.yaml --format ID --no-header)
+          else
+            doctl apps update $APP_ID --spec app.yaml
+          fi
+          doctl apps create-deployment $APP_ID --wait
+          URL=$(doctl apps get $APP_ID --format DefaultIngress --no-header)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+      - name: Comment PR
+        if: github.event.action != 'closed'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr comment ${{ github.event.number }} --body "Preview URL: ${{ steps.deploy.outputs.url }}"
+      - name: Destroy preview
+        if: github.event.action == 'closed'
+        env:
+          APP_NAME: ipachat-pr-${{ github.event.number }}
+        run: |
+          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk -v app="$APP_NAME" '$2==app {print $1}')
+          if [ -n "$APP_ID" ]; then
+            doctl apps delete $APP_ID --force --dangerous
+          fi
