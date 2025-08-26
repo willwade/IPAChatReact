@@ -30,6 +30,7 @@ import BackupIcon from '@mui/icons-material/Backup';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { phoneticData } from '../data/phonemes';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { exampleLayouts } from '../data/exampleLayouts';
 
 const Settings = ({
   open,
@@ -375,12 +376,7 @@ const Settings = ({
                         gridTemplateColumns: 'repeat(2, 1fr)'
                       }
                     }}>
-                      {[
-                        { name: 'Example 1', file: 'example1', thumb: '/examples/example1.png' },
-                        { name: 'Example 2', file: 'example2', thumb: '/examples/example2.png' },
-                        { name: 'Example 3', file: 'example3', thumb: '/examples/example3.svg' },
-                        { name: 'Example 4', file: 'example4', thumb: '/examples/example4.svg' }
-                      ].map((ex, idx) => (
+                      {exampleLayouts.map((ex, idx) => (
                         <Box
                           key={ex.file}
                           onClick={() => handleExampleLoad(ex.file)}
