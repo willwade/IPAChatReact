@@ -303,7 +303,8 @@ app.post('/api/tts', async (req, res) => {
         'User-Agent': 'IPAChat'
       },
       data: ssml,
-      responseType: 'arraybuffer'
+      responseType: 'arraybuffer',
+      timeout: 25000 // 25 second timeout for Azure requests
     });
 
     console.log('Azure response received:', {
