@@ -973,32 +973,43 @@ const App = () => {
 
     console.log('Speaking whole utterance via TTS:', text);
 
+    // Format IPA string with spaces between phonemes for proper blending
+    const formatIpaForSpeech = (ipaText) => {
+      // Split the IPA into individual characters and add spaces between them
+      // This allows Azure TTS to properly blend the sounds together
+      return Array.from(ipaText).join(' ');
+    };
+
     const maxRetries = 2;
     const retryDelay = 1000; // 1 second
 
-    // Helper function to make TTS request
-    const makeTTSRequest = async (usePhonemes, retryCount = 0) => {
+    // Helper function to make TTS request for whole utterances
+    const makeTTSRequest = async (retryCount = 0) => {
       try {
-        console.log(`TTS attempt ${retryCount + 1}/${maxRetries + 1} (usePhonemes: ${usePhonemes})`);
+        console.log(`TTS attempt ${retryCount + 1}/${maxRetries + 1} for whole utterance`);
+
+        // Format the IPA with spaces for proper blending
+        const spacedIpa = formatIpaForSpeech(text);
+        console.log('Formatted IPA with spaces:', spacedIpa);
 
         const response = await config.api.post('/api/tts', {
-          text,
+          text: spacedIpa,
           voice: selectedVoice,
           language: selectedLanguage,
-          usePhonemes
+          usePhonemes: true,  // Always use phoneme mode for whole utterances
+          isWholeUtterance: true  // Flag to indicate this is a complete utterance
         });
 
         if (response.data && response.data.audio) {
-          const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+          const audio = new Audio(`data:audio/wav;base64,${response.data.audio}`);
           await audio.play();
-          console.log(`Whole utterance played successfully (attempt ${retryCount + 1}, phonemes: ${usePhonemes})`);
+          console.log(`Whole utterance played successfully (attempt ${retryCount + 1})`);
           return true;
         } else {
           throw new Error('No audio data received');
         }
       } catch (error) {
         console.warn(`TTS attempt ${retryCount + 1} failed:`, {
-          usePhonemes,
           error: error.message,
           code: error.code,
           status: error.response?.status
@@ -1009,7 +1020,7 @@ const App = () => {
             (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || error.response?.status >= 500)) {
           console.log(`Retrying in ${retryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay));
-          return makeTTSRequest(usePhonemes, retryCount + 1);
+          return makeTTSRequest(retryCount + 1);
         }
 
         throw error;
@@ -1017,36 +1028,28 @@ const App = () => {
     };
 
     try {
-      // First attempt: try with phoneme mode enabled for IPA
-      await makeTTSRequest(true);
-    } catch (phonemeError) {
-      console.warn('Phoneme mode failed, trying without phonemes:', phonemeError.message);
+      // Use the new whole utterance approach
+      await makeTTSRequest();
+    } catch (error) {
+      console.error('Whole utterance TTS failed:', {
+        error: error.message,
+        text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+        voice: selectedVoice
+      });
 
-      try {
-        // Fallback: try without phoneme mode
-        await makeTTSRequest(false);
-      } catch (fallbackError) {
-        console.error('Both TTS modes failed for whole utterance:', {
-          phonemeError: phonemeError.message,
-          fallbackError: fallbackError.message,
-          text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
-          voice: selectedVoice
-        });
-
-        // Final fallback: try to play individual phonemes for short utterances
-        if (text.length <= 10) {
-          console.log('Attempting individual phoneme playback as final fallback');
-          try {
-            for (const char of text) {
-              if (char.trim() && !/[↗↘↑↓|‖]/.test(char)) {
-                await handlePhonemeSpeak(char);
-                await new Promise(resolve => setTimeout(resolve, 300)); // Small delay between phonemes
-              }
+      // Final fallback: try to play individual phonemes for short utterances
+      if (text.length <= 10) {
+        console.log('Attempting individual phoneme playback as final fallback');
+        try {
+          for (const char of text) {
+            if (char.trim() && !/[↗↘↑↓|‖]/.test(char)) {
+              await handlePhonemeSpeak(char);
+              await new Promise(resolve => setTimeout(resolve, 300)); // Small delay between phonemes
             }
-            console.log('Individual phoneme fallback completed');
-          } catch (phonemeError) {
-            console.error('Individual phoneme fallback also failed:', phonemeError);
           }
+          console.log('Individual phoneme fallback completed');
+        } catch (phonemeError) {
+          console.error('Individual phoneme fallback also failed:', phonemeError);
         }
       }
     }
