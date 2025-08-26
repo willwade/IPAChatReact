@@ -188,6 +188,14 @@ const Settings = ({
     if (typeof backupData.hapticFeedback === 'boolean') {
       onHapticFeedbackChange(backupData.hapticFeedback);
     }
+
+    // Update speech settings
+    if (typeof backupData.speakOnButtonPress === 'boolean') {
+      onSpeakOnButtonPressChange(backupData.speakOnButtonPress);
+    }
+    if (typeof backupData.speakWholeUtterance === 'boolean') {
+      onSpeakWholeUtteranceChange(backupData.speakWholeUtterance);
+    }
   };
 
   const handleRestoreClick = () => {
