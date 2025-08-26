@@ -240,6 +240,12 @@ const App = () => {
           throw new Error('API connectivity test failed');
         }
 
+        // Check Azure status
+        const azureWorking = await checkAzureStatus();
+        if (!azureWorking) {
+          console.warn('⚠️ Azure TTS may not be working properly, but continuing with voice setup...');
+        }
+
         const response = await config.api.get('/api/voices');
         console.log('✅ Voice fetch response:', response.status, response.data);
 
