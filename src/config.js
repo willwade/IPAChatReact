@@ -5,8 +5,8 @@ const getApiUrl = () => {
     // In production, use the same origin
     return `${window.location.protocol}//${window.location.host}`;
   } else {
-    // In development, proxy API calls to backend on port 3001
-    return '/api-proxy';
+    // In development, use relative URLs that will be proxied to backend
+    return '';
   }
 };
 
