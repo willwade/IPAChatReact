@@ -739,17 +739,22 @@ const App = () => {
         usePhonemes: false
       });
 
-      const response = await config.api.post('/api/tts', { 
+      const response = await config.api.post('/api/tts', {
         text,
         voice: selectedVoice,
         language: selectedLanguage,
-        usePhonemes: false  // Explicitly set to false for natural word pronunciation
+        usePhonemes: false,  // Explicitly set to false for natural word pronunciation
+        isWholeUtterance: false
       });
-      
+
       console.log('TTS response:', response.data);
-      
+
       if (response.data && response.data.audio) {
-        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        // Determine audio format based on backend response
+        const audioFormat = response.data.format === 'riff-48khz-16bit-mono-pcm' ?
+          'audio/wav' : 'audio/mp3';
+
+        const audio = new Audio(`data:${audioFormat};base64,${response.data.audio}`);
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.catch(err => {
