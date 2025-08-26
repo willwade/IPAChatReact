@@ -922,8 +922,11 @@ const App = () => {
   // Add effect to speak whole utterance when message changes in build mode
   useEffect(() => {
     if (speakWholeUtterance && mode === 'build' && message) {
+      console.log('Whole utterance reading triggered:', { message, speakWholeUtterance, mode });
+
       // Add a small delay to avoid speaking on every character when typing
       const timeoutId = setTimeout(() => {
+        console.log('Speaking whole utterance:', message);
         handlePhonemeSpeak(message);
       }, 500); // 500ms delay
 
