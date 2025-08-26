@@ -32,6 +32,25 @@ REACT_APP_AZURE_REGION=your_azure_region_here
 npm start
 ```
 
+## Pull Request Preview Deployments
+
+This repository includes a GitHub Actions workflow that deploys every pull
+request to a temporary DigitalOcean App Platform app. The workflow comments on
+the PR with the preview URL.
+
+To enable preview deployments:
+
+1. Create a DigitalOcean API token with access to manage apps.
+2. Add it to the repository secrets as `DO_API_TOKEN`.
+3. Add the existing Azure environment values as GitHub repository secrets. These
+   should match the values already configured in the DigitalOcean app:
+   - `REACT_APP_AZURE_KEY`
+   - `REACT_APP_AZURE_REGION`
+   - `REACT_APP_PHONEMIZE_API`
+
+No changes are required to the production app. Preview apps are created with a
+unique name per pull request and removed when the PR is closed.
+
 ## Customizing IPA Buttons
 
 Each IPA button can be customized with:
