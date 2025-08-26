@@ -17,7 +17,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 5000, // Reduced timeout for faster error detection
   validateStatus: (status) => {
     return status >= 200 && status < 500;
   },
