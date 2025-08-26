@@ -135,83 +135,83 @@ const App = () => {
     { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) }
   ];
 
-  const testApiConnectivity = useCallback(async () => {
-    try {
-      console.log('🔍 Testing API connectivity...');
-      const response = await config.api.get('/api/test');
-      console.log('✅ API connectivity test passed:', response.data);
-      return true;
-    } catch (error) {
-      console.error('❌ API connectivity test failed:', {
-        message: error.message,
-        code: error.code,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-      });
-      return false;
-    }
-  }, []);
-
-  const fetchVoices = useCallback(async () => {
-    try {
-      console.log('🎤 Attempting to fetch voices from:', config.apiUrl + '/api/voices');
-
-      // Test basic connectivity first
-      const isConnected = await testApiConnectivity();
-      if (!isConnected) {
-        throw new Error('No API connectivity');
+  useEffect(() => {
+    const testApiConnectivity = async () => {
+      try {
+        console.log('🔍 Testing API connectivity...');
+        const response = await config.api.get('/api/test');
+        console.log('✅ API connectivity test passed:', response.data);
+        return true;
+      } catch (error) {
+        console.error('❌ API connectivity test failed:', {
+          message: error.message,
+          code: error.code,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+        });
+        return false;
       }
+    };
 
-      const response = await config.api.get('/api/voices');
-      console.log('✅ Voice fetch response:', response);
+    const fetchVoices = async () => {
+      try {
+        console.log('🎤 Attempting to fetch voices from:', config.apiUrl + '/api/voices');
 
-      if (response.data) {
-        console.log('📋 Voices data received:', response.data);
-        setAvailableVoices(response.data);
-        // Set default voice if available
-        if (selectedLanguage && response.data[selectedLanguage]?.length > 0) {
-          setSelectedVoice(response.data[selectedLanguage][0].name);
+        // Test basic connectivity first
+        const isConnected = await testApiConnectivity();
+        if (!isConnected) {
+          throw new Error('No API connectivity');
+        }
+
+        const response = await config.api.get('/api/voices');
+        console.log('✅ Voice fetch response:', response);
+
+        if (response.data) {
+          console.log('📋 Voices data received:', response.data);
+          setAvailableVoices(response.data);
+          // Set default voice if available
+          if (selectedLanguage && response.data[selectedLanguage]?.length > 0) {
+            setSelectedVoice(response.data[selectedLanguage][0].name);
+          }
+          setVoicesLoading(false);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching voices:', {
+          message: error.message,
+          code: error.code,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          timeout: error.code === 'ECONNABORTED',
+          networkError: error.code === 'ERR_NETWORK'
+        });
+
+        // Fallback to static voice data if network fails
+        console.log('🔄 Using fallback voice data...');
+        const fallbackVoices = {
+          'en-GB': [
+            { name: 'en-GB-LibbyNeural', displayName: 'Libby (Female)', locale: 'en-GB' },
+            { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)', locale: 'en-GB' },
+            { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)', locale: 'en-GB' },
+          ],
+          'en-US': [
+            { name: 'en-US-JennyNeural', displayName: 'Jenny (Female)', locale: 'en-US' },
+            { name: 'en-US-GuyNeural', displayName: 'Guy (Male)', locale: 'en-US' },
+            { name: 'en-US-AriaNeural', displayName: 'Aria (Female)', locale: 'en-US' },
+          ],
+        };
+
+        setAvailableVoices(fallbackVoices);
+        if (selectedLanguage && fallbackVoices[selectedLanguage]?.length > 0) {
+          setSelectedVoice(fallbackVoices[selectedLanguage][0].name);
         }
         setVoicesLoading(false);
       }
-    } catch (error) {
-      console.error('❌ Error fetching voices:', {
-        message: error.message,
-        code: error.code,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        timeout: error.code === 'ECONNABORTED',
-        networkError: error.code === 'ERR_NETWORK'
-      });
+    };
 
-      // Fallback to static voice data if network fails
-      console.log('🔄 Using fallback voice data...');
-      const fallbackVoices = {
-        'en-GB': [
-          { name: 'en-GB-LibbyNeural', displayName: 'Libby (Female)', locale: 'en-GB' },
-          { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)', locale: 'en-GB' },
-          { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)', locale: 'en-GB' },
-        ],
-        'en-US': [
-          { name: 'en-US-JennyNeural', displayName: 'Jenny (Female)', locale: 'en-US' },
-          { name: 'en-US-GuyNeural', displayName: 'Guy (Male)', locale: 'en-US' },
-          { name: 'en-US-AriaNeural', displayName: 'Aria (Female)', locale: 'en-US' },
-        ],
-      };
-
-      setAvailableVoices(fallbackVoices);
-      if (selectedLanguage && fallbackVoices[selectedLanguage]?.length > 0) {
-        setSelectedVoice(fallbackVoices[selectedLanguage][0].name);
-      }
-      setVoicesLoading(false);
-    }
-  }, [selectedLanguage, testApiConnectivity]);
-
-  useEffect(() => {
     fetchVoices();
-  }, [fetchVoices]);
+  }, [selectedLanguage]);
 
   // Set initial voice when language changes
   useEffect(() => {
