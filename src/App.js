@@ -553,6 +553,11 @@ const App = () => {
     // In build mode, update the message
     if (mode === 'build') {
       setMessage(prev => prev + phoneme);
+
+      // Optionally speak the phoneme if setting is enabled
+      if (speakOnButtonPress) {
+        playPhoneme(phoneme);
+      }
       return;
     }
     
@@ -743,7 +748,7 @@ const App = () => {
         for (let i = 0; i < ipa.length; i++) {
           const char = ipa[i];
           const normalizedChar = normalizePhoneme(char);
-          const isStressMarker = /[ˈ��]/.test(char);
+          const isStressMarker = /[ˈˌ]/.test(char);
           
           const exists = allPhonemes.has(char) || allPhonemes.has(normalizedChar);
           
