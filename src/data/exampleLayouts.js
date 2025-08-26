@@ -20,4 +20,9 @@ export const exampleLayouts = [
     file: 'example4', 
     thumb: '/examples/example4.svg' 
   },
+  { 
+    name: 'QWERTY', 
+    file: 'example5', 
+    thumb: '/examples/example5.png' 
+  },
 ];
