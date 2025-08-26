@@ -335,7 +335,12 @@ const Settings = ({
       onClose();
 
       // Show success message
-      alert('Example loaded successfully into build mode!');
+      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
+
+      // Reload the page after a delay to ensure IPA customizations are applied
+      setTimeout(() => {
+        window.location.reload();
+      }, 200);
 
     } catch (error) {
       console.error('Error loading example:', error);
