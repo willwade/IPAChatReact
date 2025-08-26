@@ -743,7 +743,7 @@ const App = () => {
         for (let i = 0; i < ipa.length; i++) {
           const char = ipa[i];
           const normalizedChar = normalizePhoneme(char);
-          const isStressMarker = /[ˈˌ]/.test(char);
+          const isStressMarker = /[ˈ��]/.test(char);
           
           const exists = allPhonemes.has(char) || allPhonemes.has(normalizedChar);
           
@@ -1164,6 +1164,10 @@ const App = () => {
               voices={availableVoices[selectedLanguage] || []}
               showIpaToText={showIpaToText}
               onShowIpaToTextChange={setShowIpaToText}
+              speakOnButtonPress={speakOnButtonPress}
+              onSpeakOnButtonPressChange={setSpeakOnButtonPress}
+              speakWholeUtterance={speakWholeUtterance}
+              onSpeakWholeUtteranceChange={setSpeakWholeUtterance}
             />
 
             {/* Search dialog */}
