@@ -1,6 +1,6 @@
 # IPA Chat React
 
-A Progressive Web App for exploring IPA (International Phonetic Alphabet) phonemes with speech synthesis support.
+A Progressive Web App for exploring IPA (International Phonetic Alphabet) phonemes with speech synthesis support. WIP. 
 
 ## Features
 
