@@ -100,11 +100,11 @@ const App = () => {
   });
   const [speakOnButtonPress, setSpeakOnButtonPress] = useState(() => {
     const saved = localStorage.getItem('speakOnButtonPress');
-    return saved ? JSON.parse(saved) : false;
+    return saved ? JSON.parse(saved) : true;
   });
   const [speakWholeUtterance, setSpeakWholeUtterance] = useState(() => {
     const saved = localStorage.getItem('speakWholeUtterance');
-    return saved ? JSON.parse(saved) : false;
+    return saved ? JSON.parse(saved) : true;
   });
 
   useEffect(() => {
