@@ -549,7 +549,7 @@ const Settings = ({
               <Typography variant="h6" gutterBottom>
                 Display Settings
               </Typography>
-              
+
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <FormControlLabel
                   control={
@@ -561,6 +561,44 @@ const Settings = ({
                   label="Show text conversion"
                 />
                 <Tooltip title="Display converted text when speaking IPA symbols">
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Speech Settings
+              </Typography>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={speakOnButtonPress}
+                      onChange={(e) => onSpeakOnButtonPressChange(e.target.checked)}
+                    />
+                  }
+                  label="Read each button as you press it (Build Mode)"
+                />
+                <Tooltip title="Automatically speak each phoneme when clicked in build mode">
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={speakWholeUtterance}
+                      onChange={(e) => onSpeakWholeUtteranceChange(e.target.checked)}
+                    />
+                  }
+                  label="Read whole utterance as it's built"
+                />
+                <Tooltip title="Automatically speak the entire message when the message bar is updated in build mode">
                   <IconButton size="small" sx={{ ml: 1 }}>
                     <HelpOutlineIcon fontSize="small" />
                   </IconButton>
