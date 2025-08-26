@@ -715,7 +715,7 @@ const App = () => {
     }
 
     // For longer messages, use the whole utterance function with retry logic
-    if (message.length > 5) {
+    if (message.length > 3) {
       try {
         await speakWholeUtteranceText(message);
       } catch (error) {
