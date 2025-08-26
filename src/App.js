@@ -919,6 +919,50 @@ const App = () => {
     localStorage.setItem('speakWholeUtterance', JSON.stringify(speakWholeUtterance));
   }, [speakWholeUtterance]);
 
+  // Separate function for whole utterance reading
+  const speakWholeUtteranceText = useCallback(async (text) => {
+    if (!text || !selectedVoice) return;
+
+    console.log('Speaking whole utterance via TTS:', text);
+
+    // For whole utterances, always use TTS API directly with usePhonemes=true
+    try {
+      const response = await config.api.post('/api/tts', {
+        text,
+        voice: selectedVoice,
+        language: selectedLanguage,
+        usePhonemes: true  // Explicitly enable phoneme mode for IPA
+      });
+
+      if (response.data && response.data.audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        await audio.play();
+        console.log('Whole utterance played successfully');
+      } else {
+        console.warn('No audio data received for whole utterance');
+      }
+    } catch (error) {
+      console.warn('Error in whole utterance speech synthesis:', error);
+      // Fallback: try without phoneme mode
+      try {
+        const response = await config.api.post('/api/tts', {
+          text,
+          voice: selectedVoice,
+          language: selectedLanguage,
+          usePhonemes: false
+        });
+
+        if (response.data && response.data.audio) {
+          const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+          await audio.play();
+          console.log('Whole utterance played with fallback');
+        }
+      } catch (fallbackError) {
+        console.error('Both TTS attempts failed for whole utterance:', fallbackError);
+      }
+    }
+  }, [selectedVoice, selectedLanguage]);
+
   // Add effect to speak whole utterance when message changes in build mode
   useEffect(() => {
     if (speakWholeUtterance && mode === 'build' && message) {
@@ -926,13 +970,12 @@ const App = () => {
 
       // Add a small delay to avoid speaking on every character when typing
       const timeoutId = setTimeout(() => {
-        console.log('Speaking whole utterance:', message);
-        handlePhonemeSpeak(message);
+        speakWholeUtteranceText(message);
       }, 500); // 500ms delay
 
       return () => clearTimeout(timeoutId);
     }
-  }, [message, speakWholeUtterance, mode, handlePhonemeSpeak]);
+  }, [message, speakWholeUtterance, mode, speakWholeUtteranceText]);
 
   if (dataLoading) {
     return (
