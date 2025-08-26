@@ -313,6 +313,9 @@ const Settings = ({
             // Only JSON.stringify objects and booleans, store strings directly
             if (typeof finalValue === 'boolean' || typeof finalValue === 'object') {
               localStorage.setItem(key, JSON.stringify(finalValue));
+              if (key === 'ipaCustomizations') {
+                console.log('Stored IPA customizations for example:', Object.keys(finalValue).length, 'phonemes');
+              }
             } else {
               localStorage.setItem(key, finalValue);
             }
