@@ -280,25 +280,30 @@ const Settings = ({
       // Wait a moment for language change to take effect
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Then update the rest of localStorage
+      // Then update the rest of localStorage, but force mode to "build"
       Object.entries(data).forEach(([key, value]) => {
         if (key !== 'selectedLanguage') { // Skip language since we already set it
           try {
-            localStorage.setItem(key, JSON.stringify(value));
+            // Force mode to "build" when loading examples
+            const finalValue = key === 'ipaMode' ? 'build' : value;
+            localStorage.setItem(key, JSON.stringify(finalValue));
           } catch {
-            localStorage.setItem(key, value);
+            // Force mode to "build" when loading examples
+            const finalValue = key === 'ipaMode' ? 'build' : value;
+            localStorage.setItem(key, finalValue);
           }
         }
       });
 
-      // Then update the state through props
-      applySettings(data);
+      // Then update the state through props, but force mode to "build"
+      const modifiedData = { ...data, ipaMode: 'build' };
+      applySettings(modifiedData);
 
       // Close settings dialog if open
       onClose();
 
       // Show success message
-      alert('Example loaded successfully! The page will now reload to apply all changes.');
+      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
 
       // Reload the page after a delay
       setTimeout(() => {
