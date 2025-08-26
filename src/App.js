@@ -559,11 +559,17 @@ const App = () => {
         const response = await config.api.post('/api/tts', {
           text,
           voice: selectedVoice,
-          language: selectedLanguage
+          language: selectedLanguage,
+          usePhonemes: false,
+          isWholeUtterance: false
         });
 
         if (response.data && response.data.audio) {
-          const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+          // Determine audio format based on backend response
+          const audioFormat = response.data.format === 'riff-48khz-16bit-mono-pcm' ?
+            'audio/wav' : 'audio/mp3';
+
+          const audio = new Audio(`data:${audioFormat};base64,${response.data.audio}`);
           await audio.play();
         }
       } catch (error) {
