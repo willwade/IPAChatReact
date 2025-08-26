@@ -40,7 +40,17 @@ const App = () => {
     if (language === 'en-GB') return 'en-GB-london';
     return ''; // No default region for other languages yet
   });
-  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('selectedVoice') || '');
+  const [selectedVoice, setSelectedVoice] = useState(() => {
+    const saved = localStorage.getItem('selectedVoice');
+    if (!saved) return '';
+
+    // Try to parse as JSON first (for legacy format), fallback to string
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return saved;
+    }
+  });
   const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
   const [autoScale, setAutoScale] = useState(() => {
