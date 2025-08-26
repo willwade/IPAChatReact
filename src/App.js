@@ -861,6 +861,15 @@ const App = () => {
     localStorage.setItem('showIpaToText', JSON.stringify(showIpaToText));
   }, [showIpaToText]);
 
+  // Add effects to save speech settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('speakOnButtonPress', JSON.stringify(speakOnButtonPress));
+  }, [speakOnButtonPress]);
+
+  useEffect(() => {
+    localStorage.setItem('speakWholeUtterance', JSON.stringify(speakWholeUtterance));
+  }, [speakWholeUtterance]);
+
   if (dataLoading) {
     return (
       <Box 
