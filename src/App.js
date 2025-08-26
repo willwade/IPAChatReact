@@ -241,9 +241,13 @@ const App = () => {
         }
 
         // Check Azure status
-        const azureWorking = await checkAzureStatus();
-        if (!azureWorking) {
-          console.warn('⚠️ Azure TTS may not be working properly, but continuing with voice setup...');
+        try {
+          const azureWorking = await checkAzureStatus();
+          if (!azureWorking) {
+            console.warn('⚠️ Azure TTS may not be working properly, but continuing with voice setup...');
+          }
+        } catch (azureError) {
+          console.warn('⚠️ Azure status check failed, but continuing with voice setup...', azureError.message);
         }
 
         const response = await config.api.get('/api/voices');
