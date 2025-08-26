@@ -1001,9 +1001,13 @@ const App = () => {
         });
 
         if (response.data && response.data.audio) {
-          const audio = new Audio(`data:audio/wav;base64,${response.data.audio}`);
+          // Determine audio format based on backend response
+          const audioFormat = response.data.format === 'riff-48khz-16bit-mono-pcm' ?
+            'audio/wav' : 'audio/mp3';
+
+          const audio = new Audio(`data:${audioFormat};base64,${response.data.audio}`);
           await audio.play();
-          console.log(`Whole utterance played successfully (attempt ${retryCount + 1})`);
+          console.log(`Whole utterance played successfully (attempt ${retryCount + 1}), format: ${audioFormat}`);
           return true;
         } else {
           throw new Error('No audio data received');
