@@ -137,17 +137,49 @@ const App = () => {
 
   const fetchVoices = async () => {
     try {
+      console.log('Attempting to fetch voices from:', config.apiUrl + '/api/voices');
       const response = await config.api.get('/api/voices');
+      console.log('Voice fetch response:', response);
+
       if (response.data) {
+        console.log('Voices data received:', response.data);
         setAvailableVoices(response.data);
         // Set default voice if available
-        if (response.data.length > 0) {
-          setSelectedVoice(response.data[0].name);
+        if (selectedLanguage && response.data[selectedLanguage]?.length > 0) {
+          setSelectedVoice(response.data[selectedLanguage][0].name);
         }
         setVoicesLoading(false);
       }
     } catch (error) {
-      console.error('Error fetching voices:', error);
+      console.error('Error fetching voices:', {
+        message: error.message,
+        code: error.code,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        timeout: error.code === 'ECONNABORTED'
+      });
+
+      // Fallback to static voice data if network fails
+      console.log('Using fallback voice data...');
+      const fallbackVoices = {
+        'en-GB': [
+          { name: 'en-GB-LibbyNeural', displayName: 'Libby (Female)', locale: 'en-GB' },
+          { name: 'en-GB-RyanNeural', displayName: 'Ryan (Male)', locale: 'en-GB' },
+          { name: 'en-GB-SoniaNeural', displayName: 'Sonia (Female)', locale: 'en-GB' },
+        ],
+        'en-US': [
+          { name: 'en-US-JennyNeural', displayName: 'Jenny (Female)', locale: 'en-US' },
+          { name: 'en-US-GuyNeural', displayName: 'Guy (Male)', locale: 'en-US' },
+          { name: 'en-US-AriaNeural', displayName: 'Aria (Female)', locale: 'en-US' },
+        ],
+      };
+
+      setAvailableVoices(fallbackVoices);
+      if (selectedLanguage && fallbackVoices[selectedLanguage]?.length > 0) {
+        setSelectedVoice(fallbackVoices[selectedLanguage][0].name);
+      }
       setVoicesLoading(false);
     }
   };
