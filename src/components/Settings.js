@@ -318,22 +318,95 @@ const Settings = ({
             </ListItem>
 
             <ListItem>
-              <Box sx={{ width: '100%', display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                {['example1', 'example2', 'example3', 'example4'].map((ex, idx) => (
-                  <Box
-                    key={ex}
-                    onClick={() => handleExampleLoad(ex)}
-                    sx={{ cursor: 'pointer', textAlign: 'center' }}
-                  >
-                    <img
-                      src={`/examples/${ex}.svg`}
-                      alt={`Example ${idx + 1}`}
-                      width={64}
-                      height={64}
-                    />
-                    <Typography variant="caption">Example {idx + 1}</Typography>
-                  </Box>
-                ))}
+              <Box sx={{ width: '100%' }}>
+                <Card
+                  variant="outlined"
+                  sx={{
+                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+                  }}
+                >
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        textAlign: 'center',
+                        fontSize: '1.1rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      📁 Load Example Configurations
+                    </Typography>
+
+                    <Box sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: 1.5,
+                      justifyItems: 'center',
+                      '@media (max-width: 600px)': {
+                        gridTemplateColumns: 'repeat(2, 1fr)'
+                      }
+                    }}>
+                      {['example1', 'example2', 'example3', 'example4'].map((ex, idx) => (
+                        <Box
+                          key={ex}
+                          onClick={() => handleExampleLoad(ex)}
+                          sx={{
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'transform 0.2s',
+                            '&:hover': {
+                              transform: 'scale(1.05)'
+                            },
+                            '&:active': {
+                              transform: 'scale(0.95)'
+                            }
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 70,
+                              height: 70,
+                              borderRadius: 2,
+                              overflow: 'hidden',
+                              mb: 0.5,
+                              border: '2px solid',
+                              borderColor: 'primary.light',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: 'background.paper',
+                              '@media (max-width: 600px)': {
+                                width: 60,
+                                height: 60
+                              }
+                            }}
+                          >
+                            <img
+                              src={`/examples/${ex}.svg`}
+                              alt={`Example ${idx + 1}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}
+                          >
+                            Example {idx + 1}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
               </Box>
             </ListItem>
 
