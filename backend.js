@@ -71,6 +71,120 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+// Azure credentials validation endpoint
+app.get('/api/azure/status', (req, res) => {
+  console.log('Azure status check requested');
+
+  const status = {
+    configured: !!AZURE_KEY && !!AZURE_REGION,
+    hasKey: !!AZURE_KEY,
+    hasRegion: !!AZURE_REGION,
+    region: AZURE_REGION || 'not configured',
+    keyLength: AZURE_KEY ? AZURE_KEY.length : 0,
+    endpoint: AZURE_REGION ? `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1` : 'not available'
+  };
+
+  console.log('Azure configuration status:', {
+    ...status,
+    keyPreview: AZURE_KEY ? `${AZURE_KEY.substring(0, 8)}...` : 'not set'
+  });
+
+  res.json(status);
+});
+
+// Azure connectivity test endpoint
+app.post('/api/azure/test', async (req, res) => {
+  console.log('Azure connectivity test requested');
+
+  if (!AZURE_KEY || !AZURE_REGION) {
+    return res.status(400).json({
+      error: 'Azure credentials not configured',
+      configured: false,
+      hasKey: !!AZURE_KEY,
+      hasRegion: !!AZURE_REGION
+    });
+  }
+
+  try {
+    const tts_endpoint = `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
+
+    // Test with a simple SSML
+    const testSSML = `
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-GB">
+        <voice name="en-GB-LibbyNeural">
+          test
+        </voice>
+      </speak>
+    `.trim();
+
+    console.log('Testing Azure connectivity with simple request...');
+
+    const response = await axios({
+      method: 'post',
+      url: tts_endpoint,
+      headers: {
+        'Ocp-Apim-Subscription-Key': AZURE_KEY,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
+        'User-Agent': 'IPAChat-Test'
+      },
+      data: testSSML,
+      responseType: 'arraybuffer',
+      timeout: 10000 // Shorter timeout for test
+    });
+
+    console.log('Azure test successful:', {
+      status: response.status,
+      audioLength: response.data?.length || 0
+    });
+
+    res.json({
+      success: true,
+      message: 'Azure TTS service is reachable and working',
+      status: response.status,
+      audioGenerated: response.data?.length > 0,
+      audioLength: response.data?.length || 0
+    });
+
+  } catch (error) {
+    console.error('Azure test failed:', {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    });
+
+    let errorType = 'unknown';
+    let userMessage = 'Azure TTS test failed';
+
+    if (error.response?.status === 401) {
+      errorType = 'authentication';
+      userMessage = 'Invalid Azure subscription key';
+    } else if (error.response?.status === 403) {
+      errorType = 'authorization';
+      userMessage = 'Azure subscription key does not have TTS permissions';
+    } else if (error.code === 'ECONNABORTED') {
+      errorType = 'timeout';
+      userMessage = 'Request to Azure TTS service timed out';
+    } else if (error.code === 'ERR_NETWORK' || error.code === 'ENOTFOUND') {
+      errorType = 'network';
+      userMessage = 'Cannot reach Azure TTS service';
+    } else if (error.response?.status >= 500) {
+      errorType = 'server';
+      userMessage = 'Azure TTS service is experiencing issues';
+    }
+
+    res.status(500).json({
+      success: false,
+      error: userMessage,
+      errorType,
+      details: error.message,
+      statusCode: error.response?.status,
+      configured: true // Credentials are configured, but there's an issue
+    });
+  }
+});
+
 // Endpoint to get available voices
 app.get('/api/voices', (req, res) => {
   try {
