@@ -28,6 +28,7 @@ import BackupIcon from '@mui/icons-material/Backup';
 import RestoreIcon from '@mui/icons-material/Restore';
 import { phoneticData } from '../data/phonemes';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { exampleLayouts } from '../data/exampleLayouts';
 
 const Settings = ({
   open,
@@ -319,19 +320,19 @@ const Settings = ({
 
             <ListItem>
               <Box sx={{ width: '100%', display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                {['example1', 'example2', 'example3', 'example4'].map((ex, idx) => (
+                {exampleLayouts.map((example) => (
                   <Box
-                    key={ex}
-                    onClick={() => handleExampleLoad(ex)}
+                    key={example.name}
+                    onClick={() => handleExampleLoad(example.file)}
                     sx={{ cursor: 'pointer', textAlign: 'center' }}
                   >
                     <img
-                      src={`/examples/${ex}.svg`}
-                      alt={`Example ${idx + 1}`}
+                      src={example.thumb}
+                      alt={example.name}
                       width={64}
                       height={64}
                     />
-                    <Typography variant="caption">Example {idx + 1}</Typography>
+                    <Typography variant="caption">{example.name}</Typography>
                   </Box>
                 ))}
               </Box>
