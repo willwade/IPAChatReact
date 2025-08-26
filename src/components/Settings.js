@@ -303,7 +303,12 @@ const Settings = ({
           try {
             // Force mode to "build" when loading examples
             const finalValue = key === 'ipaMode' ? 'build' : value;
-            localStorage.setItem(key, JSON.stringify(finalValue));
+            // Only JSON.stringify objects and booleans, store strings directly
+            if (typeof finalValue === 'boolean' || typeof finalValue === 'object') {
+              localStorage.setItem(key, JSON.stringify(finalValue));
+            } else {
+              localStorage.setItem(key, finalValue);
+            }
           } catch {
             // Force mode to "build" when loading examples
             const finalValue = key === 'ipaMode' ? 'build' : value;
