@@ -335,12 +335,7 @@ const Settings = ({
       onClose();
 
       // Show success message
-      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
-
-      // Reload the page after a delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 200);
+      alert('Example loaded successfully into build mode!');
 
     } catch (error) {
       console.error('Error loading example:', error);
