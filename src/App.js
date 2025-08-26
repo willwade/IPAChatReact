@@ -697,8 +697,42 @@ const App = () => {
     }
   };
 
+  // Browser speech synthesis fallback
+  const speakWithBrowserTTS = (text) => {
+    if ('speechSynthesis' in window) {
+      try {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.7; // Slower rate for better pronunciation
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Try to find a UK English voice
+        const voices = window.speechSynthesis.getVoices();
+        const ukVoice = voices.find(voice =>
+          voice.lang.includes('en-GB') || voice.lang.includes('en-UK')
+        );
+        if (ukVoice) {
+          utterance.voice = ukVoice;
+        }
+
+        console.log('Using browser TTS for:', text);
+        window.speechSynthesis.speak(utterance);
+        return true;
+      } catch (error) {
+        console.error('Browser TTS failed:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
   const speak = async () => {
     if (!message) return;
+
+    console.log('Speak button clicked with message:', message);
 
     // Only fetch conversion if the feature is enabled
     if (showIpaToText) {
@@ -718,17 +752,29 @@ const App = () => {
       setConvertedText('');
     }
 
-    // For longer messages, use the whole utterance function with retry logic
-    if (message.length > 3) {
-      try {
+    // Try Azure TTS first, fall back to browser TTS
+    try {
+      console.log('Attempting Azure TTS...');
+
+      // For longer messages, use the whole utterance function with retry logic
+      if (message.length > 3) {
         await speakWholeUtteranceText(message);
-      } catch (error) {
-        console.warn('Whole utterance failed, falling back to handlePhonemeSpeak:', error);
+      } else {
+        // For short messages, use the regular phoneme speak function
         await handlePhonemeSpeak(message);
       }
-    } else {
-      // For short messages, use the regular phoneme speak function
-      await handlePhonemeSpeak(message);
+
+      console.log('Azure TTS succeeded');
+    } catch (error) {
+      console.warn('Azure TTS failed, trying browser TTS:', error);
+
+      // Fallback to browser speech synthesis
+      const browserSuccess = speakWithBrowserTTS(convertedText || message);
+
+      if (!browserSuccess) {
+        console.error('Both Azure and browser TTS failed');
+        alert('Speech synthesis failed. Please check your browser\'s speech settings or Azure configuration.');
+      }
     }
   };
 
