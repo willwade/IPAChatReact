@@ -324,6 +324,9 @@ const Settings = ({
         }
       });
 
+      // Force mode to build when loading examples
+      onModeChange('build');
+
       // Then update the state through props, but force mode to "build"
       const modifiedData = { ...data, ipaMode: 'build' };
       applySettings(modifiedData);
