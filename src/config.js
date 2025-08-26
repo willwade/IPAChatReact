@@ -33,14 +33,39 @@ const api = axios.create({
 
 // Add response interceptor for better error handling
 api.interceptors.response.use(
-  response => response,
+  response => {
+    console.log('API Success:', {
+      url: response.config?.url,
+      status: response.status,
+      method: response.config?.method,
+    });
+    return response;
+  },
   error => {
-    console.error('API Error:', {
+    const errorDetails = {
       message: error.message,
+      code: error.code,
       url: error.config?.url,
       baseURL: error.config?.baseURL,
       method: error.config?.method,
-    });
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      timeout: error.code === 'ECONNABORTED',
+      networkError: error.code === 'ERR_NETWORK',
+      data: error.response?.data
+    };
+
+    console.error('API Error:', errorDetails);
+
+    // Log specific error types
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timed out after 10 seconds');
+    } else if (error.code === 'ERR_NETWORK') {
+      console.error('Network error - cannot reach server');
+    } else if (error.response?.status >= 500) {
+      console.error('Server error:', error.response.status);
+    }
+
     return Promise.reject(error);
   }
 );
