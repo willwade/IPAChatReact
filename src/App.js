@@ -199,6 +199,36 @@ const App = () => {
       }
     };
 
+    const checkAzureStatus = async () => {
+      try {
+        console.log('🔍 Checking Azure TTS status...');
+        const response = await config.api.get('/api/azure/status');
+        console.log('Azure status:', response.data);
+
+        if (!response.data.configured) {
+          console.warn('⚠️ Azure TTS not configured:', {
+            hasKey: response.data.hasKey,
+            hasRegion: response.data.hasRegion,
+            region: response.data.region
+          });
+          return false;
+        }
+
+        // Test Azure connectivity
+        try {
+          const testResponse = await config.api.post('/api/azure/test');
+          console.log('✅ Azure TTS test passed:', testResponse.data);
+          return true;
+        } catch (testError) {
+          console.error('❌ Azure TTS test failed:', testError.response?.data || testError.message);
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ Azure status check failed:', error.message);
+        return false;
+      }
+    };
+
     const fetchVoices = async () => {
       try {
         console.log('🎤 Attempting to fetch voices from:', config.apiUrl + '/api/voices');
@@ -1002,7 +1032,7 @@ const App = () => {
           console.log('Attempting individual phoneme playback as final fallback');
           try {
             for (const char of text) {
-              if (char.trim() && !/[↗��↑↓|‖]/.test(char)) {
+              if (char.trim() && !/[↗↘↑↓|‖]/.test(char)) {
                 await handlePhonemeSpeak(char);
                 await new Promise(resolve => setTimeout(resolve, 300)); // Small delay between phonemes
               }
