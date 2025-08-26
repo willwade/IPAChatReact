@@ -63,6 +63,8 @@ const Settings = ({
   onSpeakOnButtonPressChange,
   speakWholeUtterance,
   onSpeakWholeUtteranceChange,
+  mode,
+  onModeChange,
 }) => {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
