@@ -361,22 +361,23 @@ app.post('/api/tts', async (req, res) => {
     voice: req.body.voice,
     language: req.body.language,
     usePhonemes: req.body.usePhonemes,
+    isWholeUtterance: req.body.isWholeUtterance,
     hasKey: !!AZURE_KEY,
     hasRegion: !!AZURE_REGION,
     region: AZURE_REGION
   });
 
-  const { text, voice, language, usePhonemes = true } = req.body;
+  const { text, voice, language, usePhonemes = true, isWholeUtterance = false } = req.body;
 
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
   }
 
   if (!AZURE_KEY || !AZURE_REGION) {
-    console.error('Azure credentials missing:', { 
-      hasKey: !!AZURE_KEY, 
+    console.error('Azure credentials missing:', {
+      hasKey: !!AZURE_KEY,
       hasRegion: !!AZURE_REGION,
-      region: AZURE_REGION 
+      region: AZURE_REGION
     });
     return res.status(500).json({ error: 'Azure credentials not configured' });
   }
@@ -385,26 +386,55 @@ app.post('/api/tts', async (req, res) => {
     const tts_endpoint = `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
     console.log('Using TTS endpoint:', tts_endpoint);
 
-    // Generate SSML based on usePhonemes flag
-    const ssml = usePhonemes ? `
-      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
-        <voice name="${voice}">
-          <prosody rate="slow" pitch="medium">
-            <phoneme alphabet="ipa" ph="${text}">
-              ${text === 'p' ? 'puh' : text === 'f' ? 'fuh' : '_'}
-            </phoneme>
-          </prosody>
-        </voice>
-      </speak>
-    `.trim() : `
-      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
-        <voice name="${voice}">
-          ${text}
-        </voice>
-      </speak>
-    `.trim();
-    
+    // Generate SSML based on usePhonemes flag and whether it's a whole utterance
+    let ssml;
+
+    if (usePhonemes && isWholeUtterance) {
+      // For whole utterances, use proper SSML with spaced phonemes for blending
+      ssml = `
+        <speak version="1.0"
+               xmlns="http://www.w3.org/2001/10/synthesis"
+               xmlns:mstts="https://www.w3.org/2001/mstts"
+               xml:lang="${language}">
+          <voice name="${voice}">
+            <prosody rate="medium" pitch="medium">
+              <phoneme alphabet="ipa" ph="${text}"></phoneme>
+            </prosody>
+          </voice>
+        </speak>
+      `.trim();
+    } else if (usePhonemes) {
+      // For individual phonemes, use simpler SSML
+      ssml = `
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+          <voice name="${voice}">
+            <prosody rate="slow" pitch="medium">
+              <phoneme alphabet="ipa" ph="${text}">
+                ${text === 'p' ? 'puh' : text === 'f' ? 'fuh' : '_'}
+              </phoneme>
+            </prosody>
+          </voice>
+        </speak>
+      `.trim();
+    } else {
+      // For regular text
+      ssml = `
+        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+          <voice name="${voice}">
+            ${text}
+          </voice>
+        </speak>
+      `.trim();
+    }
+
     console.log('Generated SSML:', ssml);
+
+    // Use different audio format based on request type
+    const audioFormat = isWholeUtterance ?
+      'riff-48khz-16bit-mono-pcm' :  // PCM for whole utterances (more efficient)
+      'audio-48khz-192kbitrate-mono-mp3';  // MP3 for individual phonemes (cached)
+
+    console.log('Using audio format:', audioFormat);
 
     console.log('Making request to Azure...');
     const response = await axios({
@@ -413,7 +443,7 @@ app.post('/api/tts', async (req, res) => {
       headers: {
         'Ocp-Apim-Subscription-Key': AZURE_KEY,
         'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
+        'X-Microsoft-OutputFormat': audioFormat,
         'User-Agent': 'IPAChat'
       },
       data: ssml,
@@ -424,7 +454,8 @@ app.post('/api/tts', async (req, res) => {
     console.log('Azure response received:', {
       status: response.status,
       headers: response.headers,
-      dataLength: response.data?.length || 0
+      dataLength: response.data?.length || 0,
+      format: audioFormat
     });
 
     // Convert audio buffer to base64
@@ -432,7 +463,8 @@ app.post('/api/tts', async (req, res) => {
     console.log('Audio converted to base64, length:', base64Audio.length);
 
     res.json({
-      audio: base64Audio
+      audio: base64Audio,
+      format: audioFormat
     });
   } catch (error) {
     // Create detailed error information
