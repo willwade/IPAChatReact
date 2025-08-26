@@ -7,18 +7,16 @@ import {
   Button,
   Typography,
   Box,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon
+  Card,
+  CardContent,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
-import BuildIcon from '@mui/icons-material/Build';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import SearchIcon from '@mui/icons-material/Search';
-import EditIcon from '@mui/icons-material/Edit';
-import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 
 const WelcomeModal = ({ open, onClose }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const examples = [
     { name: 'Example 1', file: 'example1', thumb: '/examples/example1.png' },
     { name: 'Example 2', file: 'example2', thumb: '/examples/example2.png' },
@@ -42,85 +40,204 @@ const WelcomeModal = ({ open, onClose }) => {
       console.error('Failed to load example', error);
     }
   };
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
       maxWidth="sm"
       fullWidth
+      PaperProps={{
+        sx: {
+          height: isMobile ? '100vh' : 'auto',
+          maxHeight: isMobile ? '100vh' : '90vh',
+          m: isMobile ? 0 : 2,
+          borderRadius: isMobile ? 0 : 2
+        }
+      }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
-        Welcome to IPA Chat (Beta)
+      <DialogTitle sx={{ 
+        pb: 1, 
+        textAlign: 'center',
+        fontSize: isMobile ? '1.25rem' : '1.5rem'
+      }}>
+        Welcome to IPA Chat
       </DialogTitle>
-      <DialogContent>
+      
+      <DialogContent sx={{ 
+        px: isMobile ? 2 : 3,
+        pt: 1
+      }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography variant="body1">
-            This is a demonstration of how Speech Sounds (Phonemes) could be used for Augmentative and Alternative Communication (AAC), offering an alternative to symbol based AAC.
+          
+          {/* Compressed intro */}
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              textAlign: 'center',
+              color: 'text.secondary',
+              fontSize: isMobile ? '0.875rem' : '1rem'
+            }}
+          >
+            Create speech using phonemes for AAC communication
           </Typography>
 
-        <Box>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Get started with:
-          </Typography>
-          <List dense sx={{ pl: 2 }}>
-            <ListItem sx={{ py: 0 }}>
-              <ListItemIcon>
-                <BuildIcon />
-              </ListItemIcon>
-              <ListItemText primary="Build mode - create speech directly with phonemes" />
-            </ListItem>
-            <ListItem sx={{ py: 0 }}>
-              <ListItemIcon>
-                <MusicNoteIcon />
-              </ListItemIcon>
-              <ListItemText primary="Babble mode - explore and play with sounds" />
-            </ListItem>
-            <ListItem sx={{ py: 0 }}>
-              <ListItemIcon>
-                <SearchIcon />
-              </ListItemIcon>
-              <ListItemText primary="Search mode - find phonemes for specific words" />
-            </ListItem>
-            <ListItem sx={{ py: 0 }}>
-              <ListItemIcon>
-                <EditIcon />
-              </ListItemIcon>
-              <ListItemText primary="Edit mode - personalize sounds with images or colors" />
-            </ListItem>
-            <ListItem sx={{ py: 0 }}>
-              <ListItemIcon>
-                <SportsEsportsIcon />
-              </ListItemIcon>
-              <ListItemText primary="Game mode - learn AAC through interactive challenges" />
-            </ListItem>
-          </List>
-        </Box>
-
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 1 }}>
-            Or try an example setup:
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {examples.map((ex) => (
-              <Box
-                key={ex.name}
-                onClick={() => handleExampleSelect(ex)}
-                sx={{ cursor: 'pointer', textAlign: 'center' }}
+          {/* Examples section - prioritized for mobile */}
+          <Card 
+            variant="outlined" 
+            sx={{ 
+              mt: 1,
+              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+            }}
+          >
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 2, 
+                  textAlign: 'center',
+                  fontSize: isMobile ? '1.1rem' : '1.25rem',
+                  fontWeight: 600
+                }}
               >
-                <img src={ex.thumb} alt={ex.name} width={80} height={80} />
-                <Typography variant="caption">{ex.name}</Typography>
+                🚀 Quick Start - Try an Example
+              </Typography>
+              
+              <Box sx={{ 
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                gap: 1.5,
+                justifyItems: 'center'
+              }}>
+                {examples.map((ex) => (
+                  <Box
+                    key={ex.name}
+                    onClick={() => handleExampleSelect(ex)}
+                    sx={{ 
+                      cursor: 'pointer', 
+                      textAlign: 'center',
+                      transition: 'transform 0.2s',
+                      '&:hover': {
+                        transform: 'scale(1.05)'
+                      },
+                      '&:active': {
+                        transform: 'scale(0.95)'
+                      }
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: isMobile ? 60 : 70,
+                        height: isMobile ? 60 : 70,
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        mb: 0.5,
+                        border: '2px solid',
+                        borderColor: 'primary.light',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'background.paper'
+                      }}
+                    >
+                      <img 
+                        src={ex.thumb} 
+                        alt={ex.name} 
+                        style={{ 
+                          width: '100%', 
+                          height: '100%', 
+                          objectFit: 'cover' 
+                        }} 
+                      />
+                    </Box>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        display: 'block',
+                        fontSize: isMobile ? '0.7rem' : '0.75rem',
+                        fontWeight: 500
+                      }}
+                    >
+                      {ex.name}
+                    </Typography>
+                  </Box>
+                ))}
               </Box>
-            ))}
-          </Box>
-        </Box>
+            </CardContent>
+          </Card>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Currently supporting English (UK and US) phonemes. This is a beta demonstration and not yet intended for daily communication needs.
-        </Typography>
+          {/* Compact mode descriptions */}
+          <Box sx={{ mt: 1 }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                mb: 1,
+                fontWeight: 500,
+                fontSize: isMobile ? '0.875rem' : '1rem'
+              }}
+            >
+              Or explore these modes:
+            </Typography>
+            
+            <Box sx={{ 
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+              gap: 1,
+              fontSize: isMobile ? '0.8rem' : '0.875rem'
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                🔧 <strong>Build:</strong> Create speech with phonemes
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                🎵 <strong>Babble:</strong> Explore and play with sounds
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                🔍 <strong>Search:</strong> Find phonemes for words
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                ✏️ <strong>Edit:</strong> Customize with images/colors
+              </Typography>
+              {!isMobile && (
+                <Typography variant="body2" color="text.secondary" sx={{ gridColumn: 'span 2' }}>
+                  🎮 <strong>Game:</strong> Learn through interactive challenges
+                </Typography>
+              )}
+              {isMobile && (
+                <Typography variant="body2" color="text.secondary">
+                  🎮 <strong>Game:</strong> Interactive challenges
+                </Typography>
+              )}
+            </Box>
+          </Box>
+
+          {/* Compressed disclaimer */}
+          <Typography 
+            variant="caption" 
+            color="text.secondary" 
+            sx={{ 
+              textAlign: 'center',
+              fontSize: isMobile ? '0.7rem' : '0.75rem',
+              mt: 1
+            }}
+          >
+            Beta version • English phonemes • For demonstration purposes
+          </Typography>
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} variant="contained">
+      
+      <DialogActions sx={{ 
+        px: isMobile ? 2 : 3,
+        pb: isMobile ? 2 : 2
+      }}>
+        <Button 
+          onClick={onClose} 
+          variant="contained" 
+          fullWidth={isMobile}
+          size={isMobile ? "large" : "medium"}
+          sx={{
+            py: isMobile ? 1.5 : 1
+          }}
+        >
           Get Started
         </Button>
       </DialogActions>
@@ -128,4 +245,4 @@ const WelcomeModal = ({ open, onClose }) => {
   );
 };
 
-export default WelcomeModal; 
+export default WelcomeModal;
