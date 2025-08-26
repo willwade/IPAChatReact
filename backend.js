@@ -61,15 +61,31 @@ app.use((req, res, next) => {
   next();
 });
 
+// Test endpoint for connectivity
+app.get('/api/test', (req, res) => {
+  console.log('Test endpoint hit - API connectivity working');
+  res.json({
+    message: 'API is working',
+    timestamp: new Date().toISOString(),
+    port: port
+  });
+});
+
 // Endpoint to get available voices
 app.get('/api/voices', (req, res) => {
   try {
-    // Log the response for debugging
+    console.log('📢 Voices endpoint hit by:', req.ip);
+    console.log('Request headers:', req.headers);
     console.log('Sending voice data:', voiceData);
+
+    // Add CORS headers explicitly
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+
     res.json(voiceData);
   } catch (error) {
     console.error('Error getting voices:', error);
-    res.status(500).json({ error: 'Failed to get voices' });
+    res.status(500).json({ error: 'Failed to get voices', details: error.message });
   }
 });
 
