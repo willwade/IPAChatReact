@@ -55,62 +55,72 @@
       "customColor": "#A1DC7A"
     },
     "kw": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "q",
       "image": "",
       "customColor": "#E18676"
     },
     "w": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "w",
       "image": "",
       "customColor": "#E18676"
     },
     "e": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "e",
       "image": "",
       "customColor": "#ACDFE1"
     },
     "r": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "r",
       "image": "",
       "customColor": "#E18676"
     },
     "t": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "t",
       "image": "",
       "customColor": "#E18676"
     },
     "j": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "y",
       "image": "",
       "customColor": "#E18676"
     },
     "ʌ": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "u",
       "image": "",
       "customColor": "#ACDFE1"
     },
     "ɪ": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "i",
       "image": "",
       "customColor": "#ACDFE1"
     },
     "ɒ": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "o",
       "image": "",
       "customColor": "#ACDFE1"
     },
     "p": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "p",
       "image": "",
       "customColor": "#E18676"
     },
@@ -169,56 +179,65 @@
       "customColor": "#A1DC7A"
     },
     "æ": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "a",
       "image": "",
       "customColor": "#ACDFE1"
     },
     "s": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "s",
       "image": "",
       "customColor": "#E18676"
     },
     "d": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "d",
       "image": "",
       "customColor": "#E18676"
     },
     "f": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "f",
       "image": "",
       "customColor": "#E18676"
     },
     "g": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "g",
       "image": "",
       "customColor": "#E18676"
     },
     "h": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "h",
       "image": "",
       "customColor": "#E18676"
     },
     "dʒ": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "j",
       "image": "",
       "customColor": "#E18676"
     },
     "k": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "k",
       "image": "",
       "customColor": "#E18676"
     },
     "l": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "l",
       "image": "",
       "customColor": "#E18676"
     },
@@ -247,38 +266,44 @@
       "customColor": "#C05D54"
     },
     "z": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "z",
       "image": "",
       "customColor": "#E18676"
     },
     "ks": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "x",
       "image": "",
       "customColor": "#E18676"
     },
     "v": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "v",
       "image": "",
       "customColor": "#E18676"
     },
     "b": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "b",
       "image": "",
       "customColor": "#E18676"
     },
     "n": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "n",
       "image": "",
       "customColor": "#E18676"
     },
     "m": {
-      "hideLabel": true,
+      "hideLabel": false,
       "hideButton": false,
+      "displayLabel": "m",
       "image": "",
       "customColor": "#E18676"
     }

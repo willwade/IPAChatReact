@@ -986,7 +986,7 @@ const IPAKeyboard = ({
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          {!customization.hideLabel && phoneme}
+          {!customization.hideLabel && (customization.displayLabel || phoneme)}
           {canMoveLeft && (
             <Box
               onClick={(e) => {
@@ -1069,8 +1069,11 @@ const IPAKeyboard = ({
       );
     }
 
-    // If no image and not in move mode, show the phoneme text unless hideLabel is true
-    return !customization.hideLabel ? phoneme : null;
+    // If no image and not in move mode, show displayLabel, then phoneme text unless hideLabel is true
+    if (!customization.hideLabel) {
+      return customization.displayLabel || phoneme;
+    }
+    return null;
   };
 
   const renderPhonemeButton = (phoneme, group) => {
@@ -1142,6 +1145,7 @@ const IPAKeyboard = ({
     const customization = customizations[phoneme] || {};
     const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
     const [hideButton, setHideButton] = useState(customization.hideButton || false);
+    const [displayLabel, setDisplayLabel] = useState(customization.displayLabel || '');
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
@@ -1168,6 +1172,7 @@ const IPAKeyboard = ({
       const newCustomization = {
         hideLabel,
         hideButton,
+        displayLabel: displayLabel.trim() || undefined, // Only save if not empty
         image: previewSrc,
         customColor,
       };
@@ -1246,6 +1251,17 @@ const IPAKeyboard = ({
             <FormControlLabel
               control={<Switch checked={hideButton} onChange={(e) => setHideButton(e.target.checked)} />}
               label="Hide Button"
+            />
+            
+            {/* Display Label Input */}
+            <TextField
+              label="Display Label"
+              placeholder={`Default: ${phoneme}`}
+              value={displayLabel}
+              onChange={(e) => setDisplayLabel(e.target.value)}
+              helperText="Custom text to show on button (leave empty for default phoneme)"
+              variant="outlined"
+              size="small"
             />
             <Divider />
             
