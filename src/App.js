@@ -118,6 +118,18 @@ const App = () => {
       image: ''
     };
   });
+  const [toolbarConfig, setToolbarConfig] = useState(() => {
+    const saved = localStorage.getItem('toolbarConfig');
+    return saved ? JSON.parse(saved) : {
+      showBuild: true,
+      showSearch: true,
+      showBabble: true,
+      showEdit: true,
+      showGame: true,
+      showSettings: true,
+      showSetupWizard: true
+    };
+  });
 
   useEffect(() => {
     const initializeData = () => {
