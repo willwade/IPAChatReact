@@ -1263,6 +1263,7 @@ const IPAKeyboard = ({
     const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
     const [hideButton, setHideButton] = useState(customization.hideButton || false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
+    const [buttonOpacity, setButtonOpacity] = useState(customization.opacity !== undefined ? customization.opacity : 1);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
     const [customLabel, setCustomLabel] = useState(customization.label || '');
 
