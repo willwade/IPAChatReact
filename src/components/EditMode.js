@@ -172,26 +172,19 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
 
               <Box sx={{ mb: 2 }}>
                 <Typography gutterBottom>Button Color</Typography>
-                <Box
-                  sx={{
+                <input
+                  type="color"
+                  value={customColor}
+                  onChange={(e) => setCustomColor(e.target.value)}
+                  style={{
                     width: '100%',
                     height: '40px',
-                    backgroundColor: customColor,
-                    cursor: 'pointer',
                     border: '1px solid #ccc',
-                    borderRadius: 1,
-                    mb: 1
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    backgroundColor: 'transparent'
                   }}
-                  onClick={() => setShowColorPicker(!showColorPicker)}
                 />
-                {showColorPicker && (
-                  <Box sx={{ position: 'relative', zIndex: 2 }}>
-                    <SketchPicker
-                      color={customColor}
-                      onChange={(color) => setCustomColor(color.hex)}
-                    />
-                  </Box>
-                )}
               </Box>
 
               <Box sx={{ mb: 2 }}>
