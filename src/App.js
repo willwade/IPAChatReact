@@ -169,7 +169,10 @@ const App = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const configParam = urlParams.get('config');
 
-      if (configParam) {
+      // Check if we've already loaded this config to prevent infinite loop
+      const lastLoadedConfig = localStorage.getItem('lastLoadedConfig');
+
+      if (configParam && lastLoadedConfig !== configParam) {
         try {
           let configData;
 
@@ -203,6 +206,14 @@ const App = () => {
               }
             });
 
+            // Mark this config as loaded to prevent infinite loop
+            localStorage.setItem('lastLoadedConfig', configParam);
+
+            // Remove the config parameter from URL to prevent reload loop
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('config');
+            window.history.replaceState({}, '', newUrl);
+
             // Show success message
             alert('Configuration loaded successfully! The page will now reload to apply all changes.');
 
@@ -214,6 +225,10 @@ const App = () => {
         } catch (error) {
           console.error('Error loading configuration:', error);
           alert(`Failed to load configuration: ${error.message}`);
+          // Remove the config parameter from URL even on error
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('config');
+          window.history.replaceState({}, '', newUrl);
         }
       }
     };
