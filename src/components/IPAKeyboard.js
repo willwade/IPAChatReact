@@ -1251,7 +1251,6 @@ const IPAKeyboard = ({
     const customization = customizations[phoneme] || {};
     const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
     const [hideButton, setHideButton] = useState(customization.hideButton || false);
-    const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
     const [customLabel, setCustomLabel] = useState(customization.label || '');
