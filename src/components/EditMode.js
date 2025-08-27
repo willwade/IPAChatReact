@@ -71,6 +71,7 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
         hidden: hideButton,
         image: imageUrl,
         customColor,
+        opacity: buttonOpacity,
       });
     }
     onClose();
