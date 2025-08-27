@@ -1440,11 +1440,13 @@ const IPAKeyboard = ({
                 onChange={handleColorChange}
                 style={{
                   width: '100%',
+                  maxWidth: '100%',
                   height: '40px',
                   border: '1px solid #ccc',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  backgroundColor: 'transparent'
+                  backgroundColor: 'transparent',
+                  boxSizing: 'border-box'
                 }}
               />
               <Box sx={{ mt: 1.5 }}>
