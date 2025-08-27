@@ -1191,10 +1191,13 @@ const IPAKeyboard = ({
     
     // Calculate opacity based on mode and button state
     const getOpacity = () => {
+      // Use custom opacity if set, otherwise use default behavior
+      const baseOpacity = customization.opacity !== undefined ? customization.opacity : 1;
+
       if (mode === 'edit') {
-        return customization.hideButton ? 0.3 : 1;
+        return customization.hideButton ? 0.3 : baseOpacity;
       }
-      return customization.hideButton ? 0 : (isDisabled ? 0.5 : 1);
+      return customization.hideButton ? 0 : (isDisabled ? 0.5 : baseOpacity);
     };
 
     return (
