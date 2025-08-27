@@ -1335,20 +1335,34 @@ const IPAKeyboard = ({
     };
 
     return (
-      <Dialog open={open} onClose={onClose}>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="sm"
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 1, sm: 3 },
+            width: { xs: 'calc(100% - 16px)', sm: 'auto' },
+            maxHeight: { xs: 'calc(100% - 16px)', sm: 'auto' }
+          }
+        }}
+      >
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box display="flex" alignItems="center" gap={1}>
-              <IconButton 
-                onClick={handleMoveLeft} 
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <IconButton
+                onClick={handleMoveLeft}
                 disabled={!canMoveLeft}
                 size="small"
               >
                 <KeyboardArrowLeftIcon />
               </IconButton>
-              <Typography variant="h6">Customize Phoneme: {phoneme}</Typography>
-              <IconButton 
-                onClick={handleMoveRight} 
+              <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                Customize: {phoneme}
+              </Typography>
+              <IconButton
+                onClick={handleMoveRight}
                 disabled={!canMoveRight}
                 size="small"
               >
@@ -1360,8 +1374,8 @@ const IPAKeyboard = ({
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: '300px', mt: 2 }}>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
             <FormControlLabel
               control={<Switch checked={hideLabel} onChange={(e) => setHideLabel(e.target.checked)} />}
               label="Hide Label"
