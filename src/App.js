@@ -693,31 +693,34 @@ const App = () => {
           return;
         } catch (error) {
           console.warn('Error playing cached audio:', error);
+          // Fall through to TTS fallback
         }
-      }
+      } else {
+        // Try to load from pre-generated files if not in cache
+        try {
+          const fileName = getPhonemeFileName(text, selectedVoice);
+          const audio = await loadAudioFile(fileName);
+          await audio.play();
+          return;
+        } catch (primaryError) {
+          console.warn('Error loading primary voice audio, trying fallbacks:', primaryError.message);
 
-      // Try to load from pre-generated files if not in cache
-      try {
-        const fileName = getPhonemeFileName(text, selectedVoice);
-        const audio = await loadAudioFile(fileName);
-        await audio.play();
-        return;
-      } catch (primaryError) {
-        console.warn('Error playing primary voice audio:', primaryError);
+          // Try fallback voices quickly
+          const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
+            .filter(v => v !== selectedVoice);
 
-        // Try fallback voices
-        const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
-          .filter(v => v !== selectedVoice);
-
-        for (const fallbackVoice of fallbackVoices) {
-          try {
-            const fallbackFileName = getPhonemeFileName(text, fallbackVoice);
-            const audio = await loadAudioFile(fallbackFileName);
-            await audio.play();
-            return;
-          } catch (fallbackError) {
-            console.warn(`Fallback ${fallbackVoice} failed:`, fallbackError);
+          for (const fallbackVoice of fallbackVoices) {
+            try {
+              const fallbackFileName = getPhonemeFileName(text, fallbackVoice);
+              const audio = await loadAudioFile(fallbackFileName);
+              await audio.play();
+              return;
+            } catch (fallbackError) {
+              console.warn(`Fallback ${fallbackVoice} failed for ${text}`);
+            }
           }
+          // All pre-recorded options failed, fall through to TTS
+          console.warn(`All pre-recorded audio failed for ${text}, using TTS`);
         }
       }
     }
