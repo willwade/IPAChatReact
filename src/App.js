@@ -523,6 +523,13 @@ const App = () => {
       console.error('Voice name contains quotes:', voice);
     }
 
+    // Log mapping for debugging
+    if (phonemeToFilename[phoneme]) {
+      console.log(`Phoneme ${phoneme} mapped to filename part: ${filenamePart}`);
+    } else {
+      console.warn(`No filename mapping for phoneme ${phoneme}, using encoded: ${filenamePart}`);
+    }
+
     return fileName;
   }, []);
 
