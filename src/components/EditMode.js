@@ -16,6 +16,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Slider,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
