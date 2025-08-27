@@ -29,6 +29,8 @@ const IPAKeyboard = ({
   autoScale = true,
   touchDwellEnabled = false,
   touchDwellTime = 800,
+  backgroundSettings,
+  onBackgroundSave,
   dwellIndicatorType = 'border',
   dwellIndicatorColor = 'primary',
   hapticFeedback = false,
