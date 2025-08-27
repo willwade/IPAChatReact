@@ -1391,6 +1391,7 @@ const IPAKeyboard = ({
               placeholder={`Default: ${phoneme}`}
               fullWidth
               size="small"
+              sx={{ maxWidth: '100%', overflow: 'hidden' }}
             />
             <Divider />
             
