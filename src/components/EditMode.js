@@ -304,26 +304,19 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
 
                   <Box sx={{ mb: 2 }}>
                     <Typography gutterBottom>End Color</Typography>
-                    <Box
-                      sx={{
+                    <input
+                      type="color"
+                      value={gradientEnd}
+                      onChange={(e) => setGradientEnd(e.target.value)}
+                      style={{
                         width: '100%',
                         height: '40px',
-                        backgroundColor: gradientEnd,
-                        cursor: 'pointer',
                         border: '1px solid #ccc',
-                        borderRadius: 1,
-                        mb: 1
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        backgroundColor: 'transparent'
                       }}
-                      onClick={() => setShowGradientEndPicker(!showGradientEndPicker)}
                     />
-                    {showGradientEndPicker && (
-                      <Box sx={{ position: 'relative', zIndex: 2 }}>
-                        <SketchPicker
-                          color={gradientEnd}
-                          onChange={(color) => setGradientEnd(color.hex)}
-                        />
-                      </Box>
-                    )}
                   </Box>
                 </>
               )}
