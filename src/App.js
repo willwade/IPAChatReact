@@ -533,6 +533,25 @@ const App = () => {
     return fileName;
   }, []);
 
+  // Test function to check if audio files are accessible
+  const testAudioAvailability = useCallback(async () => {
+    const testPhonemes = ['ɐ', 'ʊ', 'ɒ']; // ah, uh, oh - the ones that are failing
+    const testVoice = 'en-GB-LibbyNeural';
+
+    console.log('Testing audio file availability...');
+    for (const phoneme of testPhonemes) {
+      const fileName = getPhonemeFileName(phoneme, testVoice);
+      const url = `/audio/phonemes/${fileName}`;
+
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        console.log(`${phoneme} (${fileName}): ${response.ok ? 'Available' : 'Not found'} - Status: ${response.status}`);
+      } catch (error) {
+        console.log(`${phoneme} (${fileName}): Network error - ${error.message}`);
+      }
+    }
+  }, [getPhonemeFileName]);
+
   const cachePhonemeAudio = async () => {
     if (!selectedVoice || cacheLoading) {
       console.warn('Cannot cache audio: voice not selected or already caching');
