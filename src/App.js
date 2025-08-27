@@ -1386,6 +1386,8 @@ const App = () => {
                     hapticFeedback={hapticFeedback}
                     showStressMarkers={showStressMarkers}
                     onStressMarkersChange={handleStressMarkersChange}
+                    backgroundSettings={backgroundSettings}
+                    onBackgroundSave={handleBackgroundSave}
                   />
                 </Box>
               ) : mode === 'game' ? (
