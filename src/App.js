@@ -163,6 +163,65 @@ const App = () => {
     initializeData();
   }, [selectedLanguage]);
 
+  // URL parameter loading effect
+  useEffect(() => {
+    const loadConfigFromUrl = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const configParam = urlParams.get('config');
+
+      if (configParam) {
+        try {
+          let configData;
+
+          // Check if it's a URL (starts with http/https)
+          if (configParam.startsWith('http://') || configParam.startsWith('https://')) {
+            // Load from remote URL
+            console.log('Loading config from remote URL:', configParam);
+            const response = await fetch(configParam);
+            configData = await response.json();
+          } else {
+            // Load from local example file
+            console.log('Loading config from local file:', configParam);
+            const response = await fetch(`/examples/${configParam}.json`);
+            configData = await response.json();
+          }
+
+          if (configData) {
+            // Apply the configuration
+            console.log('Applying configuration:', configData);
+
+            // Update localStorage with all the configuration
+            Object.entries(configData).forEach(([key, value]) => {
+              try {
+                if (typeof value === 'boolean' || typeof value === 'object') {
+                  localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                  localStorage.setItem(key, value);
+                }
+              } catch (error) {
+                console.warn(`Failed to save ${key} to localStorage:`, error);
+              }
+            });
+
+            // Show success message
+            alert('Configuration loaded successfully! The page will now reload to apply all changes.');
+
+            // Reload the page to apply all changes
+            setTimeout(() => {
+              window.location.reload();
+            }, 200);
+          }
+        } catch (error) {
+          console.error('Error loading configuration:', error);
+          alert(`Failed to load configuration: ${error.message}`);
+        }
+      }
+    };
+
+    // Only run once when component mounts
+    loadConfigFromUrl();
+  }, []);
+
   // Clean up localStorage from any JSON-stringified simple values on app start
   useEffect(() => {
     const cleanupLocalStorage = () => {
