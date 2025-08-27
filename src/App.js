@@ -107,6 +107,17 @@ const App = () => {
     const saved = localStorage.getItem('speakWholeUtterance');
     return saved ? JSON.parse(saved) : true;
   });
+  const [backgroundSettings, setBackgroundSettings] = useState(() => {
+    const saved = localStorage.getItem('backgroundSettings');
+    return saved ? JSON.parse(saved) : {
+      type: 'color',
+      color: '#ffffff',
+      gradientStart: '#ffffff',
+      gradientEnd: '#000000',
+      gradientDirection: 'to bottom',
+      image: ''
+    };
+  });
 
   useEffect(() => {
     const initializeData = () => {
@@ -1027,6 +1038,30 @@ const App = () => {
     localStorage.setItem('showStressMarkers', JSON.stringify(newValue));
   };
 
+  const handleBackgroundSave = (settings) => {
+    setBackgroundSettings(settings);
+  };
+
+  const getBackgroundStyle = () => {
+    if (backgroundSettings.type === 'color') {
+      return {
+        backgroundColor: backgroundSettings.color
+      };
+    } else if (backgroundSettings.type === 'gradient') {
+      return {
+        background: `linear-gradient(${backgroundSettings.gradientDirection}, ${backgroundSettings.gradientStart}, ${backgroundSettings.gradientEnd})`
+      };
+    } else if (backgroundSettings.type === 'image' && backgroundSettings.image) {
+      return {
+        backgroundImage: `url(${backgroundSettings.image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      };
+    }
+    return {};
+  };
+
   // Add effect to save showIpaToText to localStorage
   useEffect(() => {
     localStorage.setItem('showIpaToText', JSON.stringify(showIpaToText));
@@ -1040,6 +1075,10 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('speakWholeUtterance', JSON.stringify(speakWholeUtterance));
   }, [speakWholeUtterance]);
+
+  useEffect(() => {
+    localStorage.setItem('backgroundSettings', JSON.stringify(backgroundSettings));
+  }, [backgroundSettings]);
 
   // Separate function for whole utterance reading with retry logic
   const speakWholeUtteranceText = useCallback(async (text) => {
@@ -1326,7 +1365,11 @@ const App = () => {
             )}
 
             {/* Content */}
-            <Box sx={{ flex: 1, minHeight: 0 }}>
+            <Box sx={{
+              flex: 1,
+              minHeight: 0,
+              ...getBackgroundStyle()
+            }}>
               {mode === 'edit' ? (
                 <Box sx={{ height: '100%' }}>
                   <IPAKeyboard
@@ -1343,6 +1386,8 @@ const App = () => {
                     hapticFeedback={hapticFeedback}
                     showStressMarkers={showStressMarkers}
                     onStressMarkersChange={handleStressMarkersChange}
+                    backgroundSettings={backgroundSettings}
+                    onBackgroundSave={handleBackgroundSave}
                   />
                 </Box>
               ) : mode === 'game' ? (

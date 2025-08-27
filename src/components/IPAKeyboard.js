@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress, Typography } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress, Typography, Slider } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import { ChromePicker } from 'react-color';
 import { detailedPhoneticData as phoneticData } from '../data/phoneticData';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import CloseIcon from '@mui/icons-material/Close';
+import EditMode from './EditMode';
 
 const debounce = (func, wait) => {
   let timeout;
@@ -28,6 +28,8 @@ const IPAKeyboard = ({
   autoScale = true,
   touchDwellEnabled = false,
   touchDwellTime = 800,
+  backgroundSettings,
+  onBackgroundSave,
   dwellIndicatorType = 'border',
   dwellIndicatorColor = 'primary',
   hapticFeedback = false,
@@ -50,6 +52,7 @@ const IPAKeyboard = ({
     return {};
   });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [backgroundEditOpen, setBackgroundEditOpen] = useState(false);
   const containerRef = useRef(null);
   const [isJiggling, setIsJiggling] = useState(false);
   const [touchStartTime, setTouchStartTime] = useState(null);
@@ -1188,10 +1191,13 @@ const IPAKeyboard = ({
     
     // Calculate opacity based on mode and button state
     const getOpacity = () => {
+      // Use custom opacity if set, otherwise use default behavior
+      const baseOpacity = customization.opacity !== undefined ? customization.opacity : 1;
+
       if (mode === 'edit') {
-        return customization.hideButton ? 0.3 : 1;
+        return customization.hideButton ? 0.3 : baseOpacity;
       }
-      return customization.hideButton ? 0 : (isDisabled ? 0.5 : 1);
+      return customization.hideButton ? 0 : (isDisabled ? 0.5 : baseOpacity);
     };
 
     return (
@@ -1227,7 +1233,15 @@ const IPAKeyboard = ({
           position: 'relative',
           '&:hover': {
             backgroundColor: color,
-            opacity: mode === 'edit' ? (customization.hideButton ? 0.4 : 0.9) : (isDisabled ? 0.5 : 0.9),
+            opacity: (() => {
+              const baseOpacity = customization.opacity !== undefined ? customization.opacity : 1;
+              const hoverOpacity = Math.min(baseOpacity * 0.9, 0.9); // Reduce opacity slightly on hover
+
+              if (mode === 'edit') {
+                return customization.hideButton ? 0.4 : hoverOpacity;
+              }
+              return isDisabled ? 0.5 : hoverOpacity;
+            })(),
           },
           '&:active': {
             transform: 'scale(0.95)',
@@ -1248,8 +1262,8 @@ const IPAKeyboard = ({
     const customization = customizations[phoneme] || {};
     const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
     const [hideButton, setHideButton] = useState(customization.hideButton || false);
-    const [showColorPicker, setShowColorPicker] = useState(false);
     const [customColor, setCustomColor] = useState(customization.customColor || null);
+    const [buttonOpacity, setButtonOpacity] = useState(customization.opacity !== undefined ? customization.opacity : 1);
     const [previewSrc, setPreviewSrc] = useState(customization.image || '');
     const [customLabel, setCustomLabel] = useState(customization.label || '');
 
@@ -1277,6 +1291,7 @@ const IPAKeyboard = ({
         hideButton,
         image: previewSrc,
         customColor,
+        opacity: buttonOpacity,
         label: customLabel,
       };
       console.log('Saving new customization:', newCustomization);
@@ -1315,25 +1330,39 @@ const IPAKeyboard = ({
       setPreviewSrc('');
     };
 
-    const handleColorChange = (color) => {
-      setCustomColor(color.hex);
+    const handleColorChange = (event) => {
+      setCustomColor(event.target.value);
     };
 
     return (
-      <Dialog open={open} onClose={onClose}>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="sm"
+        sx={{
+          '& .MuiDialog-paper': {
+            margin: { xs: 1, sm: 3 },
+            width: { xs: 'calc(100% - 16px)', sm: 'auto' },
+            maxHeight: { xs: 'calc(100% - 16px)', sm: 'auto' }
+          }
+        }}
+      >
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box display="flex" alignItems="center" gap={1}>
-              <IconButton 
-                onClick={handleMoveLeft} 
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <IconButton
+                onClick={handleMoveLeft}
                 disabled={!canMoveLeft}
                 size="small"
               >
                 <KeyboardArrowLeftIcon />
               </IconButton>
-              <Typography variant="h6">Customize Phoneme: {phoneme}</Typography>
-              <IconButton 
-                onClick={handleMoveRight} 
+              <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                Customize: {phoneme}
+              </Typography>
+              <IconButton
+                onClick={handleMoveRight}
                 disabled={!canMoveRight}
                 size="small"
               >
@@ -1345,8 +1374,8 @@ const IPAKeyboard = ({
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: '300px', mt: 2 }}>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
             <FormControlLabel
               control={<Switch checked={hideLabel} onChange={(e) => setHideLabel(e.target.checked)} />}
               label="Hide Label"
@@ -1362,6 +1391,7 @@ const IPAKeyboard = ({
               placeholder={`Default: ${phoneme}`}
               fullWidth
               size="small"
+              sx={{ maxWidth: '100%', overflow: 'hidden' }}
             />
             <Divider />
             
@@ -1403,22 +1433,36 @@ const IPAKeyboard = ({
 
             {/* Color Picker Section */}
             <Box>
-              <Button
-                variant="outlined"
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                sx={{ mb: 1 }}
-              >
-                {showColorPicker ? 'Hide Color Picker' : 'Show Color Picker'}
-              </Button>
-              {showColorPicker && (
-                <Box sx={{ position: 'relative', zIndex: 1000 }}>
-                  <ChromePicker
-                    color={customColor || getPhonemeColor(phoneme)}
-                    onChange={handleColorChange}
-                    disableAlpha={true}
-                  />
-                </Box>
-              )}
+              <Typography gutterBottom>Button Color</Typography>
+              <input
+                type="color"
+                value={customColor || getPhonemeColor(phoneme)}
+                onChange={handleColorChange}
+                style={{
+                  width: '100%',
+                  maxWidth: '100%',
+                  height: '40px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="body2" gutterBottom>
+                  Opacity
+                </Typography>
+                <Slider
+                  value={buttonOpacity}
+                  onChange={(e, newValue) => setButtonOpacity(newValue)}
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  size="small"
+                  sx={{ mb: 0.5 }}
+                />
+              </Box>
             </Box>
           </Box>
         </DialogContent>
@@ -1520,50 +1564,84 @@ const IPAKeyboard = ({
       </Box>
 
       {mode === 'edit' && (
-        <Box sx={{ 
+        <Box sx={{
           position: 'fixed',
-          bottom: 16,
+          bottom: { xs: 8, sm: 16 },
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
           backgroundColor: 'background.paper',
           borderRadius: 2,
           boxShadow: 3,
-          p: 1,
+          p: { xs: 0.5, sm: 1 },
           display: 'flex',
-          gap: 1,
-          flexShrink: 0,
-          alignItems: 'center'
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 0.5, sm: 1 },
+          alignItems: 'center',
+          maxWidth: { xs: '95vw', sm: 'auto' }
         }}>
-          <Button
-            variant={editMode === 'move' ? 'contained' : 'outlined'}
-            onClick={() => {
-              setEditMode('move');
+          <Box sx={{
+            display: 'flex',
+            gap: { xs: 0.5, sm: 1 },
+            flexWrap: { xs: 'nowrap', sm: 'wrap' }
+          }}>
+            <Button
+              variant={editMode === 'move' ? 'contained' : 'outlined'}
+              onClick={() => {
+                setEditMode('move');
+              }}
+              size="small"
+              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
+            >
+              Move
+            </Button>
+            <Button
+              variant={editMode === 'customize' ? 'contained' : 'outlined'}
+              onClick={() => {
+                setEditMode('customize');
+              }}
+              size="small"
+              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
+            >
+              Customize
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setBackgroundEditOpen(true);
+              }}
+              size="small"
+              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
+            >
+              Background
+            </Button>
+          </Box>
+
+          <Divider
+            orientation={{ xs: 'horizontal', sm: 'vertical' }}
+            flexItem
+            sx={{
+              mx: { xs: 0, sm: 1 },
+              my: { xs: 0.5, sm: 0 },
+              width: { xs: '100%', sm: 'auto' }
             }}
-            size="small"
-          >
-            Move
-          </Button>
-          <Button
-            variant={editMode === 'customize' ? 'contained' : 'outlined'}
-            onClick={() => {
-              setEditMode('customize');
-            }}
-            size="small"
-          >
-            Customize
-          </Button>
-          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+          />
+
           <FormControlLabel
             control={
-              <Switch 
+              <Switch
                 size="small"
                 checked={showStressMarkers}
                 onChange={handleStressMarkersToggle}
               />
             }
-            label="Show Stress Markers"
-            sx={{ ml: 0 }}
+            label="Stress"
+            sx={{
+              ml: 0,
+              '& .MuiFormControlLabel-label': {
+                fontSize: { xs: '0.8rem', sm: '0.875rem' }
+              }
+            }}
           />
         </Box>
       )}
@@ -1575,6 +1653,14 @@ const IPAKeyboard = ({
           phoneme={selectedPhoneme}
         />
       )}
+
+      <EditMode
+        open={backgroundEditOpen}
+        onClose={() => setBackgroundEditOpen(false)}
+        phoneme={null}
+        backgroundSettings={backgroundSettings}
+        onBackgroundSave={onBackgroundSave}
+      />
     </Box>
   );
 };
