@@ -27,6 +27,7 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
   const [imageUrl, setImageUrl] = useState(currentCustomization?.image || '');
   const [selectedFile, setSelectedFile] = useState(null);
   const [customColor, setCustomColor] = useState(currentCustomization?.customColor || defaultColor);
+  const [buttonOpacity, setButtonOpacity] = useState(currentCustomization?.opacity !== undefined ? currentCustomization.opacity : 1);
   const [showColorPicker, setShowColorPicker] = useState(false);
   
   // Background customization states
