@@ -287,26 +287,19 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
 
                   <Box sx={{ mb: 2 }}>
                     <Typography gutterBottom>Start Color</Typography>
-                    <Box
-                      sx={{
+                    <input
+                      type="color"
+                      value={gradientStart}
+                      onChange={(e) => setGradientStart(e.target.value)}
+                      style={{
                         width: '100%',
                         height: '40px',
-                        backgroundColor: gradientStart,
-                        cursor: 'pointer',
                         border: '1px solid #ccc',
-                        borderRadius: 1,
-                        mb: 1
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        backgroundColor: 'transparent'
                       }}
-                      onClick={() => setShowGradientStartPicker(!showGradientStartPicker)}
                     />
-                    {showGradientStartPicker && (
-                      <Box sx={{ position: 'relative', zIndex: 2 }}>
-                        <SketchPicker
-                          color={gradientStart}
-                          onChange={(color) => setGradientStart(color.hex)}
-                        />
-                      </Box>
-                    )}
                   </Box>
 
                   <Box sx={{ mb: 2 }}>
