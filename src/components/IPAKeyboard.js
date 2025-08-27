@@ -1318,8 +1318,8 @@ const IPAKeyboard = ({
       setPreviewSrc('');
     };
 
-    const handleColorChange = (color) => {
-      setCustomColor(color.hex);
+    const handleColorChange = (event) => {
+      setCustomColor(event.target.value);
     };
 
     return (
