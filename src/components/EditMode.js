@@ -17,7 +17,6 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
-import { SketchPicker } from 'react-color';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
