@@ -185,41 +185,19 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
                     backgroundColor: 'transparent'
                   }}
                 />
-                <Box sx={{ mt: 2 }}>
-                  <Typography gutterBottom>
-                    Button Opacity: {Math.round(buttonOpacity * 100)}%
+                <Box sx={{ mt: 1.5 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Opacity
                   </Typography>
                   <Slider
                     value={buttonOpacity}
                     onChange={(e, newValue) => setButtonOpacity(newValue)}
                     min={0}
                     max={1}
-                    step={0.05}
-                    marks={[
-                      { value: 0, label: '0%' },
-                      { value: 0.5, label: '50%' },
-                      { value: 1, label: '100%' }
-                    ]}
-                    sx={{ mb: 1 }}
+                    step={0.1}
+                    size="small"
+                    sx={{ mb: 0.5 }}
                   />
-                  <Box
-                    sx={{
-                      width: '100%',
-                      height: '30px',
-                      backgroundColor: customColor,
-                      opacity: buttonOpacity,
-                      border: '1px solid #ccc',
-                      borderRadius: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '0.8rem',
-                      textShadow: '1px 1px 1px rgba(0,0,0,0.5)'
-                    }}
-                  >
-                    Preview
-                  </Box>
                 </Box>
               </Box>
 
