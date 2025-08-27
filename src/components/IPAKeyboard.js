@@ -1589,6 +1589,14 @@ const IPAKeyboard = ({
           phoneme={selectedPhoneme}
         />
       )}
+
+      <EditMode
+        open={backgroundEditOpen}
+        onClose={() => setBackgroundEditOpen(false)}
+        phoneme={null}
+        backgroundSettings={backgroundSettings}
+        onBackgroundSave={onBackgroundSave}
+      />
     </Box>
   );
 };
