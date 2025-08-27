@@ -27,7 +27,17 @@ import { ThemeProvider, CssBaseline } from '@mui/material';
 import { theme } from './theme';
 
 const App = () => {
-  const [mode, setMode] = useState(() => localStorage.getItem('ipaMode') || 'build');
+  const [mode, setMode] = useState(() => {
+    const saved = localStorage.getItem('ipaMode');
+    if (!saved) return 'build';
+
+    // Try to parse as JSON first (for legacy format), fallback to string
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return saved;
+    }
+  });
   const [selectedLanguage, setSelectedLanguage] = useState(() => {
     const saved = localStorage.getItem('selectedLanguage');
     return saved && phoneticData[saved]?.groups ? saved : 'en-GB';
@@ -41,7 +51,17 @@ const App = () => {
     if (language === 'en-GB') return 'en-GB-london';
     return ''; // No default region for other languages yet
   });
-  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('selectedVoice') || '');
+  const [selectedVoice, setSelectedVoice] = useState(() => {
+    const saved = localStorage.getItem('selectedVoice');
+    if (!saved) return '';
+
+    // Try to parse as JSON first (for legacy format), fallback to string
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return saved;
+    }
+  });
   const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
   const [autoScale, setAutoScale] = useState(() => {
@@ -79,6 +99,14 @@ const App = () => {
     const saved = localStorage.getItem('showIpaToText');
     return saved ? JSON.parse(saved) : true;
   });
+  const [speakOnButtonPress, setSpeakOnButtonPress] = useState(() => {
+    const saved = localStorage.getItem('speakOnButtonPress');
+    return saved ? JSON.parse(saved) : true;
+  });
+  const [speakWholeUtterance, setSpeakWholeUtterance] = useState(() => {
+    const saved = localStorage.getItem('speakWholeUtterance');
+    return saved ? JSON.parse(saved) : true;
+  });
 
   useEffect(() => {
     const initializeData = () => {
@@ -111,6 +139,23 @@ const App = () => {
 
     initializeData();
   }, [selectedLanguage]);
+
+  // Clean up localStorage from any JSON-stringified simple values on app start
+  useEffect(() => {
+    const cleanupLocalStorage = () => {
+      const keysToClean = ['selectedVoice', 'ipaMode', 'selectedLanguage', 'selectedRegion'];
+
+      keysToClean.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value && value.startsWith('"') && value.endsWith('"')) {
+          // This is a JSON-stringified simple string, clean it up
+          localStorage.setItem(key, value.slice(1, -1));
+        }
+      });
+    };
+
+    cleanupLocalStorage();
+  }, []);
 
   useEffect(() => {
     if (isInitialized && selectedVoice && isDataLoaded) {
@@ -161,6 +206,36 @@ const App = () => {
       }
     };
 
+    const checkAzureStatus = async () => {
+      try {
+        console.log('🔍 Checking Azure TTS status...');
+        const response = await config.api.get('/api/azure/status');
+        console.log('Azure status:', response.data);
+
+        if (!response.data.configured) {
+          console.warn('⚠️ Azure TTS not configured:', {
+            hasKey: response.data.hasKey,
+            hasRegion: response.data.hasRegion,
+            region: response.data.region
+          });
+          return false;
+        }
+
+        // Test Azure connectivity
+        try {
+          const testResponse = await config.api.post('/api/azure/test');
+          console.log('✅ Azure TTS test passed:', testResponse.data);
+          return true;
+        } catch (testError) {
+          console.error('❌ Azure TTS test failed:', testError.response?.data || testError.message);
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ Azure status check failed:', error.message);
+        return false;
+      }
+    };
+
     const fetchVoices = async () => {
       try {
         console.log('🎤 Attempting to fetch voices from:', config.apiUrl + '/api/voices');
@@ -170,6 +245,16 @@ const App = () => {
         const isConnected = await testApiConnectivity();
         if (!isConnected) {
           throw new Error('API connectivity test failed');
+        }
+
+        // Check Azure status
+        try {
+          const azureWorking = await checkAzureStatus();
+          if (!azureWorking) {
+            console.warn('⚠️ Azure TTS may not be working properly, but continuing with voice setup...');
+          }
+        } catch (azureError) {
+          console.warn('⚠️ Azure status check failed, but continuing with voice setup...', azureError.message);
         }
 
         const response = await config.api.get('/api/voices');
@@ -308,16 +393,16 @@ const App = () => {
     localStorage.setItem('selectedRegion', region);
   };
 
-  const loadAudioFile = async (fileName) => {
+  const loadAudioFile = useCallback(async (fileName) => {
     return new Promise((resolve, reject) => {
       const audio = new Audio();
-      
+
       const onLoad = () => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
         resolve(audio);
       };
-      
+
       const onError = (e) => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
@@ -325,22 +410,29 @@ const App = () => {
         console.error(`Full URL: ${new URL(`/audio/phonemes/${fileName}`, window.location.href).href}`);
         reject(new Error(`Failed to load audio: ${e.message}`));
       };
-      
+
       audio.addEventListener('canplaythrough', onLoad);
       audio.addEventListener('error', onError);
-      
+
       const url = `/audio/phonemes/${fileName}`;
       console.log(`Attempting to load audio from: ${url}`);
       audio.src = url;
       audio.preload = 'auto';
     });
-  };
+  }, []);
 
-  const getPhonemeFileName = (phoneme, voice) => {
+  const getPhonemeFileName = useCallback((phoneme, voice) => {
     // Use URL-friendly name if available, otherwise use URL-encoded phoneme
     const filenamePart = phonemeToFilename[phoneme] || encodeURIComponent(phoneme);
-    return `${filenamePart}_${voice}.mp3`;
-  };
+    const fileName = `${filenamePart}_${voice}.mp3`;
+
+    // Debug logging to check for malformed filenames
+    if (voice.includes('"')) {
+      console.error('Voice name contains quotes:', voice);
+    }
+
+    return fileName;
+  }, []);
 
   const cachePhonemeAudio = async () => {
     if (!selectedVoice || cacheLoading) {
@@ -460,7 +552,7 @@ const App = () => {
     cachePhonemeAudio();
   }, [selectedVoice, selectedLanguage]);
 
-  const handlePhonemeSpeak = async (text) => {
+  const handlePhonemeSpeak = useCallback(async (text) => {
     if (!text || !selectedVoice) return;
 
     // Skip only special marks
@@ -475,14 +567,20 @@ const App = () => {
     if (!isIpaPhoneme) {
       // If it's not an IPA phoneme, use the TTS API directly
       try {
-        const response = await config.api.post('/api/tts', { 
+        const response = await config.api.post('/api/tts', {
           text,
           voice: selectedVoice,
-          language: selectedLanguage
+          language: selectedLanguage,
+          usePhonemes: false,
+          isWholeUtterance: false
         });
-        
+
         if (response.data && response.data.audio) {
-          const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+          // Determine audio format based on backend response
+          const audioFormat = response.data.format === 'riff-48khz-16bit-mono-pcm' ?
+            'audio/wav' : 'audio/mp3';
+
+          const audio = new Audio(`data:${audioFormat};base64,${response.data.audio}`);
           await audio.play();
         }
       } catch (error) {
@@ -513,11 +611,11 @@ const App = () => {
         return;
       } catch (primaryError) {
         console.warn('Error playing primary voice audio:', primaryError);
-        
+
         // Try fallback voices
         const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
           .filter(v => v !== selectedVoice);
-        
+
         for (const fallbackVoice of fallbackVoices) {
           try {
             const fallbackFileName = getPhonemeFileName(text, fallbackVoice);
@@ -533,25 +631,36 @@ const App = () => {
 
     // For complex phonemes or if all else fails, use Azure TTS
     try {
-      const response = await config.api.post('/api/tts', { 
+      const response = await config.api.post('/api/tts', {
         text,
         voice: selectedVoice,
-        language: selectedLanguage
+        language: selectedLanguage,
+        usePhonemes: true,
+        isWholeUtterance: false
       });
-      
+
       if (response.data && response.data.audio) {
-        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        // Determine audio format based on backend response
+        const audioFormat = response.data.format === 'riff-48khz-16bit-mono-pcm' ?
+          'audio/wav' : 'audio/mp3';
+
+        const audio = new Audio(`data:${audioFormat};base64,${response.data.audio}`);
         await audio.play();
       }
     } catch (error) {
       console.warn('Error in speech synthesis:', error);
     }
-  };
+  }, [selectedVoice, selectedLanguage, audioCache, getPhonemeFileName, loadAudioFile]);
 
   const handlePhonemeClick = (phoneme) => {
     // In build mode, update the message
     if (mode === 'build') {
       setMessage(prev => prev + phoneme);
+
+      // Optionally speak the phoneme if setting is enabled
+      if (speakOnButtonPress) {
+        playPhoneme(phoneme);
+      }
       return;
     }
     
@@ -595,14 +704,50 @@ const App = () => {
     }
   };
 
+  // Browser speech synthesis fallback
+  const speakWithBrowserTTS = (text) => {
+    if ('speechSynthesis' in window) {
+      try {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.7; // Slower rate for better pronunciation
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Try to find a UK English voice
+        const voices = window.speechSynthesis.getVoices();
+        const ukVoice = voices.find(voice =>
+          voice.lang.includes('en-GB') || voice.lang.includes('en-UK')
+        );
+        if (ukVoice) {
+          utterance.voice = ukVoice;
+        }
+
+        console.log('Using browser TTS for:', text);
+        window.speechSynthesis.speak(utterance);
+        return true;
+      } catch (error) {
+        console.error('Browser TTS failed:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
   const speak = async () => {
+    if (!message) return;
+
+    console.log('Speak button clicked with message:', message);
+
     // Only fetch conversion if the feature is enabled
     if (showIpaToText) {
       try {
         const response = await axios.post('https://dolphin-app-62ztl.ondigitalocean.app/ipa-to-text', {
           ipa: message
         });
-        
+
         if (response.data && response.data.text) {
           setConvertedText(response.data.text);
         }
@@ -614,8 +759,30 @@ const App = () => {
       setConvertedText('');
     }
 
-    // Then speak the IPA as before
-    handlePhonemeSpeak(message);
+    // Try Azure TTS first, fall back to browser TTS
+    try {
+      console.log('Attempting Azure TTS...');
+
+      // For longer messages, use the whole utterance function with retry logic
+      if (message.length > 3) {
+        await speakWholeUtteranceText(message);
+      } else {
+        // For short messages, use the regular phoneme speak function
+        await handlePhonemeSpeak(message);
+      }
+
+      console.log('Azure TTS succeeded');
+    } catch (error) {
+      console.warn('Azure TTS failed, trying browser TTS:', error);
+
+      // Fallback to browser speech synthesis
+      const browserSuccess = speakWithBrowserTTS(convertedText || message);
+
+      if (!browserSuccess) {
+        console.error('Both Azure and browser TTS failed');
+        alert('Speech synthesis failed. Please check your browser\'s speech settings or Azure configuration.');
+      }
+    }
   };
 
   const handleSpeakRequest = async (text) => {
@@ -629,17 +796,22 @@ const App = () => {
         usePhonemes: false
       });
 
-      const response = await config.api.post('/api/tts', { 
+      const response = await config.api.post('/api/tts', {
         text,
         voice: selectedVoice,
         language: selectedLanguage,
-        usePhonemes: false  // Explicitly set to false for natural word pronunciation
+        usePhonemes: false,  // Explicitly set to false for natural word pronunciation
+        isWholeUtterance: false
       });
-      
+
       console.log('TTS response:', response.data);
-      
+
       if (response.data && response.data.audio) {
-        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        // Determine audio format based on backend response
+        const audioFormat = response.data.format === 'riff-48khz-16bit-mono-pcm' ?
+          'audio/wav' : 'audio/mp3';
+
+        const audio = new Audio(`data:${audioFormat};base64,${response.data.audio}`);
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.catch(err => {
@@ -859,6 +1031,98 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('showIpaToText', JSON.stringify(showIpaToText));
   }, [showIpaToText]);
+
+  // Add effects to save speech settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('speakOnButtonPress', JSON.stringify(speakOnButtonPress));
+  }, [speakOnButtonPress]);
+
+  useEffect(() => {
+    localStorage.setItem('speakWholeUtterance', JSON.stringify(speakWholeUtterance));
+  }, [speakWholeUtterance]);
+
+  // Separate function for whole utterance reading with retry logic
+  const speakWholeUtteranceText = useCallback(async (text) => {
+    if (!text || !selectedVoice) return;
+
+    console.log('Speaking whole utterance via TTS:', text);
+
+    const maxRetries = 2;
+    const retryDelay = 1000; // 1 second
+
+    // Helper function to make TTS request for whole utterances
+    const makeTTSRequest = async (retryCount = 0) => {
+      try {
+        console.log(`TTS attempt ${retryCount + 1}/${maxRetries + 1} for whole utterance`);
+        console.log('IPA text to speak:', text);
+
+        const response = await config.api.post('/api/tts', {
+          text: text,  // Send IPA as-is, Azure TTS will handle the blending
+          voice: selectedVoice,
+          language: selectedLanguage,
+          usePhonemes: true,  // Always use phoneme mode for whole utterances
+          isWholeUtterance: true  // Flag to indicate this is a complete utterance
+        });
+
+        if (response.data && response.data.audio) {
+          // Determine audio format based on backend response
+          const audioFormat = response.data.format === 'riff-48khz-16bit-mono-pcm' ?
+            'audio/wav' : 'audio/mp3';
+
+          const audio = new Audio(`data:${audioFormat};base64,${response.data.audio}`);
+          await audio.play();
+          console.log(`Whole utterance played successfully (attempt ${retryCount + 1}), format: ${audioFormat}`);
+          return true;
+        } else {
+          throw new Error('No audio data received');
+        }
+      } catch (error) {
+        console.warn(`TTS attempt ${retryCount + 1} failed:`, {
+          error: error.message,
+          code: error.code,
+          status: error.response?.status
+        });
+
+        // If it's a network/timeout error and we have retries left, try again
+        if (retryCount < maxRetries &&
+            (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || error.response?.status >= 500)) {
+          console.log(`Retrying in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          return makeTTSRequest(retryCount + 1);
+        }
+
+        throw error;
+      }
+    };
+
+    try {
+      // Use the new whole utterance approach
+      await makeTTSRequest();
+    } catch (error) {
+      console.error('Whole utterance TTS failed:', {
+        error: error.message,
+        text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+        voice: selectedVoice
+      });
+
+      // Rethrow so the speak function can handle the fallback
+      throw error;
+    }
+  }, [selectedVoice, selectedLanguage]);
+
+  // Add effect to speak whole utterance when message changes in build mode
+  useEffect(() => {
+    if (speakWholeUtterance && mode === 'build' && message) {
+      console.log('Whole utterance reading triggered:', { message, speakWholeUtterance, mode });
+
+      // Add a small delay to avoid speaking on every character when typing
+      const timeoutId = setTimeout(() => {
+        speakWholeUtteranceText(message);
+      }, 500); // 500ms delay
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [message, speakWholeUtterance, mode, speakWholeUtteranceText]);
 
   if (dataLoading) {
     return (
@@ -1154,6 +1418,12 @@ const App = () => {
               voices={availableVoices[selectedLanguage] || []}
               showIpaToText={showIpaToText}
               onShowIpaToTextChange={setShowIpaToText}
+              speakOnButtonPress={speakOnButtonPress}
+              onSpeakOnButtonPressChange={setSpeakOnButtonPress}
+              speakWholeUtterance={speakWholeUtterance}
+              onSpeakWholeUtteranceChange={setSpeakWholeUtterance}
+              mode={mode}
+              onModeChange={setMode}
             />
 
             {/* Search dialog */}

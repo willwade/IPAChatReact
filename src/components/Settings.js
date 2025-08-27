@@ -60,6 +60,12 @@ const Settings = ({
   voices = [],
   showIpaToText,
   onShowIpaToTextChange,
+  speakOnButtonPress,
+  onSpeakOnButtonPressChange,
+  speakWholeUtterance,
+  onSpeakWholeUtteranceChange,
+  mode,
+  onModeChange,
 }) => {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
@@ -185,6 +191,19 @@ const Settings = ({
     if (typeof backupData.hapticFeedback === 'boolean') {
       onHapticFeedbackChange(backupData.hapticFeedback);
     }
+
+    // Update speech settings
+    if (typeof backupData.speakOnButtonPress === 'boolean') {
+      onSpeakOnButtonPressChange(backupData.speakOnButtonPress);
+    }
+    if (typeof backupData.speakWholeUtterance === 'boolean') {
+      onSpeakWholeUtteranceChange(backupData.speakWholeUtterance);
+    }
+
+    // Update mode
+    if (backupData.ipaMode) {
+      onModeChange(backupData.ipaMode);
+    }
   };
 
   const handleRestoreClick = () => {
@@ -230,7 +249,12 @@ const Settings = ({
           Object.entries(backupData).forEach(([key, value]) => {
             if (key !== 'selectedLanguage') { // Skip language since we already set it
               try {
-                localStorage.setItem(key, JSON.stringify(value));
+                // Only JSON.stringify objects and booleans, store strings directly
+                if (typeof value === 'boolean' || typeof value === 'object') {
+                  localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                  localStorage.setItem(key, value);
+                }
               } catch {
                 localStorage.setItem(key, value);
               }
@@ -281,27 +305,43 @@ const Settings = ({
       // Wait a moment for language change to take effect
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Then update the rest of localStorage
+      // Then update the rest of localStorage, but force mode to "build"
       Object.entries(data).forEach(([key, value]) => {
         if (key !== 'selectedLanguage') { // Skip language since we already set it
           try {
-            localStorage.setItem(key, JSON.stringify(value));
+            // Force mode to "build" when loading examples
+            const finalValue = key === 'ipaMode' ? 'build' : value;
+            // Only JSON.stringify objects and booleans, store strings directly
+            if (typeof finalValue === 'boolean' || typeof finalValue === 'object') {
+              localStorage.setItem(key, JSON.stringify(finalValue));
+              if (key === 'ipaCustomizations') {
+                console.log('Stored IPA customizations for example:', Object.keys(finalValue).length, 'phonemes');
+              }
+            } else {
+              localStorage.setItem(key, finalValue);
+            }
           } catch {
-            localStorage.setItem(key, value);
+            // Force mode to "build" when loading examples
+            const finalValue = key === 'ipaMode' ? 'build' : value;
+            localStorage.setItem(key, finalValue);
           }
         }
       });
 
-      // Then update the state through props
-      applySettings(data);
+      // Force mode to build when loading examples
+      onModeChange('build');
+
+      // Then update the state through props, but force mode to "build"
+      const modifiedData = { ...data, ipaMode: 'build' };
+      applySettings(modifiedData);
 
       // Close settings dialog if open
       onClose();
 
       // Show success message
-      alert('Example loaded successfully! The page will now reload to apply all changes.');
+      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
 
-      // Reload the page after a delay
+      // Reload the page after a delay to ensure IPA customizations are applied
       setTimeout(() => {
         window.location.reload();
       }, 200);
@@ -536,7 +576,7 @@ const Settings = ({
               <Typography variant="h6" gutterBottom>
                 Display Settings
               </Typography>
-              
+
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <FormControlLabel
                   control={
@@ -548,6 +588,44 @@ const Settings = ({
                   label="Show text conversion"
                 />
                 <Tooltip title="Display converted text when speaking IPA symbols">
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Speech Settings
+              </Typography>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={speakOnButtonPress}
+                      onChange={(e) => onSpeakOnButtonPressChange(e.target.checked)}
+                    />
+                  }
+                  label="Read each button as you press it (Build Mode)"
+                />
+                <Tooltip title="Automatically speak each phoneme when clicked in build mode">
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={speakWholeUtterance}
+                      onChange={(e) => onSpeakWholeUtteranceChange(e.target.checked)}
+                    />
+                  }
+                  label="Read whole utterance as it's built"
+                />
+                <Tooltip title="Automatically speak the entire message when the message bar is updated in build mode">
                   <IconButton size="small" sx={{ ml: 1 }}>
                     <HelpOutlineIcon fontSize="small" />
                   </IconButton>
