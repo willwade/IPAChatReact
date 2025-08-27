@@ -485,22 +485,29 @@ const App = () => {
       const onLoad = () => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
+        audio.removeEventListener('loadstart', onLoadStart);
         resolve(audio);
       };
 
       const onError = (e) => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
-        console.error(`Failed to load audio file: ${fileName}`);
-        console.error(`Full URL: ${new URL(`/audio/phonemes/${fileName}`, window.location.href).href}`);
-        reject(new Error(`Failed to load audio: ${e.message}`));
+        audio.removeEventListener('loadstart', onLoadStart);
+        console.warn(`Failed to load audio file: ${fileName}`);
+        console.warn(`Full URL: ${new URL(`/audio/phonemes/${fileName}`, window.location.href).href}`);
+        console.warn(`Error details:`, e);
+        reject(new Error(`Failed to load audio: ${fileName}`));
+      };
+
+      const onLoadStart = () => {
+        console.log(`Started loading: ${fileName}`);
       };
 
       audio.addEventListener('canplaythrough', onLoad);
       audio.addEventListener('error', onError);
+      audio.addEventListener('loadstart', onLoadStart);
 
       const url = `/audio/phonemes/${fileName}`;
-      console.log(`Attempting to load audio from: ${url}`);
       audio.src = url;
       audio.preload = 'auto';
     });
