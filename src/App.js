@@ -668,8 +668,11 @@ const App = () => {
 
   // Update cache when voice or language changes
   useEffect(() => {
-    cachePhonemeAudio();
-  }, [selectedVoice, selectedLanguage]);
+    if (selectedVoice && selectedLanguage) {
+      testAudioAvailability();
+      cachePhonemeAudio();
+    }
+  }, [selectedVoice, selectedLanguage, testAudioAvailability, cachePhonemeAudio]);
 
   const handlePhonemeSpeak = useCallback(async (text) => {
     if (!text || !selectedVoice) return;
