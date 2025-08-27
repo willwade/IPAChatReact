@@ -7,6 +7,7 @@ import { detailedPhoneticData as phoneticData } from '../data/phoneticData';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import CloseIcon from '@mui/icons-material/Close';
+import EditMode from './EditMode';
 
 const debounce = (func, wait) => {
   let timeout;
