@@ -1557,6 +1557,16 @@ const IPAKeyboard = ({
           >
             Customize
           </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setBackgroundEditOpen(true);
+            }}
+            size="small"
+            sx={{ ml: 1 }}
+          >
+            Background
+          </Button>
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
           <FormControlLabel
             control={
