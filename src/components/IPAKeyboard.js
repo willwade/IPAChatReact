@@ -1291,6 +1291,7 @@ const IPAKeyboard = ({
         hideButton,
         image: previewSrc,
         customColor,
+        opacity: buttonOpacity,
         label: customLabel,
       };
       console.log('Saving new customization:', newCustomization);
