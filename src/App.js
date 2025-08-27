@@ -577,12 +577,12 @@ const App = () => {
           try {
             // Only treat diphthongs and length-marked vowels as complex
             const isComplex = /^[aeiouɑɔəʊɪʊ][ɪʊə]$|ː/.test(phoneme);
-            
+
             if (!isComplex) {
               // Try the exact voice first for single phonemes
               const fileName = getPhonemeFileName(phoneme, selectedVoice);
               console.log(`Attempting to load: ${fileName} for phoneme: ${phoneme}`);
-              
+
               try {
                 const audio = await loadAudioFile(fileName);
                 newCache[phoneme] = audio;
@@ -593,7 +593,7 @@ const App = () => {
                 // If the primary voice fails, try fallback voices
                 const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
                   .filter(v => v !== selectedVoice);
-                
+
                 let fallbackSuccess = false;
                 for (const fallbackVoice of fallbackVoices) {
                   try {
@@ -610,15 +610,16 @@ const App = () => {
                   }
                 }
                 if (!fallbackSuccess) {
-                  console.error(`All voices failed for phoneme: ${phoneme}`);
+                  console.warn(`All pre-recorded voices failed for phoneme: ${phoneme} - will use TTS fallback`);
+                  // Don't cache anything, let it fall back to TTS during playback
                 }
               }
             } else {
               // For complex phonemes, we'll generate them on demand using Azure TTS
-              console.log(`Complex phoneme ${phoneme} will be generated on demand`);
+              console.log(`Complex phoneme ${phoneme} will be generated on demand using TTS`);
             }
           } catch (error) {
-            console.error(`Failed to cache phoneme ${phoneme}:`, error.message);
+            console.warn(`Failed to cache phoneme ${phoneme}:`, error.message);
           }
         }));
         
