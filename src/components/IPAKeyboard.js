@@ -1564,60 +1564,84 @@ const IPAKeyboard = ({
       </Box>
 
       {mode === 'edit' && (
-        <Box sx={{ 
+        <Box sx={{
           position: 'fixed',
-          bottom: 16,
+          bottom: { xs: 8, sm: 16 },
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
           backgroundColor: 'background.paper',
           borderRadius: 2,
           boxShadow: 3,
-          p: 1,
+          p: { xs: 0.5, sm: 1 },
           display: 'flex',
-          gap: 1,
-          flexShrink: 0,
-          alignItems: 'center'
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 0.5, sm: 1 },
+          alignItems: 'center',
+          maxWidth: { xs: '95vw', sm: 'auto' }
         }}>
-          <Button
-            variant={editMode === 'move' ? 'contained' : 'outlined'}
-            onClick={() => {
-              setEditMode('move');
+          <Box sx={{
+            display: 'flex',
+            gap: { xs: 0.5, sm: 1 },
+            flexWrap: { xs: 'nowrap', sm: 'wrap' }
+          }}>
+            <Button
+              variant={editMode === 'move' ? 'contained' : 'outlined'}
+              onClick={() => {
+                setEditMode('move');
+              }}
+              size="small"
+              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
+            >
+              Move
+            </Button>
+            <Button
+              variant={editMode === 'customize' ? 'contained' : 'outlined'}
+              onClick={() => {
+                setEditMode('customize');
+              }}
+              size="small"
+              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
+            >
+              Customize
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setBackgroundEditOpen(true);
+              }}
+              size="small"
+              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
+            >
+              Background
+            </Button>
+          </Box>
+
+          <Divider
+            orientation={{ xs: 'horizontal', sm: 'vertical' }}
+            flexItem
+            sx={{
+              mx: { xs: 0, sm: 1 },
+              my: { xs: 0.5, sm: 0 },
+              width: { xs: '100%', sm: 'auto' }
             }}
-            size="small"
-          >
-            Move
-          </Button>
-          <Button
-            variant={editMode === 'customize' ? 'contained' : 'outlined'}
-            onClick={() => {
-              setEditMode('customize');
-            }}
-            size="small"
-          >
-            Customize
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setBackgroundEditOpen(true);
-            }}
-            size="small"
-            sx={{ ml: 1 }}
-          >
-            Background
-          </Button>
-          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+          />
+
           <FormControlLabel
             control={
-              <Switch 
+              <Switch
                 size="small"
                 checked={showStressMarkers}
                 onChange={handleStressMarkersToggle}
               />
             }
-            label="Show Stress Markers"
-            sx={{ ml: 0 }}
+            label="Stress"
+            sx={{
+              ml: 0,
+              '& .MuiFormControlLabel-label': {
+                fontSize: { xs: '0.8rem', sm: '0.875rem' }
+              }
+            }}
           />
         </Box>
       )}
