@@ -259,15 +259,18 @@ const App = () => {
     setShowWelcome(true);
   };
 
-  const actions = [
-    { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
-    { icon: <SearchIcon />, name: 'Search Mode', onClick: handleSearchModeClick },
-    { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble') },
-    { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit') },
-    { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game') },
-    { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) },
-    { icon: <RestartAltIcon />, name: 'Setup Wizard', onClick: handleRestartWelcome }
+  const allActions = [
+    { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build'), key: 'showBuild' },
+    { icon: <SearchIcon />, name: 'Search Mode', onClick: handleSearchModeClick, key: 'showSearch' },
+    { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble'), key: 'showBabble' },
+    { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit'), key: 'showEdit' },
+    { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game'), key: 'showGame' },
+    { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true), key: 'showSettings' },
+    { icon: <RestartAltIcon />, name: 'Setup Wizard', onClick: handleRestartWelcome, key: 'showSetupWizard' }
   ];
+
+  // Filter actions based on toolbar configuration
+  const actions = allActions.filter(action => toolbarConfig[action.key]);
 
   useEffect(() => {
     const testApiConnectivity = async () => {
