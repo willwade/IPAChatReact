@@ -1233,7 +1233,15 @@ const IPAKeyboard = ({
           position: 'relative',
           '&:hover': {
             backgroundColor: color,
-            opacity: mode === 'edit' ? (customization.hideButton ? 0.4 : 0.9) : (isDisabled ? 0.5 : 0.9),
+            opacity: (() => {
+              const baseOpacity = customization.opacity !== undefined ? customization.opacity : 1;
+              const hoverOpacity = Math.min(baseOpacity * 0.9, 0.9); // Reduce opacity slightly on hover
+
+              if (mode === 'edit') {
+                return customization.hideButton ? 0.4 : hoverOpacity;
+              }
+              return isDisabled ? 0.5 : hoverOpacity;
+            })(),
           },
           '&:active': {
             transform: 'scale(0.95)',
