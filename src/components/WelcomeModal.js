@@ -12,17 +12,12 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
+import { exampleLayouts } from '../data/exampleLayouts';
 
 const WelcomeModal = ({ open, onClose }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const examples = [
-    { name: 'Example 1', file: 'example1', thumb: '/examples/example1.png' },
-    { name: 'Example 2', file: 'example2', thumb: '/examples/example2.png' },
-    { name: 'Example 3', file: 'example3', thumb: '/examples/example3.svg' },
-    { name: 'Example 4', file: 'example4', thumb: '/examples/example4.svg' }
-  ];
 
   const handleExampleSelect = async (ex) => {
     try {
@@ -109,7 +104,7 @@ const WelcomeModal = ({ open, onClose }) => {
                 gap: 1.5,
                 justifyItems: 'center'
               }}>
-                {examples.map((ex) => (
+                {exampleLayouts.map((ex) => (
                   <Box
                     key={ex.name}
                     onClick={() => handleExampleSelect(ex)}

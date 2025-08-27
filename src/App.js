@@ -11,6 +11,7 @@ import ChildCareIcon from '@mui/icons-material/ChildCare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { voicesByLanguage, detailedPhoneticData as phoneticData, normalizePhoneme } from './data/phoneticData';
 import { config } from './config';
 import { regions } from './data/gamePhases';
@@ -126,13 +127,19 @@ const App = () => {
     setSearchDialogOpen(true);
   };
 
+  const handleRestartWelcome = () => {
+    localStorage.removeItem('hasVisitedBefore');
+    setShowWelcome(true);
+  };
+
   const actions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
     { icon: <SearchIcon />, name: 'Search Mode', onClick: handleSearchModeClick },
     { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble') },
     { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit') },
     { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game') },
-    { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) }
+    { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) },
+    { icon: <RestartAltIcon />, name: 'Setup Wizard', onClick: handleRestartWelcome }
   ];
 
   useEffect(() => {
