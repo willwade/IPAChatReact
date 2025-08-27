@@ -552,7 +552,7 @@ const App = () => {
     }
   }, [getPhonemeFileName]);
 
-  const cachePhonemeAudio = async () => {
+  const cachePhonemeAudio = useCallback(async () => {
     if (!selectedVoice || cacheLoading) {
       console.warn('Cannot cache audio: voice not selected or already caching');
       return;
@@ -562,14 +562,14 @@ const App = () => {
       console.warn('Cannot cache audio: language data not loaded');
       return;
     }
-    
+
     setCacheLoading(true);
     // Clear existing cache when voice changes
     setAudioCache({});
     console.log(`Clearing cache for previous voice and loading new cache for ${selectedVoice}`);
-    
+
     const newCache = {};
-    
+
     // Get all phonemes except stress/intonation marks
     const phonemes = Object.values(phoneticData[selectedLanguage].groups)
       .flatMap(group => {
@@ -577,9 +577,9 @@ const App = () => {
         if (!group || !group.phonemes || group.title === 'Stress & Intonation') return [];
         return group.phonemes;
       })
-      .filter(phoneme => 
+      .filter(phoneme =>
         // Include all IPA characters but exclude arrows, special marks, and problematic characters
-        phoneme && !/[↗↘↑↓|‖]/.test(phoneme) && 
+        phoneme && !/[↗↘↑↓|‖]/.test(phoneme) &&
         // Ensure the phoneme is properly encoded
         encodeURIComponent(phoneme) !== '%EF%BF%BD'
       );
@@ -591,12 +591,12 @@ const App = () => {
     }
 
     console.log(`Starting cache for ${phonemes.length} phonemes with voice: ${selectedVoice}`);
-    
+
     try {
       // Load pre-generated audio files in parallel batches
       const batchSize = 5;
       let loadedCount = 0;
-      
+
       for (let i = 0; i < phonemes.length; i += batchSize) {
         const batch = phonemes.slice(i, i + batchSize);
         await Promise.all(batch.map(async phoneme => {
@@ -648,11 +648,11 @@ const App = () => {
             console.warn(`Failed to cache phoneme ${phoneme}:`, error.message);
           }
         }));
-        
+
         // Small delay between batches to prevent overwhelming the browser
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      
+
       setAudioCache(newCache);
       const cachedPhonemes = Object.keys(newCache);
       console.log(`Audio cache completed for ${selectedVoice}.`);
@@ -664,7 +664,7 @@ const App = () => {
     } finally {
       setCacheLoading(false);
     }
-  };
+  }, [selectedVoice, selectedLanguage, cacheLoading, phoneticData, getPhonemeFileName, loadAudioFile]);
 
   // Update cache when voice or language changes
   useEffect(() => {
