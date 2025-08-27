@@ -1154,6 +1154,10 @@ const App = () => {
     localStorage.setItem('backgroundSettings', JSON.stringify(backgroundSettings));
   }, [backgroundSettings]);
 
+  useEffect(() => {
+    localStorage.setItem('toolbarConfig', JSON.stringify(toolbarConfig));
+  }, [toolbarConfig]);
+
   // Separate function for whole utterance reading with retry logic
   const speakWholeUtteranceText = useCallback(async (text) => {
     if (!text || !selectedVoice) return;
