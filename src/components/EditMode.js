@@ -36,9 +36,6 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
   const [gradientEnd, setGradientEnd] = useState(backgroundSettings?.gradientEnd || '#000000');
   const [gradientDirection, setGradientDirection] = useState(backgroundSettings?.gradientDirection || 'to bottom');
   const [backgroundImage, setBackgroundImage] = useState(backgroundSettings?.image || '');
-  const [showBackgroundColorPicker, setShowBackgroundColorPicker] = useState(false);
-  const [showGradientStartPicker, setShowGradientStartPicker] = useState(false);
-  const [showGradientEndPicker, setShowGradientEndPicker] = useState(false);
   const [activeTab, setActiveTab] = useState(phoneme ? 'button' : 'background');
 
   const handleImageChange = (event) => {
