@@ -1406,22 +1406,20 @@ const IPAKeyboard = ({
 
             {/* Color Picker Section */}
             <Box>
-              <Button
-                variant="outlined"
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                sx={{ mb: 1 }}
-              >
-                {showColorPicker ? 'Hide Color Picker' : 'Show Color Picker'}
-              </Button>
-              {showColorPicker && (
-                <Box sx={{ position: 'relative', zIndex: 1000 }}>
-                  <ChromePicker
-                    color={customColor || getPhonemeColor(phoneme)}
-                    onChange={handleColorChange}
-                    disableAlpha={true}
-                  />
-                </Box>
-              )}
+              <Typography gutterBottom>Button Color</Typography>
+              <input
+                type="color"
+                value={customColor || getPhonemeColor(phoneme)}
+                onChange={handleColorChange}
+                style={{
+                  width: '100%',
+                  height: '40px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent'
+                }}
+              />
             </Box>
           </Box>
         </DialogContent>
