@@ -253,26 +253,19 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
               {backgroundType === 'color' && (
                 <Box sx={{ mb: 2 }}>
                   <Typography gutterBottom>Background Color</Typography>
-                  <Box
-                    sx={{
+                  <input
+                    type="color"
+                    value={backgroundColor}
+                    onChange={(e) => setBackgroundColor(e.target.value)}
+                    style={{
                       width: '100%',
                       height: '40px',
-                      backgroundColor: backgroundColor,
-                      cursor: 'pointer',
                       border: '1px solid #ccc',
-                      borderRadius: 1,
-                      mb: 1
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent'
                     }}
-                    onClick={() => setShowBackgroundColorPicker(!showBackgroundColorPicker)}
                   />
-                  {showBackgroundColorPicker && (
-                    <Box sx={{ position: 'relative', zIndex: 2 }}>
-                      <SketchPicker
-                        color={backgroundColor}
-                        onChange={(color) => setBackgroundColor(color.hex)}
-                      />
-                    </Box>
-                  )}
                 </Box>
               )}
 
