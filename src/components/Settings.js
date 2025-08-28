@@ -245,6 +245,20 @@ const Settings = ({
           // Wait a moment for language change to take effect
           await new Promise(resolve => setTimeout(resolve, 100));
 
+          // Reset background settings to default if not included in backup
+          if (!backupData.backgroundSettings) {
+            const defaultBackground = {
+              type: 'color',
+              color: '#ffffff',
+              gradientStart: '#ffffff',
+              gradientEnd: '#000000',
+              gradientDirection: 'to bottom',
+              image: ''
+            };
+            localStorage.setItem('backgroundSettings', JSON.stringify(defaultBackground));
+            console.log('Reset background settings to default during restore');
+          }
+
           // Then update the rest of localStorage
           Object.entries(backupData).forEach(([key, value]) => {
             if (key !== 'selectedLanguage') { // Skip language since we already set it
@@ -304,6 +318,20 @@ const Settings = ({
 
       // Wait a moment for language change to take effect
       await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Reset background settings to default if not included in example
+      if (!data.backgroundSettings) {
+        const defaultBackground = {
+          type: 'color',
+          color: '#ffffff',
+          gradientStart: '#ffffff',
+          gradientEnd: '#000000',
+          gradientDirection: 'to bottom',
+          image: ''
+        };
+        localStorage.setItem('backgroundSettings', JSON.stringify(defaultBackground));
+        console.log('Reset background settings to default when loading example');
+      }
 
       // Then update the rest of localStorage, but force mode to "build"
       Object.entries(data).forEach(([key, value]) => {
