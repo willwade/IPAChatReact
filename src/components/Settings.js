@@ -74,6 +74,26 @@ const Settings = ({
   const [restoreError, setRestoreError] = useState(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  // Helper function to safely update toolbar config
+  const handleToolbarConfigChange = (key, value) => {
+    if (!value) {
+      // Count how many toolbar items are currently visible (excluding settings which is always visible)
+      const visibleCount = Object.entries(toolbarConfig || {})
+        .filter(([k, v]) => k !== 'showSettings' && v !== false)
+        .length;
+
+      // Don't allow disabling if it would leave less than 1 visible item
+      if (visibleCount <= 1) {
+        return;
+      }
+    }
+
+    onToolbarConfigChange(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
   const handleLanguageChange = (event) => {
     onLanguageChange(event.target.value);
   };
