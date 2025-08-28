@@ -118,6 +118,18 @@ const App = () => {
       image: ''
     };
   });
+  const [toolbarConfig, setToolbarConfig] = useState(() => {
+    const saved = localStorage.getItem('toolbarConfig');
+    return saved ? JSON.parse(saved) : {
+      showBuild: true,
+      showSearch: true,
+      showBabble: true,
+      showEdit: true,
+      showGame: true,
+      showSettings: true,
+      showSetupWizard: true
+    };
+  });
 
   useEffect(() => {
     const initializeData = () => {
@@ -150,6 +162,80 @@ const App = () => {
 
     initializeData();
   }, [selectedLanguage]);
+
+  // URL parameter loading effect
+  useEffect(() => {
+    const loadConfigFromUrl = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const configParam = urlParams.get('config');
+
+      // Check if we've already loaded this config to prevent infinite loop
+      const lastLoadedConfig = localStorage.getItem('lastLoadedConfig');
+
+      if (configParam && lastLoadedConfig !== configParam) {
+        try {
+          let configData;
+
+          // Check if it's a URL (starts with http/https)
+          if (configParam.startsWith('http://') || configParam.startsWith('https://')) {
+            // Load from remote URL
+            console.log('Loading config from remote URL:', configParam);
+            const response = await fetch(configParam);
+            configData = await response.json();
+          } else {
+            // Load from local example file
+            console.log('Loading config from local file:', configParam);
+            const response = await fetch(`/examples/${configParam}.json`);
+            configData = await response.json();
+          }
+
+          if (configData) {
+            // Apply the configuration
+            console.log('Applying configuration:', configData);
+
+            // Update localStorage with all the configuration
+            Object.entries(configData).forEach(([key, value]) => {
+              try {
+                if (typeof value === 'boolean' || typeof value === 'object') {
+                  localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                  localStorage.setItem(key, value);
+                }
+              } catch (error) {
+                console.warn(`Failed to save ${key} to localStorage:`, error);
+              }
+            });
+
+            // Mark this config as loaded to prevent infinite loop
+            localStorage.setItem('lastLoadedConfig', configParam);
+
+            // Remove the config parameter from URL to prevent reload loop
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('config');
+            window.history.replaceState({}, '', newUrl);
+
+            // Show success message
+            alert('Configuration loaded successfully! The page will now reload to apply all changes.');
+
+            // Reload the page to apply all changes
+            setTimeout(() => {
+              window.location.reload();
+            }, 200);
+          }
+        } catch (error) {
+          console.error('Error loading configuration:', error);
+          alert(`Failed to load configuration: ${error.message}`);
+          // Remove the config parameter from URL even on error
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('config');
+          window.history.replaceState({}, '', newUrl);
+        }
+      }
+    };
+
+    // Only run once when component mounts
+    loadConfigFromUrl();
+  }, []);
 
   // Clean up localStorage from any JSON-stringified simple values on app start
   useEffect(() => {
@@ -188,15 +274,18 @@ const App = () => {
     setShowWelcome(true);
   };
 
-  const actions = [
-    { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build') },
-    { icon: <SearchIcon />, name: 'Search Mode', onClick: handleSearchModeClick },
-    { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble') },
-    { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit') },
-    { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game') },
-    { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true) },
-    { icon: <RestartAltIcon />, name: 'Setup Wizard', onClick: handleRestartWelcome }
+  const allActions = [
+    { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build'), key: 'showBuild' },
+    { icon: <SearchIcon />, name: 'Search Mode', onClick: handleSearchModeClick, key: 'showSearch' },
+    { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble'), key: 'showBabble' },
+    { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit'), key: 'showEdit' },
+    { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game'), key: 'showGame' },
+    { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true), key: 'showSettings' },
+    { icon: <RestartAltIcon />, name: 'Setup Wizard', onClick: handleRestartWelcome, key: 'showSetupWizard' }
   ];
+
+  // Filter actions based on toolbar configuration
+  const actions = allActions.filter(action => toolbarConfig[action.key]);
 
   useEffect(() => {
     const testApiConnectivity = async () => {
@@ -411,22 +500,29 @@ const App = () => {
       const onLoad = () => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
+        audio.removeEventListener('loadstart', onLoadStart);
         resolve(audio);
       };
 
       const onError = (e) => {
         audio.removeEventListener('canplaythrough', onLoad);
         audio.removeEventListener('error', onError);
-        console.error(`Failed to load audio file: ${fileName}`);
-        console.error(`Full URL: ${new URL(`/audio/phonemes/${fileName}`, window.location.href).href}`);
-        reject(new Error(`Failed to load audio: ${e.message}`));
+        audio.removeEventListener('loadstart', onLoadStart);
+        console.warn(`Failed to load audio file: ${fileName}`);
+        console.warn(`Full URL: ${new URL(`/audio/phonemes/${fileName}`, window.location.href).href}`);
+        console.warn(`Error details:`, e);
+        reject(new Error(`Failed to load audio: ${fileName}`));
+      };
+
+      const onLoadStart = () => {
+        console.log(`Started loading: ${fileName}`);
       };
 
       audio.addEventListener('canplaythrough', onLoad);
       audio.addEventListener('error', onError);
+      audio.addEventListener('loadstart', onLoadStart);
 
       const url = `/audio/phonemes/${fileName}`;
-      console.log(`Attempting to load audio from: ${url}`);
       audio.src = url;
       audio.preload = 'auto';
     });
@@ -442,10 +538,36 @@ const App = () => {
       console.error('Voice name contains quotes:', voice);
     }
 
+    // Log mapping for debugging
+    if (phonemeToFilename[phoneme]) {
+      console.log(`Phoneme ${phoneme} mapped to filename part: ${filenamePart}`);
+    } else {
+      console.warn(`No filename mapping for phoneme ${phoneme}, using encoded: ${filenamePart}`);
+    }
+
     return fileName;
   }, []);
 
-  const cachePhonemeAudio = async () => {
+  // Test function to check if audio files are accessible
+  const testAudioAvailability = useCallback(async () => {
+    const testPhonemes = ['ɐ', 'ʊ', 'ɒ']; // ah, uh, oh - the ones that are failing
+    const testVoice = 'en-GB-LibbyNeural';
+
+    console.log('Testing audio file availability...');
+    for (const phoneme of testPhonemes) {
+      const fileName = getPhonemeFileName(phoneme, testVoice);
+      const url = `/audio/phonemes/${fileName}`;
+
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        console.log(`${phoneme} (${fileName}): ${response.ok ? 'Available' : 'Not found'} - Status: ${response.status}`);
+      } catch (error) {
+        console.log(`${phoneme} (${fileName}): Network error - ${error.message}`);
+      }
+    }
+  }, [getPhonemeFileName]);
+
+  const cachePhonemeAudio = useCallback(async () => {
     if (!selectedVoice || cacheLoading) {
       console.warn('Cannot cache audio: voice not selected or already caching');
       return;
@@ -455,14 +577,14 @@ const App = () => {
       console.warn('Cannot cache audio: language data not loaded');
       return;
     }
-    
+
     setCacheLoading(true);
     // Clear existing cache when voice changes
     setAudioCache({});
     console.log(`Clearing cache for previous voice and loading new cache for ${selectedVoice}`);
-    
+
     const newCache = {};
-    
+
     // Get all phonemes except stress/intonation marks
     const phonemes = Object.values(phoneticData[selectedLanguage].groups)
       .flatMap(group => {
@@ -470,9 +592,9 @@ const App = () => {
         if (!group || !group.phonemes || group.title === 'Stress & Intonation') return [];
         return group.phonemes;
       })
-      .filter(phoneme => 
+      .filter(phoneme =>
         // Include all IPA characters but exclude arrows, special marks, and problematic characters
-        phoneme && !/[↗↘↑↓|‖]/.test(phoneme) && 
+        phoneme && !/[↗↘↑↓|‖]/.test(phoneme) &&
         // Ensure the phoneme is properly encoded
         encodeURIComponent(phoneme) !== '%EF%BF%BD'
       );
@@ -484,24 +606,24 @@ const App = () => {
     }
 
     console.log(`Starting cache for ${phonemes.length} phonemes with voice: ${selectedVoice}`);
-    
+
     try {
       // Load pre-generated audio files in parallel batches
       const batchSize = 5;
       let loadedCount = 0;
-      
+
       for (let i = 0; i < phonemes.length; i += batchSize) {
         const batch = phonemes.slice(i, i + batchSize);
         await Promise.all(batch.map(async phoneme => {
           try {
             // Only treat diphthongs and length-marked vowels as complex
             const isComplex = /^[aeiouɑɔəʊɪʊ][ɪʊə]$|ː/.test(phoneme);
-            
+
             if (!isComplex) {
               // Try the exact voice first for single phonemes
               const fileName = getPhonemeFileName(phoneme, selectedVoice);
               console.log(`Attempting to load: ${fileName} for phoneme: ${phoneme}`);
-              
+
               try {
                 const audio = await loadAudioFile(fileName);
                 newCache[phoneme] = audio;
@@ -512,7 +634,7 @@ const App = () => {
                 // If the primary voice fails, try fallback voices
                 const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
                   .filter(v => v !== selectedVoice);
-                
+
                 let fallbackSuccess = false;
                 for (const fallbackVoice of fallbackVoices) {
                   try {
@@ -529,22 +651,23 @@ const App = () => {
                   }
                 }
                 if (!fallbackSuccess) {
-                  console.error(`All voices failed for phoneme: ${phoneme}`);
+                  console.warn(`All pre-recorded voices failed for phoneme: ${phoneme} - will use TTS fallback`);
+                  // Don't cache anything, let it fall back to TTS during playback
                 }
               }
             } else {
               // For complex phonemes, we'll generate them on demand using Azure TTS
-              console.log(`Complex phoneme ${phoneme} will be generated on demand`);
+              console.log(`Complex phoneme ${phoneme} will be generated on demand using TTS`);
             }
           } catch (error) {
-            console.error(`Failed to cache phoneme ${phoneme}:`, error.message);
+            console.warn(`Failed to cache phoneme ${phoneme}:`, error.message);
           }
         }));
-        
+
         // Small delay between batches to prevent overwhelming the browser
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      
+
       setAudioCache(newCache);
       const cachedPhonemes = Object.keys(newCache);
       console.log(`Audio cache completed for ${selectedVoice}.`);
@@ -556,12 +679,15 @@ const App = () => {
     } finally {
       setCacheLoading(false);
     }
-  };
+  }, [selectedVoice, selectedLanguage, cacheLoading, phoneticData, getPhonemeFileName, loadAudioFile]);
 
   // Update cache when voice or language changes
   useEffect(() => {
-    cachePhonemeAudio();
-  }, [selectedVoice, selectedLanguage]);
+    if (selectedVoice && selectedLanguage) {
+      testAudioAvailability();
+      cachePhonemeAudio();
+    }
+  }, [selectedVoice, selectedLanguage, testAudioAvailability, cachePhonemeAudio]);
 
   const handlePhonemeSpeak = useCallback(async (text) => {
     if (!text || !selectedVoice) return;
@@ -611,31 +737,34 @@ const App = () => {
           return;
         } catch (error) {
           console.warn('Error playing cached audio:', error);
+          // Fall through to TTS fallback
         }
-      }
+      } else {
+        // Try to load from pre-generated files if not in cache
+        try {
+          const fileName = getPhonemeFileName(text, selectedVoice);
+          const audio = await loadAudioFile(fileName);
+          await audio.play();
+          return;
+        } catch (primaryError) {
+          console.warn('Error loading primary voice audio, trying fallbacks:', primaryError.message);
 
-      // Try to load from pre-generated files if not in cache
-      try {
-        const fileName = getPhonemeFileName(text, selectedVoice);
-        const audio = await loadAudioFile(fileName);
-        await audio.play();
-        return;
-      } catch (primaryError) {
-        console.warn('Error playing primary voice audio:', primaryError);
+          // Try fallback voices quickly
+          const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
+            .filter(v => v !== selectedVoice);
 
-        // Try fallback voices
-        const fallbackVoices = ['en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-US-JennyNeural']
-          .filter(v => v !== selectedVoice);
-
-        for (const fallbackVoice of fallbackVoices) {
-          try {
-            const fallbackFileName = getPhonemeFileName(text, fallbackVoice);
-            const audio = await loadAudioFile(fallbackFileName);
-            await audio.play();
-            return;
-          } catch (fallbackError) {
-            console.warn(`Fallback ${fallbackVoice} failed:`, fallbackError);
+          for (const fallbackVoice of fallbackVoices) {
+            try {
+              const fallbackFileName = getPhonemeFileName(text, fallbackVoice);
+              const audio = await loadAudioFile(fallbackFileName);
+              await audio.play();
+              return;
+            } catch (fallbackError) {
+              console.warn(`Fallback ${fallbackVoice} failed for ${text}`);
+            }
           }
+          // All pre-recorded options failed, fall through to TTS
+          console.warn(`All pre-recorded audio failed for ${text}, using TTS`);
         }
       }
     }
@@ -1079,6 +1208,10 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('backgroundSettings', JSON.stringify(backgroundSettings));
   }, [backgroundSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('toolbarConfig', JSON.stringify(toolbarConfig));
+  }, [toolbarConfig]);
 
   // Separate function for whole utterance reading with retry logic
   const speakWholeUtteranceText = useCallback(async (text) => {

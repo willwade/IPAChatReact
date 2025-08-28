@@ -1,0 +1,60 @@
+{
+  "toolbarConfig": {
+    "showBuild": false,
+    "showSearch": false,
+    "showBabble": false,
+    "showEdit": false,
+    "showGame": false,
+    "showSettings": false,
+    "showSetupWizard": false
+  },
+  "ipaCustomizations": {
+    "ɑː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1b629b"
+    },
+    "ɜː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1c5d90"
+    },
+    "iː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1e537e"
+    },
+    "ɔː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#194d78"
+    },
+    "uː": {
+      "hideLabel": false,
+      "hideButton": false,
+      "image": "",
+      "customColor": "#1c4d74"
+    }
+  },
+  "dwellIndicatorColor": "primary",
+  "touchDwellEnabled": false,
+  "buttonSpacing": 4,
+  "dwellIndicatorType": "border",
+  "selectedLanguage": "en-GB",
+  "touchDwellTime": 800,
+  "autoScale": true,
+  "buttonScale": 1.2,
+  "hasVisitedBefore": true,
+  "ipaMode": "build",
+  "selectedRegion": "en-GB-london",
+  "showStressors": false,
+  "hapticFeedback": false,
+  "selectedVoice": "en-GB-LibbyNeural",
+  "showIpaToText": true,
+  "speakOnButtonPress": true,
+  "speakWholeUtterance": false
+}
