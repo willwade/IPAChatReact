@@ -66,11 +66,33 @@ const Settings = ({
   onSpeakWholeUtteranceChange,
   mode,
   onModeChange,
+  toolbarConfig,
+  onToolbarConfigChange,
 }) => {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
   const [restoreError, setRestoreError] = useState(null);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Helper function to safely update toolbar config
+  const handleToolbarConfigChange = (key, value) => {
+    if (!value) {
+      // Count how many toolbar items are currently visible (excluding settings which is always visible)
+      const visibleCount = Object.entries(toolbarConfig || {})
+        .filter(([k, v]) => k !== 'showSettings' && v !== false)
+        .length;
+
+      // Don't allow disabling if it would leave less than 1 visible item
+      if (visibleCount <= 1) {
+        return;
+      }
+    }
+
+    onToolbarConfigChange(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
   const handleLanguageChange = (event) => {
     onLanguageChange(event.target.value);
@@ -245,6 +267,20 @@ const Settings = ({
           // Wait a moment for language change to take effect
           await new Promise(resolve => setTimeout(resolve, 100));
 
+          // Reset background settings to default if not included in backup
+          if (!backupData.backgroundSettings) {
+            const defaultBackground = {
+              type: 'color',
+              color: '#ffffff',
+              gradientStart: '#ffffff',
+              gradientEnd: '#000000',
+              gradientDirection: 'to bottom',
+              image: ''
+            };
+            localStorage.setItem('backgroundSettings', JSON.stringify(defaultBackground));
+            console.log('Reset background settings to default during restore');
+          }
+
           // Then update the rest of localStorage
           Object.entries(backupData).forEach(([key, value]) => {
             if (key !== 'selectedLanguage') { // Skip language since we already set it
@@ -304,6 +340,20 @@ const Settings = ({
 
       // Wait a moment for language change to take effect
       await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Reset background settings to default if not included in example
+      if (!data.backgroundSettings) {
+        const defaultBackground = {
+          type: 'color',
+          color: '#ffffff',
+          gradientStart: '#ffffff',
+          gradientEnd: '#000000',
+          gradientDirection: 'to bottom',
+          image: ''
+        };
+        localStorage.setItem('backgroundSettings', JSON.stringify(defaultBackground));
+        console.log('Reset background settings to default when loading example');
+      }
 
       // Then update the rest of localStorage, but force mode to "build"
       Object.entries(data).forEach(([key, value]) => {
@@ -705,6 +755,99 @@ const Settings = ({
                 }
                 label="Enable Haptic Feedback"
               />
+            </ListItem>
+
+            <Divider />
+
+            <Typography variant="h6" gutterBottom sx={{ mt: 3, px: 2 }}>Advanced Settings</Typography>
+
+            <ListItem>
+              <Box sx={{ width: '100%' }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                  Toolbar Configuration
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Control which toolbar buttons are visible in the app
+                </Typography>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showBuild !== false}
+                        onChange={(e) => handleToolbarConfigChange('showBuild', e.target.checked)}
+                      />
+                    }
+                    label="Build Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showSearch !== false}
+                        onChange={(e) => handleToolbarConfigChange('showSearch', e.target.checked)}
+                      />
+                    }
+                    label="Search Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showBabble !== false}
+                        onChange={(e) => handleToolbarConfigChange('showBabble', e.target.checked)}
+                      />
+                    }
+                    label="Babble Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showEdit !== false}
+                        onChange={(e) => handleToolbarConfigChange('showEdit', e.target.checked)}
+                      />
+                    }
+                    label="Edit Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showGame !== false}
+                        onChange={(e) => handleToolbarConfigChange('showGame', e.target.checked)}
+                      />
+                    }
+                    label="Game Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={true}
+                        disabled={true}
+                      />
+                    }
+                    label="Settings (Always Visible)"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showSetupWizard !== false}
+                        onChange={(e) => handleToolbarConfigChange('showSetupWizard', e.target.checked)}
+                      />
+                    }
+                    label="Setup Wizard"
+                  />
+                </Box>
+
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    Note: At least one toolbar button must remain visible. The Settings button cannot be hidden.
+                  </Typography>
+                </Alert>
+              </Box>
             </ListItem>
           </List>
         </DialogContent>
