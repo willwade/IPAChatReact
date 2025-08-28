@@ -1616,6 +1616,8 @@ const App = () => {
               onSpeakWholeUtteranceChange={setSpeakWholeUtterance}
               mode={mode}
               onModeChange={setMode}
+              toolbarConfig={toolbarConfig}
+              onToolbarConfigChange={setToolbarConfig}
             />
 
             {/* Search dialog */}
