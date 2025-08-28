@@ -434,7 +434,7 @@ const Settings = ({
                         fontWeight: 600
                       }}
                     >
-                      📁 Load Example Configurations
+                      ��� Load Example Configurations
                     </Typography>
 
                     <Box sx={{
@@ -735,6 +735,120 @@ const Settings = ({
                 }
                 label="Enable Haptic Feedback"
               />
+            </ListItem>
+
+            <Divider />
+
+            <Typography variant="h6" gutterBottom sx={{ mt: 3, px: 2 }}>Advanced Settings</Typography>
+
+            <ListItem>
+              <Box sx={{ width: '100%' }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+                  Toolbar Configuration
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Control which toolbar buttons are visible in the app
+                </Typography>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showBuild !== false}
+                        onChange={(e) => onToolbarConfigChange(prev => ({
+                          ...prev,
+                          showBuild: e.target.checked
+                        }))}
+                      />
+                    }
+                    label="Build Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showSearch !== false}
+                        onChange={(e) => onToolbarConfigChange(prev => ({
+                          ...prev,
+                          showSearch: e.target.checked
+                        }))}
+                      />
+                    }
+                    label="Search Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showBabble !== false}
+                        onChange={(e) => onToolbarConfigChange(prev => ({
+                          ...prev,
+                          showBabble: e.target.checked
+                        }))}
+                      />
+                    }
+                    label="Babble Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showEdit !== false}
+                        onChange={(e) => onToolbarConfigChange(prev => ({
+                          ...prev,
+                          showEdit: e.target.checked
+                        }))}
+                      />
+                    }
+                    label="Edit Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showGame !== false}
+                        onChange={(e) => onToolbarConfigChange(prev => ({
+                          ...prev,
+                          showGame: e.target.checked
+                        }))}
+                      />
+                    }
+                    label="Game Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showSettings !== false}
+                        onChange={(e) => onToolbarConfigChange(prev => ({
+                          ...prev,
+                          showSettings: e.target.checked
+                        }))}
+                      />
+                    }
+                    label="Settings"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={toolbarConfig?.showSetupWizard !== false}
+                        onChange={(e) => onToolbarConfigChange(prev => ({
+                          ...prev,
+                          showSetupWizard: e.target.checked
+                        }))}
+                      />
+                    }
+                    label="Setup Wizard"
+                  />
+                </Box>
+
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    Note: At least one toolbar button must remain visible. The Settings button cannot be hidden.
+                  </Typography>
+                </Alert>
+              </Box>
             </ListItem>
           </List>
         </DialogContent>
