@@ -193,6 +193,20 @@ const App = () => {
             // Apply the configuration
             console.log('Applying configuration:', configData);
 
+            // Reset background settings to default if not included in config
+            if (!configData.backgroundSettings) {
+              const defaultBackground = {
+                type: 'color',
+                color: '#ffffff',
+                gradientStart: '#ffffff',
+                gradientEnd: '#000000',
+                gradientDirection: 'to bottom',
+                image: ''
+              };
+              localStorage.setItem('backgroundSettings', JSON.stringify(defaultBackground));
+              console.log('Reset background settings to default');
+            }
+
             // Update localStorage with all the configuration
             Object.entries(configData).forEach(([key, value]) => {
               try {
