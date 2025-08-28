@@ -66,6 +66,8 @@ const Settings = ({
   onSpeakWholeUtteranceChange,
   mode,
   onModeChange,
+  toolbarConfig,
+  onToolbarConfigChange,
 }) => {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
