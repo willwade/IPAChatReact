@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const axios = require('axios');
 const cors = require('cors');
+const { CircuitBreaker } = require('./utils/circuitBreaker');
 require('dotenv').config();
 
 const app = express();
@@ -34,6 +35,13 @@ let appState = null;
 const AZURE_KEY = process.env.REACT_APP_AZURE_KEY;
 const AZURE_REGION = process.env.REACT_APP_AZURE_REGION;
 
+// Initialize circuit breaker for Azure TTS calls
+const azureTTSCircuitBreaker = new CircuitBreaker({
+  failureThreshold: 3,      // Open after 3 failures
+  resetTimeout: 30000,      // Try again after 30 seconds
+  monitoringPeriod: 60000   // Track calls over 1 minute window
+});
+
 // Log Azure configuration (without exposing the full key)
 console.log('Azure Configuration:', {
   region: AZURE_REGION,
@@ -54,6 +62,29 @@ const voiceData = {
     { name: 'en-US-AriaNeural', displayName: 'Aria (Female)', locale: 'en-US' },
   ],
 };
+
+// Helper function to make Azure TTS API call
+async function callAzureTTS(ssml, tts_endpoint) {
+  const response = await axios({
+    method: 'post',
+    url: tts_endpoint,
+    headers: {
+      'Ocp-Apim-Subscription-Key': AZURE_KEY,
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
+      'User-Agent': 'IPAChat'
+    },
+    data: ssml,
+    responseType: 'arraybuffer',
+    timeout: 10000 // 10 second timeout for Azure calls
+  });
+
+  if (!response.data || response.data.length === 0) {
+    throw new Error('Empty response from Azure TTS');
+  }
+
+  return response;
+}
 
 // Log all requests
 app.use((req, res, next) => {
@@ -292,19 +323,10 @@ app.post('/api/tts', async (req, res) => {
     
     console.log('Generated SSML:', ssml);
 
-    console.log('Making request to Azure...');
-    const response = await axios({
-      method: 'post',
-      url: tts_endpoint,
-      headers: {
-        'Ocp-Apim-Subscription-Key': AZURE_KEY,
-        'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
-        'User-Agent': 'IPAChat'
-      },
-      data: ssml,
-      responseType: 'arraybuffer'
-    });
+    console.log('Making request to Azure through circuit breaker...');
+    
+    // Use circuit breaker to call Azure TTS
+    const response = await azureTTSCircuitBreaker.call(callAzureTTS, ssml, tts_endpoint);
 
     console.log('Azure response received:', {
       status: response.status,
@@ -320,6 +342,22 @@ app.post('/api/tts', async (req, res) => {
       audio: base64Audio
     });
   } catch (error) {
+    // Handle circuit breaker specific errors
+    if (error.code === 'CIRCUIT_BREAKER_OPEN') {
+      console.log('Circuit breaker is OPEN - blocking Azure TTS request');
+      const stats = azureTTSCircuitBreaker.getStats();
+      return res.status(503).json({
+        error: 'Azure TTS service temporarily unavailable',
+        details: 'Circuit breaker is OPEN due to recent failures',
+        circuitBreakerState: stats.state,
+        retryAfter: Math.ceil(stats.timeUntilNextAttempt / 1000),
+        stats: {
+          failureCount: stats.failureCount,
+          successRate: stats.successRate
+        }
+      });
+    }
+
     // Log the full error object
     console.error('Full error object:', JSON.stringify(error, null, 2));
     
@@ -327,6 +365,7 @@ app.post('/api/tts', async (req, res) => {
     console.error('Error in TTS:', {
       message: error.message,
       code: error.code,
+      circuitBreakerState: azureTTSCircuitBreaker.getStats().state,
       response: {
         data: error.response?.data ? error.response.data.toString() : null,
         status: error.response?.status,
@@ -344,6 +383,7 @@ app.post('/api/tts', async (req, res) => {
     res.status(500).json({ 
       error: 'Speech synthesis failed',
       details: error.response?.data ? error.response.data.toString() : error.message,
+      circuitBreakerState: azureTTSCircuitBreaker.getStats().state,
       requestInfo: {
         text: text,
         voice: voice,
@@ -351,6 +391,33 @@ app.post('/api/tts', async (req, res) => {
       }
     });
   }
+});
+
+// Circuit breaker status and control endpoints
+app.get('/api/tts/circuit-breaker/status', (req, res) => {
+  const stats = azureTTSCircuitBreaker.getStats();
+  console.log('Circuit breaker status requested:', stats);
+  res.json(stats);
+});
+
+app.post('/api/tts/circuit-breaker/reset', (req, res) => {
+  console.log('Manual circuit breaker reset requested');
+  azureTTSCircuitBreaker.forceReset();
+  const stats = azureTTSCircuitBreaker.getStats();
+  res.json({
+    message: 'Circuit breaker reset successfully',
+    stats: stats
+  });
+});
+
+app.post('/api/tts/circuit-breaker/trip', (req, res) => {
+  console.log('Manual circuit breaker trip requested');
+  azureTTSCircuitBreaker.forceOpen();
+  const stats = azureTTSCircuitBreaker.getStats();
+  res.json({
+    message: 'Circuit breaker tripped successfully',
+    stats: stats
+  });
 });
 
 // Phonemization endpoint
