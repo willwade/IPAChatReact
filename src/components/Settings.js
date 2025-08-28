@@ -434,7 +434,7 @@ const Settings = ({
                         fontWeight: 600
                       }}
                     >
-                      ��� Load Example Configurations
+                      📁 Load Example Configurations
                     </Typography>
 
                     <Box sx={{
@@ -819,14 +819,11 @@ const Settings = ({
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={toolbarConfig?.showSettings !== false}
-                        onChange={(e) => onToolbarConfigChange(prev => ({
-                          ...prev,
-                          showSettings: e.target.checked
-                        }))}
+                        checked={true}
+                        disabled={true}
                       />
                     }
-                    label="Settings"
+                    label="Settings (Always Visible)"
                   />
 
                   <FormControlLabel
