@@ -775,10 +775,7 @@ const Settings = ({
                     control={
                       <Switch
                         checked={toolbarConfig?.showBuild !== false}
-                        onChange={(e) => onToolbarConfigChange(prev => ({
-                          ...prev,
-                          showBuild: e.target.checked
-                        }))}
+                        onChange={(e) => handleToolbarConfigChange('showBuild', e.target.checked)}
                       />
                     }
                     label="Build Mode"
@@ -788,10 +785,7 @@ const Settings = ({
                     control={
                       <Switch
                         checked={toolbarConfig?.showSearch !== false}
-                        onChange={(e) => onToolbarConfigChange(prev => ({
-                          ...prev,
-                          showSearch: e.target.checked
-                        }))}
+                        onChange={(e) => handleToolbarConfigChange('showSearch', e.target.checked)}
                       />
                     }
                     label="Search Mode"
@@ -801,10 +795,7 @@ const Settings = ({
                     control={
                       <Switch
                         checked={toolbarConfig?.showBabble !== false}
-                        onChange={(e) => onToolbarConfigChange(prev => ({
-                          ...prev,
-                          showBabble: e.target.checked
-                        }))}
+                        onChange={(e) => handleToolbarConfigChange('showBabble', e.target.checked)}
                       />
                     }
                     label="Babble Mode"
@@ -814,10 +805,7 @@ const Settings = ({
                     control={
                       <Switch
                         checked={toolbarConfig?.showEdit !== false}
-                        onChange={(e) => onToolbarConfigChange(prev => ({
-                          ...prev,
-                          showEdit: e.target.checked
-                        }))}
+                        onChange={(e) => handleToolbarConfigChange('showEdit', e.target.checked)}
                       />
                     }
                     label="Edit Mode"
@@ -827,10 +815,7 @@ const Settings = ({
                     control={
                       <Switch
                         checked={toolbarConfig?.showGame !== false}
-                        onChange={(e) => onToolbarConfigChange(prev => ({
-                          ...prev,
-                          showGame: e.target.checked
-                        }))}
+                        onChange={(e) => handleToolbarConfigChange('showGame', e.target.checked)}
                       />
                     }
                     label="Game Mode"
@@ -850,10 +835,7 @@ const Settings = ({
                     control={
                       <Switch
                         checked={toolbarConfig?.showSetupWizard !== false}
-                        onChange={(e) => onToolbarConfigChange(prev => ({
-                          ...prev,
-                          showSetupWizard: e.target.checked
-                        }))}
+                        onChange={(e) => handleToolbarConfigChange('showSetupWizard', e.target.checked)}
                       />
                     }
                     label="Setup Wizard"
