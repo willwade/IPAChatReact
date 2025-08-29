@@ -850,7 +850,7 @@ const App = () => {
 
     try {
       const langCode = selectedLanguage === 'en-GB' ? 'en' : selectedLanguage.toLowerCase();
-      const apiUrl = `${process.env.REACT_APP_PHONEMIZE_API}/phonemize`;
+      const apiUrl = `${process.env.REACT_APP_PHONEMIZE_API || 'https://dolphin-app-62ztl.ondigitalocean.app'}/phonemize`;
       
       console.log('Making phonemize request:', {
         text: searchWord,
@@ -887,72 +887,51 @@ const App = () => {
             acc.add(normalizePhoneme(p));
             return acc;
           }, new Set());
-        
+
         // Get valid diphthongs from the phonetic data
         const validDiphthongs = phoneticData[selectedLanguage].groups.diphthongs?.phonemes || [];
+
+
         
         // Process the IPA string character by character
         for (let i = 0; i < ipa.length; i++) {
           const char = ipa[i];
-          const normalizedChar = normalizePhoneme(char);
           const isStressMarker = /[ˈˌ]/.test(char);
-          
-          const exists = allPhonemes.has(char) || allPhonemes.has(normalizedChar);
-          
-          console.log(`Processing character at position ${i}:`, {
-            char,
-            normalizedChar,
-            currentPhoneme,
-            isStressMarker,
-            isLengthMarker: char === 'ː',
-            isDiphthongPart: ['ʊ', 'ə', 'ɪ'].includes(normalizedChar),
-            existsInPhoneticData: exists,
-            currentArray: [...phonemeArray]
-          });
           
           // Handle stress markers based on includeStressMarkers setting
           if (isStressMarker) {
-            console.log('Found stress marker:', char);
             if (currentPhoneme) {
               const normalizedPhoneme = normalizePhoneme(currentPhoneme);
-              console.log('Adding current phoneme before stress marker:', currentPhoneme);
               phonemeArray.push(normalizedPhoneme);
               currentPhoneme = '';
             }
             if (showStressMarkers) {
-              console.log('Including stress marker in array');
               phonemeArray.push(char);
-            } else {
-              console.log('Skipping stress marker (not included)');
             }
             continue;
           }
           
           // Handle length markers
           if (char === 'ː') {
-            console.log('Found length marker');
             if (currentPhoneme) {
               currentPhoneme += char;
-              console.log('Added length marker to current phoneme:', currentPhoneme);
             }
             continue;
           }
           
           // Handle diphthongs and other multi-character phonemes
           const potentialDiphthong = currentPhoneme + char;
+
           if (currentPhoneme && validDiphthongs.includes(potentialDiphthong)) {
             currentPhoneme = potentialDiphthong;
-            console.log('Added to diphthong:', currentPhoneme);
           } else {
             if (currentPhoneme) {
               const normalizedPhoneme = normalizePhoneme(currentPhoneme);
               if (allPhonemes.has(normalizedPhoneme)) {
-                console.log('Adding completed phoneme:', currentPhoneme, 'normalized to:', normalizedPhoneme);
                 phonemeArray.push(normalizedPhoneme);
               }
             }
             currentPhoneme = char;
-            console.log('Started new phoneme:', currentPhoneme);
           }
         }
         
@@ -960,7 +939,6 @@ const App = () => {
         if (currentPhoneme) {
           const normalizedPhoneme = normalizePhoneme(currentPhoneme);
           if (allPhonemes.has(normalizedPhoneme)) {
-            console.log('Adding final phoneme:', currentPhoneme, 'normalized to:', normalizedPhoneme);
             phonemeArray.push(normalizedPhoneme);
           }
         }
@@ -968,7 +946,7 @@ const App = () => {
         // Filter out any empty strings that might have been added
         phonemeArray = phonemeArray.filter(p => p.trim());
 
-        console.log('Final processed phonemes:', phonemeArray);
+        console.log('Search processed phonemes:', phonemeArray);
         setTargetPhonemes(phonemeArray);
         setCurrentPhonemeIndex(0);
         setSearchDialogOpen(false);

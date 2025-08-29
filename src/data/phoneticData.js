@@ -200,7 +200,7 @@ export const variantsMap = {
   'eə': ['ɛə'],       // Variants in diphthong transcription (e.g., "hair")
   'æ': ['a'],         // Variants in short "a" (e.g., "pan")
   'ɜː': ['ɜ'],        // Long vs. short schwa
-  'oʊ': ['əʊ'],       // British vs. American diphthong (not in table but relevant)
+  'əʊ': ['oʊ'],       // American vs. British diphthong - normalize American to British
   
   // Schwa-related differences
   'ə': ['ɐ'],         // Schwa variations (neutral vowels)
