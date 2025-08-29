@@ -1,13 +1,4 @@
 {
-  "toolbarConfig": {
-    "showBuild": true,
-    "showSearch": false,
-    "showBabble": false,
-    "showEdit": false,
-    "showGame": false,
-    "showSettings": true,
-    "showSetupWizard": true
-  },
   "ipaCustomizations": {
     "iː": {
       "hideLabel": true,

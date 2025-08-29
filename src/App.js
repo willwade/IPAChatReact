@@ -131,6 +131,127 @@ const App = () => {
     };
   });
 
+  // UI Mode detection from URL parameters
+  const getUIMode = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Check for simplified flag
+    const simplified = urlParams.get('simplified');
+    if (simplified === 'true') return 'simplified';
+    if (simplified === 'minimal') return 'minimal';
+
+    // Check for explicit toolbar control
+    const toolbar = urlParams.get('toolbar');
+    if (toolbar === 'none') return 'kiosk';
+    if (toolbar && toolbar !== 'default') {
+      // Clean and validate button names
+      const buttons = toolbar.split(',')
+        .map(btn => btn.trim().toLowerCase())
+        .filter(btn => btn.length > 0);
+      return { type: 'custom', buttons };
+    }
+
+    // Check for UI mode
+    const uiMode = urlParams.get('ui');
+    if (uiMode) return uiMode;
+
+    return 'full'; // default
+  };
+
+  // Apply UI mode to toolbar config without modifying user preferences
+  const getToolbarConfigForMode = (uiMode, userToolbarConfig) => {
+    // Handle custom toolbar specification
+    if (typeof uiMode === 'object' && uiMode.type === 'custom') {
+      const customConfig = {
+        showBuild: false,
+        showSearch: false,
+        showBabble: false,
+        showEdit: false,
+        showGame: false,
+        showSettings: false,
+        showSetupWizard: false
+      };
+
+      // Enable only specified buttons
+      uiMode.buttons.forEach(button => {
+        // Map button names to config keys
+        const buttonMap = {
+          'build': 'showBuild',
+          'search': 'showSearch',
+          'babble': 'showBabble',
+          'edit': 'showEdit',
+          'game': 'showGame',
+          'settings': 'showSettings',
+          'setupwizard': 'showSetupWizard'
+        };
+
+        const key = buttonMap[button];
+        if (key && customConfig.hasOwnProperty(key)) {
+          customConfig[key] = true;
+        }
+      });
+
+      // Always ensure settings is available unless explicitly excluded
+      if (!uiMode.buttons.includes('settings') && uiMode.buttons.length > 0) {
+        customConfig.showSettings = true;
+      }
+
+      return customConfig;
+    }
+
+    // Handle predefined UI modes
+    switch (uiMode) {
+      case 'simplified':
+        return {
+          ...userToolbarConfig,
+          showBuild: true,
+          showSettings: true,
+          showSearch: false,
+          showBabble: false,
+          showEdit: false,
+          showGame: false,
+          showSetupWizard: false
+        };
+      case 'minimal':
+        return {
+          ...userToolbarConfig,
+          showSettings: true,
+          showBuild: false,
+          showSearch: false,
+          showBabble: false,
+          showEdit: false,
+          showGame: false,
+          showSetupWizard: false
+        };
+      case 'kiosk':
+        return {
+          showBuild: false,
+          showSearch: false,
+          showBabble: false,
+          showEdit: false,
+          showGame: false,
+          showSettings: false,
+          showSetupWizard: false
+        };
+      case 'full':
+      default:
+        return userToolbarConfig;
+    }
+  };
+
+  // Get the effective toolbar configuration (URL mode takes precedence)
+  const uiMode = getUIMode();
+  const effectiveToolbarConfig = getToolbarConfigForMode(uiMode, toolbarConfig);
+
+  // Log UI mode for debugging (only in development)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎨 UI Mode:', uiMode);
+      console.log('🔧 User Toolbar Config:', toolbarConfig);
+      console.log('✅ Effective Toolbar Config:', effectiveToolbarConfig);
+    }
+  }, [uiMode, toolbarConfig, effectiveToolbarConfig]);
+
   useEffect(() => {
     const initializeData = () => {
       if (!phoneticData) {
@@ -298,8 +419,8 @@ const App = () => {
     { icon: <RestartAltIcon />, name: 'Setup Wizard', onClick: handleRestartWelcome, key: 'showSetupWizard' }
   ];
 
-  // Filter actions based on toolbar configuration
-  const actions = allActions.filter(action => toolbarConfig[action.key]);
+  // Filter actions based on effective toolbar configuration (URL mode + user preferences)
+  const actions = allActions.filter(action => effectiveToolbarConfig[action.key]);
 
   useEffect(() => {
     const testApiConnectivity = async () => {
@@ -1227,6 +1348,22 @@ const App = () => {
     localStorage.setItem('toolbarConfig', JSON.stringify(toolbarConfig));
   }, [toolbarConfig]);
 
+  // Add keyboard shortcut for settings in kiosk mode
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ctrl+Shift+S opens settings in kiosk mode
+      if (uiMode === 'kiosk' && event.ctrlKey && event.shiftKey && event.key === 'S') {
+        event.preventDefault();
+        setSettingsOpen(true);
+      }
+    };
+
+    if (uiMode === 'kiosk') {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [uiMode]);
+
   // Separate function for whole utterance reading with retry logic
   const speakWholeUtteranceText = useCallback(async (text) => {
     if (!text || !selectedVoice) return;
@@ -1352,79 +1489,81 @@ const App = () => {
         />
         
         {/* Existing content */}
-        <Box sx={{ 
-          height: '100vh', 
+        <Box sx={{
+          height: '100vh',
           display: 'flex',
           overflow: 'hidden'
         }}>
-          {/* Vertical navigation sidebar */}
-          <Box sx={{
-            width: '48px',
-            borderRight: 1,
-            borderColor: 'divider',
-            backgroundColor: 'background.paper',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            py: 1
-          }}>
-            {/* Mode selection */}
-            <Box sx={{ 
+          {/* Vertical navigation sidebar - hidden in kiosk mode */}
+          {uiMode !== 'kiosk' && (
+            <Box sx={{
+              width: '48px',
+              borderRight: 1,
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              width: '100%'
+              py: 1
             }}>
-              {actions.map((action) => (
-                <Tooltip key={action.name} title={action.name} placement="right">
-                  <IconButton
-                    onClick={action.onClick}
-                    color={mode === action.name.toLowerCase().split(' ')[0] ? 'primary' : 'default'}
-                    sx={{
-                      mb: 1,
-                      width: '40px',
-                      height: '40px',
-                      backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'transparent',
-                      '&:hover': {
-                        backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'action.hover'
-                      }
-                    }}
-                  >
-                    {action.icon}
-                  </IconButton>
-                </Tooltip>
-              ))}
-            </Box>
-
-            {/* Game mode controls */}
-            {mode === 'game' && (
-              <Box sx={{ 
+              {/* Mode selection */}
+              <Box sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                width: '100%',
-                mt: 'auto'
+                width: '100%'
               }}>
-                <Divider sx={{ width: '80%', my: 1 }} />
-                <Tooltip title="Help" placement="right">
-                  <IconButton 
-                    onClick={() => window.dispatchEvent(new CustomEvent('openGameHelp'))}
-                    sx={{ mb: 1, width: '40px', height: '40px' }}
-                  >
-                    <HelpOutlineIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Settings" placement="right">
-                  <IconButton 
-                    onClick={() => window.dispatchEvent(new CustomEvent('openGameSettings'))}
-                    sx={{ width: '40px', height: '40px' }}
-                  >
-                    <SchoolIcon />
-                  </IconButton>
-                </Tooltip>
+                {actions.map((action) => (
+                  <Tooltip key={action.name} title={action.name} placement="right">
+                    <IconButton
+                      onClick={action.onClick}
+                      color={mode === action.name.toLowerCase().split(' ')[0] ? 'primary' : 'default'}
+                      sx={{
+                        mb: 1,
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'transparent',
+                        '&:hover': {
+                          backgroundColor: mode === action.name.toLowerCase().split(' ')[0] ? 'action.selected' : 'action.hover'
+                        }
+                      }}
+                    >
+                      {action.icon}
+                    </IconButton>
+                  </Tooltip>
+                ))}
               </Box>
-            )}
-          </Box>
+
+              {/* Game mode controls */}
+              {mode === 'game' && (
+                <Box sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  width: '100%',
+                  mt: 'auto'
+                }}>
+                  <Divider sx={{ width: '80%', my: 1 }} />
+                  <Tooltip title="Help" placement="right">
+                    <IconButton
+                      onClick={() => window.dispatchEvent(new CustomEvent('openGameHelp'))}
+                      sx={{ mb: 1, width: '40px', height: '40px' }}
+                    >
+                      <HelpOutlineIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Settings" placement="right">
+                    <IconButton
+                      onClick={() => window.dispatchEvent(new CustomEvent('openGameSettings'))}
+                      sx={{ width: '40px', height: '40px' }}
+                    >
+                      <SchoolIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
+            </Box>
+          )}
 
           {/* Main content area */}
           <Box sx={{ 
@@ -1515,8 +1654,28 @@ const App = () => {
             <Box sx={{
               flex: 1,
               minHeight: 0,
-              ...getBackgroundStyle()
+              ...getBackgroundStyle(),
+              position: 'relative'
             }}>
+              {/* Kiosk mode help indicator */}
+              {uiMode === 'kiosk' && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  zIndex: 1000,
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: 1,
+                  fontSize: '0.75rem',
+                  opacity: 0.6,
+                  '&:hover': { opacity: 1 }
+                }}>
+                  Press Ctrl+Shift+S for Settings
+                </Box>
+              )}
+
               {mode === 'edit' ? (
                 <Box sx={{ height: '100%' }}>
                   <IPAKeyboard
