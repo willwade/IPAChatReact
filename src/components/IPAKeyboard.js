@@ -336,14 +336,16 @@ const IPAKeyboard = ({
       clearTimeout(timer);
       resizeObserver.disconnect();
     };
-  }, [updateScale]);
+  }, []); // Empty dependency array - set up once
 
-  // Update scale when dependencies change
+  // Update scale when critical dependencies change
   useEffect(() => {
     if (containerRef.current) {
-      updateScale();
+      // Small delay to ensure state has settled
+      const timer = setTimeout(updateScale, 10);
+      return () => clearTimeout(timer);
     }
-  }, [updateScale]);
+  }, [validLanguage, showStressMarkers, buttonSpacing]);
 
   useEffect(() => {
     // Validate phoneticData and language on mount and when selectedLanguage changes
