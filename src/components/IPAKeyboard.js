@@ -185,8 +185,7 @@ const IPAKeyboard = ({
   }, [gridConfig, validLanguage, calculateOptimalGrid]);
 
   useEffect(() => {
-    // Reset jiggling state when mode changes
-    setIsJiggling(false);
+    // Reset state when mode changes
   }, [mode]);
 
   useEffect(() => {
@@ -659,7 +658,6 @@ const IPAKeyboard = ({
 
   const handleLongPress = (phoneme) => {
     if (mode === 'edit') {
-      setIsJiggling(true);
       // Clear any existing timers
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
