@@ -379,13 +379,24 @@ const IPAKeyboard = ({
     if (newValidLanguage !== validLanguage) {
       setValidLanguage(newValidLanguage);
     }
-    
+
     // Only set loading to false if we have valid data
     if (phoneticData[newValidLanguage]?.groups) {
       setIsLoading(false);
       setError(null);
     }
   }, [selectedLanguage, phoneticData]);
+
+  // Trigger scaling after component is fully loaded
+  useEffect(() => {
+    if (!isLoading && validLanguage && containerRef.current) {
+      const timer = setTimeout(() => {
+        console.log('Triggering post-load scale update');
+        updateScale();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, validLanguage, updateScale]);
 
   const triggerHapticFeedback = () => {
     if (hapticFeedback && window.navigator.vibrate) {
