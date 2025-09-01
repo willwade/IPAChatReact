@@ -67,17 +67,9 @@ const GameMode = ({
     return saved ? JSON.parse(saved) : DIFFICULTY_LEVELS.LEVEL1;
   });
   const [error, setError] = useState(null);
-  const [buttonScale, setButtonScale] = useState(() => {
-    const saved = localStorage.getItem('buttonScale');
-    return saved ? parseFloat(saved) : 1;
-  });
   const [buttonSpacing, setButtonSpacing] = useState(() => {
     const saved = localStorage.getItem('buttonSpacing');
     return saved ? parseInt(saved) : 4;
-  });
-  const [autoScale, setAutoScale] = useState(() => {
-    const saved = localStorage.getItem('autoScale');
-    return saved ? JSON.parse(saved) : true;
   });
   const [currentWord, setCurrentWord] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
@@ -255,19 +247,9 @@ const GameMode = ({
     return !variation.validPhonemes.includes(phoneme);
   }, [currentWord, difficulty.id, currentPhase, currentWordIndex, selectedRegion]);
 
-  const handleButtonScaleChange = (newScale) => {
-    setButtonScale(newScale);
-    localStorage.setItem('buttonScale', newScale);
-  };
-
   const handleButtonSpacingChange = (newSpacing) => {
     setButtonSpacing(newSpacing);
     localStorage.setItem('buttonSpacing', newSpacing);
-  };
-
-  const handleAutoScaleChange = (newAutoScale) => {
-    setAutoScale(newAutoScale);
-    localStorage.setItem('autoScale', JSON.stringify(newAutoScale));
   };
 
   // Update difficulty and show appropriate cues
@@ -498,10 +480,8 @@ const GameMode = ({
         <IPAKeyboard
           mode="game"
           onPhonemeClick={handlePhonemeClick}
-          buttonScale={buttonScale}
           buttonSpacing={buttonSpacing}
           selectedLanguage={selectedLanguage}
-          autoScale={autoScale}
           disabledPhonemes={shouldDisablePhoneme}
         />
       </Box>
