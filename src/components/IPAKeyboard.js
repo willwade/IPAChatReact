@@ -216,7 +216,7 @@ const IPAKeyboard = ({
 
     const container = containerRef.current;
     const rect = container.getBoundingClientRect();
-    const padding = Math.round(buttonSpacing);
+    const padding = Math.max(1, Math.round(buttonSpacing / 2));
     const containerWidth = rect.width - (padding * 2);
     const containerHeight = rect.height - (padding * 2);
 
