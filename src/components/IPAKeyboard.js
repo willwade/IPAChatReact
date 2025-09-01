@@ -234,10 +234,48 @@ const IPAKeyboard = ({
 
     if (containerWidth <= 0 || containerHeight <= 0) return;
 
-    // Get total phonemes for current language
-    const orderedPhonemes = getOrderedPhonemes();
-    const totalButtons = orderedPhonemes.length;
+    // Calculate total phonemes directly to avoid circular dependencies
+    const languageData = phoneticData[validLanguage];
+    if (!languageData?.groups) return;
 
+    // Get stress markers list
+    const stressMarkers = languageData.groups.stress?.phonemes || [];
+
+    // Get base phoneme list (either from saved order or default)
+    const savedOrder = phonemeOrder[validLanguage];
+    let basePhonemes;
+
+    if (savedOrder && Array.isArray(savedOrder)) {
+      basePhonemes = savedOrder;
+    } else {
+      // If no saved order, get all phonemes including stress markers
+      basePhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
+    }
+
+    // Filter based on showStressMarkers setting
+    let filteredPhonemes;
+    if (showStressMarkers) {
+      // Add any missing stress markers
+      const phonemesWithStress = [...basePhonemes];
+      stressMarkers.forEach(marker => {
+        if (!phonemesWithStress.includes(marker)) {
+          phonemesWithStress.push(marker);
+        }
+      });
+      filteredPhonemes = phonemesWithStress;
+    } else {
+      // Filter out stress markers
+      filteredPhonemes = basePhonemes.filter(phoneme => !stressMarkers.includes(phoneme));
+    }
+
+    // Remove blank cells if not allowed
+    const customConfig = gridConfig?.[validLanguage];
+    const allowBlankCells = customConfig?.allowBlankCells || false;
+    if (!allowBlankCells) {
+      filteredPhonemes = filteredPhonemes.filter(phoneme => phoneme !== '');
+    }
+
+    const totalButtons = filteredPhonemes.length;
     if (totalButtons === 0) return;
 
     // Fixed button dimensions
@@ -246,7 +284,6 @@ const IPAKeyboard = ({
     const gap = Math.round(buttonSpacing);
 
     // Check if there's a custom grid configuration
-    const customConfig = gridConfig?.[validLanguage];
     let cols;
 
     if (customConfig?.columns) {
@@ -274,7 +311,7 @@ const IPAKeyboard = ({
     const newScale = Math.min(scaleX, scaleY, 2.0) * 0.95; // Cap at 2x scale with 5% margin
 
     setCalculatedScale(newScale);
-  }, [buttonSpacing, validLanguage, gridConfig, getOrderedPhonemes]);
+  }, [buttonSpacing, validLanguage, gridConfig, showStressMarkers, phonemeOrder]);
 
   // Auto-scale effect - simplified and more reliable
   useEffect(() => {
@@ -306,7 +343,7 @@ const IPAKeyboard = ({
     if (containerRef.current) {
       updateScale();
     }
-  }, [validLanguage, showStressMarkers, buttonSpacing, updateScale]);
+  }, [updateScale]);
 
   useEffect(() => {
     // Validate phoneticData and language on mount and when selectedLanguage changes
