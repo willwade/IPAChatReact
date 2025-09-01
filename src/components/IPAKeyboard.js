@@ -317,35 +317,40 @@ const IPAKeyboard = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Create a stable update function
+    const doUpdate = () => {
+      if (containerRef.current) {
+        updateScale();
+      }
+    };
+
     // Initial scale calculation
-    const timer = setTimeout(() => {
-      updateScale();
-    }, 50);
+    const timer = setTimeout(doUpdate, 50);
 
     // Set up ResizeObserver for responsive scaling
     const resizeObserver = new ResizeObserver(() => {
       // Use requestAnimationFrame for smooth updates
-      requestAnimationFrame(() => {
-        updateScale();
-      });
+      requestAnimationFrame(doUpdate);
     });
 
-    resizeObserver.observe(containerRef.current);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
 
     return () => {
       clearTimeout(timer);
       resizeObserver.disconnect();
     };
-  }, []); // Empty dependency array - set up once
+  }, [updateScale]);
 
   // Update scale when critical dependencies change
   useEffect(() => {
     if (containerRef.current) {
       // Small delay to ensure state has settled
-      const timer = setTimeout(updateScale, 10);
+      const timer = setTimeout(() => updateScale(), 10);
       return () => clearTimeout(timer);
     }
-  }, [validLanguage, showStressMarkers, buttonSpacing]);
+  }, [validLanguage, showStressMarkers, buttonSpacing, updateScale]);
 
   useEffect(() => {
     // Validate phoneticData and language on mount and when selectedLanguage changes
