@@ -838,13 +838,6 @@ const App = () => {
     [audioCache, getPhonemeFileName, loadAudioFile, handlePhonemeSpeak, selectedVoice]
   );
 
-  const handleModeChange = (event) => {
-    setMode(event.target.value);
-    // Clear message when switching from build mode
-    if (event.target.value !== 'build') {
-      setMessage('');
-    }
-  };
 
   // Browser speech synthesis fallback
   const speakWithBrowserTTS = (text) => {
