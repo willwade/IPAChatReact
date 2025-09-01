@@ -42,7 +42,6 @@ const IPAKeyboard = ({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [backgroundEditOpen, setBackgroundEditOpen] = useState(false);
   const containerRef = useRef(null);
-  const [isJiggling, setIsJiggling] = useState(false);
   const [touchStartTime, setTouchStartTime] = useState(null);
   const [touchPosition, setTouchPosition] = useState(null);
   const [dwellProgress, setDwellProgress] = useState(0);
