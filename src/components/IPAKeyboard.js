@@ -1522,7 +1522,7 @@ const IPAKeyboard = ({
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
-        p: Math.round(buttonSpacing)
+        p: Math.max(1, Math.round(buttonSpacing / 2))
       }}>
         <Grid 
           container
@@ -1612,15 +1612,24 @@ const IPAKeyboard = ({
             </Button>
           </Box>
 
-          <Divider
-            orientation={{ xs: 'horizontal', sm: 'vertical' }}
-            flexItem
-            sx={{
-              mx: { xs: 0, sm: 1 },
-              my: { xs: 0.5, sm: 0 },
-              width: { xs: '100%', sm: 'auto' }
-            }}
-          />
+          <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+            <Divider
+              orientation="horizontal"
+              sx={{
+                my: 0.5,
+                width: '100%'
+              }}
+            />
+          </Box>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{
+                mx: 1
+              }}
+            />
+          </Box>
 
           <FormControlLabel
             control={
