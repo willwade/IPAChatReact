@@ -258,6 +258,10 @@ const App = () => {
           localStorage.setItem(key, value.slice(1, -1));
         }
       });
+
+      // Clean up deprecated scaling settings
+      localStorage.removeItem('buttonScale');
+      localStorage.removeItem('autoScale');
     };
 
     cleanupLocalStorage();
