@@ -217,8 +217,8 @@ const IPAKeyboard = ({
     const container = containerRef.current;
     const rect = container.getBoundingClientRect();
     const padding = Math.round(buttonSpacing);
-    const containerWidth = Math.floor(rect.width - (padding * 2));
-    const containerHeight = Math.floor(rect.height - (padding * 2));
+    const containerWidth = rect.width - (padding * 2);
+    const containerHeight = rect.height - (padding * 2);
 
     if (containerWidth <= 0 || containerHeight <= 0) return;
 
@@ -277,26 +277,42 @@ const IPAKeyboard = ({
     if (customConfig?.columns) {
       cols = customConfig.columns;
     } else {
-      // Calculate optimal grid layout
-      const maxPossibleCols = Math.floor((containerWidth + gap) / (buttonWidth + gap));
-      const targetAspectRatio = containerWidth / containerHeight;
-      cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
+      // Calculate optimal grid layout that maximizes button size
+      let bestCols = 1;
+      let bestScale = 0;
 
-      // Ensure we have at least 1 column and don't exceed total buttons
-      cols = Math.max(1, Math.min(cols, totalButtons));
+      // Try different column counts to find the one that gives the largest scale
+      const maxPossibleCols = Math.min(totalButtons, Math.floor((containerWidth + gap) / (buttonWidth + gap)));
+
+      for (let testCols = 1; testCols <= maxPossibleCols; testCols++) {
+        const testRows = Math.ceil(totalButtons / testCols);
+        const testGridWidth = (testCols * buttonWidth) + ((testCols - 1) * gap);
+        const testGridHeight = (testRows * buttonHeight) + ((testRows - 1) * gap);
+
+        const testScaleX = containerWidth / testGridWidth;
+        const testScaleY = containerHeight / testGridHeight;
+        const testScale = Math.min(testScaleX, testScaleY);
+
+        if (testScale > bestScale) {
+          bestScale = testScale;
+          bestCols = testCols;
+        }
+      }
+
+      cols = bestCols;
       setGridColumns(cols);
     }
 
     const rows = Math.ceil(totalButtons / cols);
 
     // Calculate total grid dimensions
-    const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
-    const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
+    const totalGridWidth = (cols * buttonWidth) + ((cols - 1) * gap);
+    const totalGridHeight = (rows * buttonHeight) + ((rows - 1) * gap);
 
-    // Calculate scale to fit in container
+    // Calculate scale to fit in container - maximize scale while fitting
     const scaleX = containerWidth / totalGridWidth;
     const scaleY = containerHeight / totalGridHeight;
-    const newScale = Math.min(scaleX, scaleY, 2.0) * 0.95; // Cap at 2x scale with 5% margin
+    const newScale = Math.min(scaleX, scaleY, 2.0); // Cap at 2x scale, no artificial margin
 
     setCalculatedScale(newScale);
   }, [buttonSpacing, validLanguage]);
