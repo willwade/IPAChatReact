@@ -312,7 +312,7 @@ const IPAKeyboard = ({
     // Calculate scale to fit in container - maximize scale while fitting
     const scaleX = containerWidth / totalGridWidth;
     const scaleY = containerHeight / totalGridHeight;
-    const newScale = Math.min(scaleX, scaleY, 2.0); // Cap at 2x scale, no artificial margin
+    const newScale = Math.min(scaleX, scaleY); // Remove scale cap to maximize button size
 
     setCalculatedScale(newScale);
   }, [buttonSpacing, validLanguage]);
