@@ -269,7 +269,7 @@ const IPAKeyboard = ({
     // Fixed button dimensions
     const buttonWidth = 60;
     const buttonHeight = 60;
-    const gap = Math.round(buttonSpacing);
+    const gap = Math.max(1, Math.round(buttonSpacing));
 
     // Check if there's a custom grid configuration
     let cols;
