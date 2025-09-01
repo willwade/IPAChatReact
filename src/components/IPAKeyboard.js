@@ -771,14 +771,13 @@ const IPAKeyboard = ({
 
     // Get stress markers list
     const stressMarkers = languageData.groups.stress?.phonemes || [];
-    console.log('Available stress markers:', stressMarkers);
 
     // Get base phoneme list (either from saved order or default)
     const savedOrder = phonemeOrder[validLanguage];
     let basePhonemes;
-    
+
     if (savedOrder && Array.isArray(savedOrder)) {
-      basePhonemes = savedOrder;
+      basePhonemes = [...savedOrder]; // Create a copy to avoid mutations
     } else {
       // If no saved order, get all phonemes including stress markers
       basePhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
@@ -806,9 +805,6 @@ const IPAKeyboard = ({
       basePhonemes = basePhonemes.filter(phoneme => phoneme !== '');
     }
 
-    console.log('Showing stress markers:', showStressMarkers);
-    console.log('Allow blank cells:', allowBlankCells);
-    console.log('Filtered phonemes:', basePhonemes);
     return basePhonemes;
   }, [validLanguage, showStressMarkers, phonemeOrder, gridConfig]);
 
