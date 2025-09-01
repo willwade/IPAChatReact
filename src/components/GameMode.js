@@ -4,7 +4,6 @@ import {
   Typography,
   Button,
   LinearProgress,
-  Paper,
   Chip,
   IconButton,
   Alert,
@@ -15,20 +14,12 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
-  Container,
-  Card,
-  CardContent,
-  FormControlLabel,
-  Switch,
-  Slider,
-  Divider
+  ListItemIcon
 } from '@mui/material';
 import {
   VolumeUp as VolumeUpIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  ArrowForward as ArrowForwardIcon,
   School as SchoolIcon,
   Star as StarIcon,
   HelpOutline as HelpOutlineIcon
