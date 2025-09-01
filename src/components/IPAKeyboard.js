@@ -228,43 +228,6 @@ const IPAKeyboard = ({
       return;
     }
 
-    // Check if there's a custom grid configuration for this language
-    const customConfig = gridConfig?.[validLanguage];
-    if (customConfig?.columns) {
-      // Still calculate scale but don't override custom columns
-      const container = containerRef.current;
-      const rect = container.getBoundingClientRect();
-      const padding = Math.round(buttonSpacing);
-      const containerWidth = Math.floor(rect.width - (padding * 2));
-      const containerHeight = Math.floor(rect.height - (padding * 2));
-
-      if (containerWidth <= 0 || containerHeight <= 0) return;
-
-      // Get total buttons for the current language (avoid dependency on getOrderedPhonemes)
-      const languageData = phoneticData[validLanguage];
-      if (!languageData?.groups) return;
-      const allPhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
-      const totalButtons = allPhonemes.length;
-      if (totalButtons === 0) return;
-
-      const buttonWidth = 60;
-      const buttonHeight = 60;
-      const gap = Math.round(buttonSpacing);
-      const cols = customConfig.columns;
-      const rows = Math.ceil(totalButtons / cols);
-
-      const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
-      const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
-      
-      const scaleX = containerWidth / totalGridWidth;
-      const scaleY = containerHeight / totalGridHeight;
-      const newScale = Math.min(scaleX, scaleY) * 0.95;
-
-      setCalculatedScale(newScale);
-      return;
-    }
-
-
     const container = containerRef.current;
     const rect = container.getBoundingClientRect();
     const padding = Math.round(buttonSpacing);
@@ -273,88 +236,79 @@ const IPAKeyboard = ({
 
     if (containerWidth <= 0 || containerHeight <= 0) return;
 
-    // Get total buttons for the current language
-    const totalButtons = Object.values(phoneticData[validLanguage].groups)
-      .reduce((sum, group) => {
-        if (!group || !group.phonemes || group.title === 'Stress & Intonation') return sum;
-        return sum + group.phonemes.length;
-      }, 0);
+    // Get total phonemes for current language
+    const orderedPhonemes = getOrderedPhonemes();
+    const totalButtons = orderedPhonemes.length;
 
     if (totalButtons === 0) return;
 
-    // Calculate grid dimensions
+    // Fixed button dimensions
     const buttonWidth = 60;
     const buttonHeight = 60;
     const gap = Math.round(buttonSpacing);
-    
-    // Calculate optimal grid based on container size
-    const maxPossibleCols = Math.floor((containerWidth + gap) / (buttonWidth + gap));
-    
-    // Try to make grid more square-like for better visual appearance
-    const targetAspectRatio = containerWidth / containerHeight;
-    const cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
+
+    // Check if there's a custom grid configuration
+    const customConfig = gridConfig?.[validLanguage];
+    let cols;
+
+    if (customConfig?.columns) {
+      cols = customConfig.columns;
+    } else {
+      // Calculate optimal grid layout
+      const maxPossibleCols = Math.floor((containerWidth + gap) / (buttonWidth + gap));
+      const targetAspectRatio = containerWidth / containerHeight;
+      cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
+
+      // Ensure we have at least 1 column and don't exceed total buttons
+      cols = Math.max(1, Math.min(cols, totalButtons));
+      setGridColumns(cols);
+    }
+
     const rows = Math.ceil(totalButtons / cols);
 
-    // Calculate total grid size including gaps
+    // Calculate total grid dimensions
     const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
     const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
-    
-    // Calculate the maximum possible scale
+
+    // Calculate scale to fit in container
     const scaleX = containerWidth / totalGridWidth;
     const scaleY = containerHeight / totalGridHeight;
-    
-    // Use the smaller scale with a safety margin
-    const newScale = Math.min(scaleX, scaleY) * 0.95;  // 0.95 safety margin
-    
+    const newScale = Math.min(scaleX, scaleY, 2.0) * 0.95; // Cap at 2x scale with 5% margin
 
     setCalculatedScale(newScale);
-    setGridColumns(cols);
-  }, [buttonSpacing, validLanguage, gridConfig]);
+  }, [buttonSpacing, validLanguage, gridConfig, getOrderedPhonemes]);
 
+  // Auto-scale effect - simplified and more reliable
   useEffect(() => {
-    if (!autoScale) {
-      setCalculatedScale(buttonScale);
-      return;
-    }
+    if (!containerRef.current) return;
 
-    // Don't run updateScale if we have custom grid config - it's handled separately
-    const customConfig = gridConfig?.[validLanguage];
-    if (customConfig?.columns) {
-      return;
-    }
-
-    const debouncedUpdateScale = debounce(updateScale, 150);
-
-    // Initial scale calculation with a delay to ensure container is ready
-    const initialTimer = setTimeout(() => {
+    // Initial scale calculation
+    const timer = setTimeout(() => {
       updateScale();
-    }, 100);
+    }, 50);
 
-    // Add resize listener
-    window.addEventListener('resize', debouncedUpdateScale);
-    
-    return () => {
-      window.removeEventListener('resize', debouncedUpdateScale);
-      clearTimeout(initialTimer);
-    };
-  }, [updateScale, autoScale, buttonScale, gridConfig, validLanguage]);
-
-  // Add an additional effect to handle container mounting
-  useEffect(() => {
-    if (autoScale && containerRef.current) {
-      // Don't run updateScale if we have custom grid config
-      const customConfig = gridConfig?.[validLanguage];
-      if (customConfig?.columns) {
-        return;
-      }
-      
-      // Force a recalculation after a short delay to ensure container is properly sized
-      const timer = setTimeout(() => {
+    // Set up ResizeObserver for responsive scaling
+    const resizeObserver = new ResizeObserver(() => {
+      // Use requestAnimationFrame for smooth updates
+      requestAnimationFrame(() => {
         updateScale();
-      }, 300);
-      return () => clearTimeout(timer);
+      });
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
+    };
+  }, [updateScale]);
+
+  // Update scale when dependencies change
+  useEffect(() => {
+    if (containerRef.current) {
+      updateScale();
     }
-  }, [containerRef.current, autoScale, gridConfig, validLanguage, updateScale]);
+  }, [validLanguage, showStressMarkers, buttonSpacing, updateScale]);
 
   useEffect(() => {
     // Validate phoneticData and language on mount and when selectedLanguage changes
@@ -1540,7 +1494,7 @@ const IPAKeyboard = ({
             alignContent: 'center',
             height: 'auto',
             maxHeight: '100%',
-            transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
+            transform: `scale(${calculatedScale})`,
             transformOrigin: 'center center',
             willChange: 'transform',
             touchAction: 'manipulation',
