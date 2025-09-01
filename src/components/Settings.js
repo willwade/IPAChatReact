@@ -577,30 +577,13 @@ const Settings = ({
 
             {/* Layout Settings */}
             <ListItem>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={autoScale}
-                    onChange={(e) => onAutoScaleChange(e.target.checked)}
-                  />
-                }
-                label="Auto-scale buttons to screen"
-              />
-            </ListItem>
-
-            <ListItem>
               <Box sx={{ width: '100%' }}>
-                <Typography gutterBottom>Button Scale</Typography>
-                <Slider
-                  value={buttonScale}
-                  onChange={(_, value) => onButtonScaleChange(value)}
-                  min={0.5}
-                  max={2}
-                  step={0.1}
-                  marks
-                  valueLabelDisplay="auto"
-                  disabled={autoScale}
-                />
+                <Typography variant="h6" gutterBottom>
+                  Layout
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Buttons automatically scale to fit your screen for optimal viewing
+                </Typography>
               </Box>
             </ListItem>
 
