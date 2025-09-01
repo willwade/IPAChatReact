@@ -311,7 +311,7 @@ const IPAKeyboard = ({
     const newScale = Math.min(scaleX, scaleY, 2.0) * 0.95; // Cap at 2x scale with 5% margin
 
     setCalculatedScale(newScale);
-  }, [buttonSpacing, validLanguage, gridConfig, showStressMarkers, phonemeOrder]);
+  }, [buttonSpacing, validLanguage]);
 
   // Auto-scale effect - simplified and more reliable
   useEffect(() => {
