@@ -324,12 +324,16 @@ const IPAKeyboard = ({
     // Create a stable update function
     const doUpdate = () => {
       if (containerRef.current) {
-        updateScale();
+        const rect = containerRef.current.getBoundingClientRect();
+        // Only update if container has proper dimensions
+        if (rect.width > 0 && rect.height > 0) {
+          updateScale();
+        }
       }
     };
 
-    // Initial scale calculation
-    const timer = setTimeout(doUpdate, 50);
+    // Initial scale calculation with longer delay to ensure layout is complete
+    const timer = setTimeout(doUpdate, 200);
 
     // Set up ResizeObserver for responsive scaling
     const resizeObserver = new ResizeObserver(() => {
