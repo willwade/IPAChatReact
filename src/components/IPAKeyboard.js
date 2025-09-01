@@ -35,7 +35,7 @@ const IPAKeyboard = ({
   onStressMarkersChange,
 }) => {
   const [customizations, setCustomizations] = useState({});
-  const [calculatedScale, setCalculatedScale] = useState(buttonScale);
+  const [calculatedScale, setCalculatedScale] = useState(1);
   const [editMode, setEditMode] = useState('move'); 
   const [selectedPhoneme, setSelectedPhoneme] = useState(null);
   const [phonemeOrder, setPhonemeOrder] = useState(() => {
@@ -157,7 +157,7 @@ const IPAKeyboard = ({
     if (!customConfig?.columns) {
       calculateOptimalGrid();
     }
-  }, [calculateOptimalGrid, autoScale, buttonScale, gridConfig, validLanguage]);
+  }, [calculateOptimalGrid, gridConfig, validLanguage]);
 
   useEffect(() => {
     const saved = localStorage.getItem('ipaCustomizations');
