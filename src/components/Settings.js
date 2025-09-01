@@ -183,14 +183,8 @@ const Settings = ({
     }
 
     // Update scale settings
-    if (typeof backupData.buttonScale === 'number') {
-      onButtonScaleChange(backupData.buttonScale);
-    }
     if (typeof backupData.buttonSpacing === 'number') {
       onButtonSpacingChange(backupData.buttonSpacing);
-    }
-    if (typeof backupData.autoScale === 'boolean') {
-      onAutoScaleChange(backupData.autoScale);
     }
 
     // Update accessibility settings
