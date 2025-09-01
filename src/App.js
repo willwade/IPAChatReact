@@ -62,12 +62,7 @@ const App = () => {
       return saved;
     }
   });
-  const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
-  const [autoScale, setAutoScale] = useState(() => {
-    const saved = localStorage.getItem('autoScale');
-    return saved === null ? true : saved === 'true';
-  });
   const [touchDwellEnabled, setTouchDwellEnabled] = useState(() => localStorage.getItem('touchDwellEnabled') === 'true');
   const [touchDwellTime, setTouchDwellTime] = useState(() => parseInt(localStorage.getItem('touchDwellTime')) || 800);
   const [dwellIndicatorType, setDwellIndicatorType] = useState(() => localStorage.getItem('dwellIndicatorType') || 'border');
@@ -454,16 +449,8 @@ const App = () => {
   }, [selectedVoice]);
 
   useEffect(() => {
-    localStorage.setItem('buttonScale', buttonScale);
-  }, [buttonScale]);
-
-  useEffect(() => {
     localStorage.setItem('buttonSpacing', buttonSpacing);
   }, [buttonSpacing]);
-
-  useEffect(() => {
-    localStorage.setItem('autoScale', autoScale);
-  }, [autoScale]);
 
   useEffect(() => {
     localStorage.setItem('touchDwellEnabled', touchDwellEnabled);
@@ -1005,9 +992,6 @@ const App = () => {
     localStorage.setItem('selectedVoice', voice);
   };
 
-  const handleAutoScaleChange = (autoScale) => {
-    setAutoScale(autoScale);
-  };
 
   const handleSearchSubmit = async () => {
     if (!searchWord.trim()) {
@@ -1522,10 +1506,8 @@ const App = () => {
                   <IPAKeyboard
                     mode="edit"
                     onPhonemeClick={handlePhonemeClick}
-                    buttonScale={buttonScale}
                     buttonSpacing={buttonSpacing}
                     selectedLanguage={selectedLanguage}
-                    autoScale={autoScale}
                     touchDwellEnabled={touchDwellEnabled}
                     touchDwellTime={touchDwellTime}
                     dwellIndicatorType={dwellIndicatorType}
@@ -1556,16 +1538,14 @@ const App = () => {
                 <IPAKeyboard
                   mode={mode}
                   onPhonemeClick={handlePhonemeClick}
-                  buttonScale={buttonScale}
                   buttonSpacing={buttonSpacing}
                   selectedLanguage={selectedLanguage}
-                  autoScale={autoScale}
                   touchDwellEnabled={touchDwellEnabled}
                   touchDwellTime={touchDwellTime}
                   dwellIndicatorType={dwellIndicatorType}
                   dwellIndicatorColor={dwellIndicatorColor}
                   hapticFeedback={hapticFeedback}
-                  disabledPhonemes={mode === 'search' ? 
+                  disabledPhonemes={mode === 'search' ?
                     Object.values(phoneticData[selectedLanguage].groups)
                       .flatMap(group => group.phonemes)
                       .filter(p => {
@@ -1591,12 +1571,8 @@ const App = () => {
               onLanguageChange={handleLanguageChange}
               onRegionChange={handleRegionChange}
               onVoiceChange={handleVoiceChange}
-              buttonScale={buttonScale}
-              onButtonScaleChange={setButtonScale}
               buttonSpacing={buttonSpacing}
               onButtonSpacingChange={setButtonSpacing}
-              autoScale={autoScale}
-              onAutoScaleChange={setAutoScale}
               touchDwellEnabled={touchDwellEnabled}
               onTouchDwellEnabledChange={setTouchDwellEnabled}
               touchDwellTime={touchDwellTime}
