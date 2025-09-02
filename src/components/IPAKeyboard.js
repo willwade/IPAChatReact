@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress, Typography, Slider } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Button, IconButton, Divider, CircularProgress, Typography, Slider } from '@mui/material';
 import { detailedPhoneticData as phoneticData } from '../data/phoneticData';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CloseIcon from '@mui/icons-material/Close';
 import EditMode from './EditMode';
+import './PhonemeGrid.css';
 
 const debounce = (func, wait) => {
   let timeout;
@@ -22,10 +23,11 @@ const IPAKeyboard = ({
   onPhonemeClick,
   onPhonemeSwap,
   disabledPhonemes,
-  buttonScale = 1,
   buttonSpacing = 1,
   selectedLanguage = 'en-GB',
-  autoScale = true,
+  minButtonSize = 60,
+  layoutMode = 'grid',
+  fixedLayout = false,
   touchDwellEnabled = false,
   touchDwellTime = 800,
   backgroundSettings,
@@ -37,7 +39,6 @@ const IPAKeyboard = ({
   onStressMarkersChange,
 }) => {
   const [customizations, setCustomizations] = useState({});
-  const [calculatedScale, setCalculatedScale] = useState(buttonScale);
   const [editMode, setEditMode] = useState('move'); 
   const [selectedPhoneme, setSelectedPhoneme] = useState(null);
   const [phonemeOrder, setPhonemeOrder] = useState(() => {
@@ -66,100 +67,89 @@ const IPAKeyboard = ({
   const [isDragging, setIsDragging] = useState(false);
   const [draggedPhoneme, setDraggedPhoneme] = useState(null);
   const [draggedElement, setDraggedElement] = useState(null);
-  const [gridColumns, setGridColumnsState] = useState(8);
-  
-  const setGridColumns = setGridColumnsState;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [validLanguage, setValidLanguage] = useState('en-GB');
   const [gridConfig, setGridConfig] = useState(null);
 
-  const calculateOptimalGrid = useCallback(() => {
-    const container = containerRef.current;
-    if (!container || !phoneticData || !phoneticData[validLanguage]) return;
+  // State for tracking window size for responsive behavior
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-    // Check if there's a custom grid configuration for this language
-    const customConfig = gridConfig?.[validLanguage];
-    if (customConfig?.columns) {
-      setGridColumns(customConfig.columns);
-      return;
-    }
+  // Helper functions for responsive button sizing
+  const getMinButtonSize = useCallback(() => {
+    // Use the configurable minimum button size as base, with responsive adjustments
+    const baseSize = minButtonSize;
+    if (windowWidth <= 480) return `${Math.max(baseSize - 15, 30)}px`;
+    if (windowWidth <= 768) return `${Math.max(baseSize - 10, 35)}px`;
+    if (windowWidth <= 1024) return `${Math.max(baseSize - 5, 40)}px`;
+    return `${baseSize}px`;
+  }, [minButtonSize, windowWidth]);
 
-    const rect = container.getBoundingClientRect();
-    const containerWidth = rect.width;
-    const containerHeight = rect.height;
-    
-    // Account for container padding
-    const effectiveWidth = containerWidth - (buttonSpacing * 4);  // 2x padding on each side
-    const effectiveHeight = containerHeight - (buttonSpacing * 4);
-    
-    // Get total number of buttons
-    const totalButtons = Object.values(phoneticData[validLanguage]?.groups || {})
-      .reduce((sum, group) => sum + group.phonemes.length, 0);
+  const getMaxButtonSize = useCallback(() => {
+    // Calculate max size based on minimum size with better scaling
+    const baseSize = minButtonSize;
+    if (windowWidth <= 480) return `${baseSize + 5}px`;
+    if (windowWidth <= 768) return `${baseSize + 15}px`;
+    if (windowWidth <= 1024) return `${baseSize + 25}px`;
+    if (windowWidth <= 1440) return `${baseSize + 35}px`;
+    return `${baseSize + 45}px`; // Larger buttons for big screens
+  }, [minButtonSize, windowWidth]);
 
-    if (totalButtons === 0) return;
+  // Check if we should use list layout
+  const shouldUseListLayout = useCallback(() => {
+    return layoutMode === 'list' && windowWidth <= 480;
+  }, [layoutMode, windowWidth]);
 
-    // Calculate button size including spacing
-    const buttonSizeWithSpacing = 60 + (buttonSpacing * 2);
+  // Calculate fixed layout columns based on phoneme order structure
+  const getFixedLayoutColumns = useCallback(() => {
+    if (!fixedLayout) return null;
 
-    // Calculate maximum possible columns that fit in width
-    const maxColumns = Math.floor(effectiveWidth / buttonSizeWithSpacing);
-    
-    let bestColumns = maxColumns;
-    let bestRatio = Infinity;
-    
-    for (let cols = 1; cols <= maxColumns; cols++) {
-      const rows = Math.ceil(totalButtons / cols);
-      const gridWidth = cols * buttonSizeWithSpacing;
-      const gridHeight = rows * buttonSizeWithSpacing;
-      
-      // Compare with effective container dimensions
-      const ratio = Math.abs((gridWidth / gridHeight) - (effectiveWidth / effectiveHeight));
-      
-      if (ratio < bestRatio && gridHeight <= effectiveHeight) {  // Ensure grid fits in height
-        bestRatio = ratio;
-        bestColumns = cols;
-      }
-    }
+    const savedOrder = phonemeOrder[validLanguage];
+    if (!savedOrder || !Array.isArray(savedOrder)) return null;
 
-    // Calculate final scale to fit within container
-    const gridWidth = bestColumns * buttonSizeWithSpacing;
-    const rows = Math.ceil(totalButtons / bestColumns);
-    const gridHeight = rows * buttonSizeWithSpacing;
-    
-    setGridColumns(bestColumns);
-  }, [buttonSpacing, validLanguage, gridConfig]);
+    // For QWERTY-style layouts, detect the pattern by looking for empty cells
+    // and calculating the likely column count
+    const hasEmptyCells = savedOrder.includes('');
+    if (hasEmptyCells) {
+      // Common QWERTY-style layouts typically have 12 columns
+      // We can detect this by finding the pattern of non-empty cells
+      const totalCells = savedOrder.length;
+      const nonEmptyCells = savedOrder.filter(cell => cell !== '').length;
 
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver((entries) => {
-      requestAnimationFrame(() => {
-        // Only recalculate on resize if we don't have custom columns
-        const customConfig = gridConfig?.[validLanguage];
-        if (!customConfig?.columns) {
-          calculateOptimalGrid();
+      // Try common column counts and see which makes most sense
+      const possibleColumns = [10, 11, 12, 13, 14, 15];
+      for (const cols of possibleColumns) {
+        const rows = Math.ceil(totalCells / cols);
+        if (rows * cols === totalCells) {
+          return cols;
         }
-      });
-    });
+      }
 
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+      // Default to 12 for QWERTY-style layouts
+      return 12;
     }
 
-    // Initial calculation
-    calculateOptimalGrid();
-    
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [calculateOptimalGrid, gridConfig, validLanguage]);
+    return null;
+  }, [fixedLayout, phonemeOrder, validLanguage]);
 
+  // Check if we should use fixed layout
+  const shouldUseFixedLayout = useCallback(() => {
+    return fixedLayout && getFixedLayoutColumns() !== null;
+  }, [fixedLayout, getFixedLayoutColumns]);
+
+  // Track window resize for responsive behavior
   useEffect(() => {
-    // Only recalculate when scaling changes if we don't have custom columns
-    const customConfig = gridConfig?.[validLanguage];
-    if (!customConfig?.columns) {
-      calculateOptimalGrid();
-    }
-  }, [calculateOptimalGrid, autoScale, buttonScale, gridConfig, validLanguage]);
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+
+
+
 
   useEffect(() => {
     const saved = localStorage.getItem('ipaCustomizations');
@@ -185,17 +175,7 @@ const IPAKeyboard = ({
 
   }, []);
 
-  // Apply grid configuration when it changes
-  useEffect(() => {
-    if (gridConfig) {
-      const customConfig = gridConfig[validLanguage];
-      if (customConfig?.columns) {
-        setGridColumns(customConfig.columns);
-      } else {
-        calculateOptimalGrid();
-      }
-    }
-  }, [gridConfig, validLanguage, calculateOptimalGrid]);
+
 
   useEffect(() => {
     // Reset jiggling state when mode changes
@@ -210,151 +190,11 @@ const IPAKeyboard = ({
     };
   }, []);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const buttons = container.querySelectorAll('.MuiButton-root');
-    if (buttons.length > 1) {
-      const button1 = buttons[0].getBoundingClientRect();
-      const button2 = buttons[1].getBoundingClientRect();
-      const actualSpacing = button2.left - (button1.left + button1.width);
-      // Removed console log to reduce noise
-    }
-  }, [buttonSpacing, gridColumns]);
-
-  const updateScale = useCallback(() => {
-    if (!containerRef.current || !phoneticData || !phoneticData[validLanguage]?.groups) {
-      return;
-    }
-
-    // Check if there's a custom grid configuration for this language
-    const customConfig = gridConfig?.[validLanguage];
-    if (customConfig?.columns) {
-      // Still calculate scale but don't override custom columns
-      const container = containerRef.current;
-      const rect = container.getBoundingClientRect();
-      const padding = Math.round(buttonSpacing);
-      const containerWidth = Math.floor(rect.width - (padding * 2));
-      const containerHeight = Math.floor(rect.height - (padding * 2));
-
-      if (containerWidth <= 0 || containerHeight <= 0) return;
-
-      // Get total buttons for the current language (avoid dependency on getOrderedPhonemes)
-      const languageData = phoneticData[validLanguage];
-      if (!languageData?.groups) return;
-      const allPhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
-      const totalButtons = allPhonemes.length;
-      if (totalButtons === 0) return;
-
-      const buttonWidth = 60;
-      const buttonHeight = 60;
-      const gap = Math.round(buttonSpacing);
-      const cols = customConfig.columns;
-      const rows = Math.ceil(totalButtons / cols);
-
-      const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
-      const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
-      
-      const scaleX = containerWidth / totalGridWidth;
-      const scaleY = containerHeight / totalGridHeight;
-      const newScale = Math.min(scaleX, scaleY) * 0.95;
-
-      setCalculatedScale(newScale);
-      return;
-    }
 
 
-    const container = containerRef.current;
-    const rect = container.getBoundingClientRect();
-    const padding = Math.round(buttonSpacing);
-    const containerWidth = Math.floor(rect.width - (padding * 2));
-    const containerHeight = Math.floor(rect.height - (padding * 2));
 
-    if (containerWidth <= 0 || containerHeight <= 0) return;
 
-    // Get total buttons for the current language
-    const totalButtons = Object.values(phoneticData[validLanguage].groups)
-      .reduce((sum, group) => {
-        if (!group || !group.phonemes || group.title === 'Stress & Intonation') return sum;
-        return sum + group.phonemes.length;
-      }, 0);
 
-    if (totalButtons === 0) return;
-
-    // Calculate grid dimensions
-    const buttonWidth = 60;
-    const buttonHeight = 60;
-    const gap = Math.round(buttonSpacing);
-    
-    // Calculate optimal grid based on container size
-    const maxPossibleCols = Math.floor((containerWidth + gap) / (buttonWidth + gap));
-    
-    // Try to make grid more square-like for better visual appearance
-    const targetAspectRatio = containerWidth / containerHeight;
-    const cols = Math.min(maxPossibleCols, Math.ceil(Math.sqrt(totalButtons * targetAspectRatio)));
-    const rows = Math.ceil(totalButtons / cols);
-
-    // Calculate total grid size including gaps
-    const totalGridWidth = Math.floor((cols * buttonWidth) + ((cols - 1) * gap));
-    const totalGridHeight = Math.floor((rows * buttonHeight) + ((rows - 1) * gap));
-    
-    // Calculate the maximum possible scale
-    const scaleX = containerWidth / totalGridWidth;
-    const scaleY = containerHeight / totalGridHeight;
-    
-    // Use the smaller scale with a safety margin
-    const newScale = Math.min(scaleX, scaleY) * 0.95;  // 0.95 safety margin
-    
-
-    setCalculatedScale(newScale);
-    setGridColumns(cols);
-  }, [buttonSpacing, validLanguage, gridConfig]);
-
-  useEffect(() => {
-    if (!autoScale) {
-      setCalculatedScale(buttonScale);
-      return;
-    }
-
-    // Don't run updateScale if we have custom grid config - it's handled separately
-    const customConfig = gridConfig?.[validLanguage];
-    if (customConfig?.columns) {
-      return;
-    }
-
-    const debouncedUpdateScale = debounce(updateScale, 150);
-
-    // Initial scale calculation with a delay to ensure container is ready
-    const initialTimer = setTimeout(() => {
-      updateScale();
-    }, 100);
-
-    // Add resize listener
-    window.addEventListener('resize', debouncedUpdateScale);
-    
-    return () => {
-      window.removeEventListener('resize', debouncedUpdateScale);
-      clearTimeout(initialTimer);
-    };
-  }, [updateScale, autoScale, buttonScale, gridConfig, validLanguage]);
-
-  // Add an additional effect to handle container mounting
-  useEffect(() => {
-    if (autoScale && containerRef.current) {
-      // Don't run updateScale if we have custom grid config
-      const customConfig = gridConfig?.[validLanguage];
-      if (customConfig?.columns) {
-        return;
-      }
-      
-      // Force a recalculation after a short delay to ensure container is properly sized
-      const timer = setTimeout(() => {
-        updateScale();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [containerRef.current, autoScale, gridConfig, validLanguage, updateScale]);
 
   useEffect(() => {
     // Validate phoneticData and language on mount and when selectedLanguage changes
@@ -891,19 +731,37 @@ const IPAKeyboard = ({
     if (currentIndex === -1) return;
 
     const newPhonemes = [...currentPhonemes];
+
+    // Calculate grid dimensions for up/down movement
+    const fixedColumns = getFixedLayoutColumns();
+    const columnsPerRow = fixedColumns || Math.ceil(Math.sqrt(currentPhonemes.length));
+
     if (direction === 'left' && currentIndex > 0) {
       [newPhonemes[currentIndex - 1], newPhonemes[currentIndex]] =
       [newPhonemes[currentIndex], newPhonemes[currentIndex - 1]];
     } else if (direction === 'right' && currentIndex < newPhonemes.length - 1) {
       [newPhonemes[currentIndex], newPhonemes[currentIndex + 1]] =
       [newPhonemes[currentIndex + 1], newPhonemes[currentIndex]];
+    } else if (direction === 'up' && currentIndex >= columnsPerRow) {
+      const upIndex = currentIndex - columnsPerRow;
+      [newPhonemes[upIndex], newPhonemes[currentIndex]] =
+      [newPhonemes[currentIndex], newPhonemes[upIndex]];
+    } else if (direction === 'down' && currentIndex + columnsPerRow < newPhonemes.length) {
+      const downIndex = currentIndex + columnsPerRow;
+      [newPhonemes[downIndex], newPhonemes[currentIndex]] =
+      [newPhonemes[currentIndex], newPhonemes[downIndex]];
     }
 
-    setPhonemeOrder(prev => ({
-      ...prev,
+    const newPhonemeOrder = {
+      ...phonemeOrder,
       [validLanguage]: newPhonemes
-    }));
-  }, [validLanguage, phonemeOrder]);
+    };
+
+    setPhonemeOrder(newPhonemeOrder);
+
+    // Save to localStorage immediately
+    localStorage.setItem('phonemeOrder', JSON.stringify(newPhonemeOrder));
+  }, [validLanguage, phonemeOrder, getFixedLayoutColumns]);
 
   const handleStressMarkersToggle = (e) => {
     const newValue = e.target.checked;
@@ -1054,43 +912,131 @@ const IPAKeyboard = ({
   };
 
   const renderButtonContent = (phoneme, customization, getOpacity) => {
-    if (customization.image) {
-      return (
-        <img 
-          src={customization.image} 
-          alt={phoneme} 
-          style={{ 
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: getOpacity(),
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-          }} 
-        />
-      );
-    }
-
-    // In move mode, add move controls
+    // In move mode, add move controls (for both image and text buttons)
     if (mode === 'edit' && editMode === 'move') {
       const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
       const currentIndex = currentOrder.indexOf(phoneme);
       const canMoveLeft = currentIndex > 0;
       const canMoveRight = currentIndex < currentOrder.length - 1;
 
+      // Calculate grid dimensions for up/down movement
+      const fixedColumns = getFixedLayoutColumns();
+      const columnsPerRow = fixedColumns || Math.ceil(Math.sqrt(currentOrder.length));
+      const canMoveUp = currentIndex >= columnsPerRow;
+      const canMoveDown = currentIndex + columnsPerRow < currentOrder.length;
+
       return (
-        <Box sx={{ 
-          position: 'relative', 
-          width: '100%', 
+        <Box sx={{
+          position: 'relative',
+          width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          {!customization.hideLabel && (customization.label || phoneme)}
+          {/* Render image if available */}
+          {customization.image && (
+            <img
+              src={customization.image}
+              alt={phoneme}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: getOpacity(),
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            />
+          )}
+          {/* Render text if no image or if label should be shown */}
+          {!customization.image && !customization.hideLabel && (customization.label || phoneme)}
+
+          {/* Up arrow */}
+          {canMoveUp && (
+            <Box
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePhonemeMove(phoneme, 'up');
+              }}
+              sx={{
+                position: 'absolute',
+                top: -9,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'white',
+                boxShadow: 2,
+                opacity: 1,
+                zIndex: 10,
+                padding: '3px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.primary',
+                border: '1px solid',
+                borderColor: 'divider',
+                width: '18px',
+                height: '18px',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '14px'
+                },
+                '&:hover': {
+                  backgroundColor: 'white',
+                  opacity: 0.9,
+                  boxShadow: 3
+                }
+              }}
+            >
+              <KeyboardArrowUpIcon fontSize="small" />
+            </Box>
+          )}
+
+          {/* Down arrow */}
+          {canMoveDown && (
+            <Box
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePhonemeMove(phoneme, 'down');
+              }}
+              sx={{
+                position: 'absolute',
+                bottom: -9,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'white',
+                boxShadow: 2,
+                opacity: 1,
+                zIndex: 10,
+                padding: '3px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.primary',
+                border: '1px solid',
+                borderColor: 'divider',
+                width: '18px',
+                height: '18px',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '14px'
+                },
+                '&:hover': {
+                  backgroundColor: 'white',
+                  opacity: 0.9,
+                  boxShadow: 3
+                }
+              }}
+            >
+              <KeyboardArrowDownIcon fontSize="small" />
+            </Box>
+          )}
+
           {canMoveLeft && (
             <Box
               onClick={(e) => {
@@ -1173,6 +1119,27 @@ const IPAKeyboard = ({
       );
     }
 
+    // If not in move mode, render image or text normally
+    if (customization.image) {
+      return (
+        <img
+          src={customization.image}
+          alt={phoneme}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: getOpacity(),
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+        />
+      );
+    }
+
     // If no image and not in move mode, show the phoneme text unless hideLabel is true
     return !customization.hideLabel ? (customization.label || phoneme) : null;
   };
@@ -1183,11 +1150,7 @@ const IPAKeyboard = ({
       return (
         <div
           key={`blank-${Math.random()}`}
-          style={{
-            width: '60px',
-            height: '60px',
-            visibility: 'hidden',
-          }}
+          className="blank-cell"
         />
       );
     }
@@ -1224,8 +1187,8 @@ const IPAKeyboard = ({
         disableRipple={true}
         sx={(theme) => ({
           minWidth: 'unset',
-          width: '60px',
-          height: '60px',
+          width: '100%',
+          height: '100%',
           p: 0.5,
           fontSize: '1rem',
           fontFamily: '"Noto Sans", sans-serif',
@@ -1538,38 +1501,21 @@ const IPAKeyboard = ({
         overflow: 'hidden',
         p: Math.round(buttonSpacing)
       }}>
-        <Grid 
-          container
-          key={`grid-${showStressMarkers}-${validLanguage}`}
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${gridColumns}, ${60}px)`,
-            gap: `${Math.round(buttonSpacing)}px`,
-            justifyContent: 'center',
-            alignContent: 'center',
-            height: 'auto',
-            maxHeight: '100%',
-            transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
-            transformOrigin: 'center center',
-            willChange: 'transform',
-            touchAction: 'manipulation',
-            '& .MuiGrid-item': {
-              width: '60px !important',
-              height: '60px !important',  
-              padding: '0 !important',
-              margin: '0 !important',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              touchAction: 'manipulation'
-            }
+        <div
+          className={`phoneme-grid ${shouldUseListLayout() ? 'list-layout' : ''} ${shouldUseFixedLayout() ? 'fixed-layout' : ''}`}
+          key={`grid-${showStressMarkers}-${validLanguage}-${windowWidth}-${fixedLayout}`}
+          style={{
+            '--button-spacing': `${buttonSpacing}px`,
+            '--min-button-size': getMinButtonSize(),
+            '--max-button-size': getMaxButtonSize(),
+            '--fixed-columns': getFixedLayoutColumns() || 'auto',
           }}
         >
           {phoneticData && phoneticData[validLanguage]?.groups && getOrderedPhonemes().map((phoneme) => {
             const group = Object.values(phoneticData[validLanguage]?.groups || {}).find(group => group.phonemes.includes(phoneme));
             return renderPhonemeButton(phoneme, group);
           })}
-        </Grid>
+        </div>
       </Box>
 
       {mode === 'edit' && (

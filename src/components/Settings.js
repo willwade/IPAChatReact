@@ -41,12 +41,14 @@ const Settings = ({
   onVoiceChange,
   selectedRegion,
   onRegionChange,
-  buttonScale,
-  onButtonScaleChange,
   buttonSpacing,
   onButtonSpacingChange,
-  autoScale,
-  onAutoScaleChange,
+  minButtonSize,
+  onMinButtonSizeChange,
+  layoutMode,
+  onLayoutModeChange,
+  fixedLayout,
+  onFixedLayoutChange,
   touchDwellEnabled,
   onTouchDwellEnabledChange,
   touchDwellTime,
@@ -187,14 +189,17 @@ const Settings = ({
     }
 
     // Update scale settings
-    if (typeof backupData.buttonScale === 'number') {
-      onButtonScaleChange(backupData.buttonScale);
-    }
     if (typeof backupData.buttonSpacing === 'number') {
       onButtonSpacingChange(backupData.buttonSpacing);
     }
-    if (typeof backupData.autoScale === 'boolean') {
-      onAutoScaleChange(backupData.autoScale);
+    if (typeof backupData.minButtonSize === 'number') {
+      onMinButtonSizeChange(backupData.minButtonSize);
+    }
+    if (typeof backupData.layoutMode === 'string') {
+      onLayoutModeChange(backupData.layoutMode);
+    }
+    if (typeof backupData.fixedLayout === 'boolean') {
+      onFixedLayoutChange(backupData.fixedLayout);
     }
 
     // Update accessibility settings
@@ -577,31 +582,44 @@ const Settings = ({
 
             {/* Layout Settings */}
             <ListItem>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={autoScale}
-                    onChange={(e) => onAutoScaleChange(e.target.checked)}
-                  />
-                }
-                label="Auto-scale buttons to screen"
-              />
+              <Box sx={{ width: '100%' }}>
+                <Typography gutterBottom>Minimum Button Size (px)</Typography>
+                <Slider
+                  value={minButtonSize}
+                  onChange={(_, value) => onMinButtonSizeChange(value)}
+                  min={40}
+                  max={80}
+                  step={5}
+                  marks
+                  valueLabelDisplay="auto"
+                />
+              </Box>
             </ListItem>
 
             <ListItem>
-              <Box sx={{ width: '100%' }}>
-                <Typography gutterBottom>Button Scale</Typography>
-                <Slider
-                  value={buttonScale}
-                  onChange={(_, value) => onButtonScaleChange(value)}
-                  min={0.5}
-                  max={2}
-                  step={0.1}
-                  marks
-                  valueLabelDisplay="auto"
-                  disabled={autoScale}
-                />
-              </Box>
+              <FormControl fullWidth>
+                <InputLabel>Layout Mode on Small Screens</InputLabel>
+                <Select
+                  value={layoutMode}
+                  onChange={(e) => onLayoutModeChange(e.target.value)}
+                  label="Layout Mode on Small Screens"
+                >
+                  <MenuItem value="grid">Grid (default)</MenuItem>
+                  <MenuItem value="list">List</MenuItem>
+                </Select>
+              </FormControl>
+            </ListItem>
+
+            <ListItem>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={fixedLayout}
+                    onChange={(e) => onFixedLayoutChange(e.target.checked)}
+                  />
+                }
+                label="Fixed Layout (prevents button reordering on resize)"
+              />
             </ListItem>
 
             <ListItem>
