@@ -799,13 +799,10 @@ const App = () => {
   const handlePhonemeClick = (phoneme) => {
     // In build mode, update the message
     if (mode === 'build') {
-      const previousMessage = message;
       setMessage(prev => prev + phoneme);
 
-      // Only speak individual phoneme if:
-      // 1. speakOnButtonPress is enabled AND
-      // 2. Either speakWholeUtterance is disabled OR this is the first phoneme (no previous message)
-      if (speakOnButtonPress && (!speakWholeUtterance || !previousMessage)) {
+      // Speak the phoneme if setting is enabled
+      if (speakOnButtonPress) {
         playPhoneme(phoneme);
       }
       return;
@@ -1189,14 +1186,18 @@ const App = () => {
     if (speakWholeUtterance && mode === 'build' && message) {
       console.log('Whole utterance reading triggered:', { message, speakWholeUtterance, mode });
 
-      // Add a small delay to avoid speaking on every character when typing
-      const timeoutId = setTimeout(() => {
-        speakWholeUtteranceText(message);
-      }, 500); // 500ms delay
+      // Don't speak whole utterance if speakOnButtonPress is enabled (to avoid double-speaking)
+      // Only speak whole utterance when speakOnButtonPress is disabled or when explicitly requested
+      if (!speakOnButtonPress) {
+        // Add a small delay to avoid speaking on every character when typing
+        const timeoutId = setTimeout(() => {
+          speakWholeUtteranceText(message);
+        }, 500); // 500ms delay
 
-      return () => clearTimeout(timeoutId);
+        return () => clearTimeout(timeoutId);
+      }
     }
-  }, [message, speakWholeUtterance, mode, speakWholeUtteranceText]);
+  }, [message, speakWholeUtterance, mode, speakWholeUtteranceText, speakOnButtonPress]);
 
   if (dataLoading) {
     return (
