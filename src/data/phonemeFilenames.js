@@ -30,6 +30,9 @@ export const phonemeToFilename = {
   'ɡ': 'g',     // as in "go" (Unicode variant)
 
   // Combinations and long vowels
+  'aɪ': 'aɪ',       // as in "price" - keep raw IPA (files use raw characters)
+  'aʊ': 'aʊ',       // as in "mouth" - keep raw IPA (files use raw characters)
+  'eɪ': 'eɪ',       // as in "face" - keep raw IPA (files use raw characters)
   'ɔɪ': 'awih',     // as in "choice"
   'ɔː': 'awlng',    // as in "thought" (long)
   'ɑː': 'aalng',    // as in "father" (long)

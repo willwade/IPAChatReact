@@ -65,11 +65,12 @@ const App = () => {
       return saved;
     }
   });
-  const [buttonScale, setButtonScale] = useState(() => parseFloat(localStorage.getItem('buttonScale')) || 1);
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
-  const [autoScale, setAutoScale] = useState(() => {
-    const saved = localStorage.getItem('autoScale');
-    return saved === null ? true : saved === 'true';
+  const [minButtonSize, setMinButtonSize] = useState(() => parseInt(localStorage.getItem('minButtonSize')) || 60);
+  const [layoutMode, setLayoutMode] = useState(() => localStorage.getItem('layoutMode') || 'grid');
+  const [fixedLayout, setFixedLayout] = useState(() => {
+    const saved = localStorage.getItem('fixedLayout');
+    return saved === null ? false : saved === 'true';
   });
   const [touchDwellEnabled, setTouchDwellEnabled] = useState(() => localStorage.getItem('touchDwellEnabled') === 'true');
   const [touchDwellTime, setTouchDwellTime] = useState(() => parseInt(localStorage.getItem('touchDwellTime')) || 800);
@@ -435,7 +436,10 @@ const App = () => {
       console.error('Voice name contains quotes:', voice);
     }
 
-    // Removed verbose logging - many phonemes don't need special mapping
+    // Debug logging for diphthongs to verify mapping
+    if (phoneme.length > 1 && /[aeiouɑɔəʊɪʊ]/.test(phoneme)) {
+      console.log(`Diphthong ${phoneme} → filename: ${fileName}`);
+    }
 
     return fileName;
   }, []);
@@ -445,6 +449,20 @@ const App = () => {
     // Removed HEAD requests to reduce console noise
     // Audio availability is now tested during actual loading attempts
   }, [selectedVoice]);
+
+  // Function to manually clear audio cache (useful for debugging)
+  const clearAudioCache = useCallback(() => {
+    setAudioCache({});
+    console.log('Audio cache manually cleared - this will force reload of all audio files');
+  }, []);
+
+  // Expose cache clear function to global scope for debugging
+  useEffect(() => {
+    window.clearAudioCache = clearAudioCache;
+    return () => {
+      delete window.clearAudioCache;
+    };
+  }, [clearAudioCache]);
 
   const cachePhonemeAudio = useCallback(async () => {
     if (!selectedVoice || cacheLoading) {
@@ -735,16 +753,20 @@ const App = () => {
   }, [selectedVoice]);
 
   useEffect(() => {
-    localStorage.setItem('buttonScale', buttonScale);
-  }, [buttonScale]);
-
-  useEffect(() => {
     localStorage.setItem('buttonSpacing', buttonSpacing);
   }, [buttonSpacing]);
 
   useEffect(() => {
-    localStorage.setItem('autoScale', autoScale);
-  }, [autoScale]);
+    localStorage.setItem('minButtonSize', minButtonSize);
+  }, [minButtonSize]);
+
+  useEffect(() => {
+    localStorage.setItem('layoutMode', layoutMode);
+  }, [layoutMode]);
+
+  useEffect(() => {
+    localStorage.setItem('fixedLayout', fixedLayout);
+  }, [fixedLayout]);
 
   useEffect(() => {
     localStorage.setItem('touchDwellEnabled', touchDwellEnabled);
@@ -953,9 +975,7 @@ const App = () => {
     localStorage.setItem('selectedVoice', voice);
   };
 
-  const handleAutoScaleChange = (autoScale) => {
-    setAutoScale(autoScale);
-  };
+
 
   const handleSearchSubmit = async () => {
     if (!searchWord.trim()) {
@@ -1429,10 +1449,11 @@ const App = () => {
                   <IPAKeyboard
                     mode="edit"
                     onPhonemeClick={handlePhonemeClick}
-                    buttonScale={buttonScale}
                     buttonSpacing={buttonSpacing}
                     selectedLanguage={selectedLanguage}
-                    autoScale={autoScale}
+                    minButtonSize={minButtonSize}
+                    layoutMode={layoutMode}
+                    fixedLayout={fixedLayout}
                     touchDwellEnabled={touchDwellEnabled}
                     touchDwellTime={touchDwellTime}
                     dwellIndicatorType={dwellIndicatorType}
@@ -1463,16 +1484,17 @@ const App = () => {
                 <IPAKeyboard
                   mode={mode}
                   onPhonemeClick={handlePhonemeClick}
-                  buttonScale={buttonScale}
                   buttonSpacing={buttonSpacing}
                   selectedLanguage={selectedLanguage}
-                  autoScale={autoScale}
+                  minButtonSize={minButtonSize}
+                  layoutMode={layoutMode}
+                  fixedLayout={fixedLayout}
                   touchDwellEnabled={touchDwellEnabled}
                   touchDwellTime={touchDwellTime}
                   dwellIndicatorType={dwellIndicatorType}
                   dwellIndicatorColor={dwellIndicatorColor}
                   hapticFeedback={hapticFeedback}
-                  disabledPhonemes={mode === 'search' ? 
+                  disabledPhonemes={mode === 'search' ?
                     Object.values(phoneticData[selectedLanguage].groups)
                       .flatMap(group => group.phonemes)
                       .filter(p => {
@@ -1498,12 +1520,26 @@ const App = () => {
               onLanguageChange={handleLanguageChange}
               onRegionChange={handleRegionChange}
               onVoiceChange={handleVoiceChange}
-              buttonScale={buttonScale}
-              onButtonScaleChange={setButtonScale}
               buttonSpacing={buttonSpacing}
-              onButtonSpacingChange={setButtonSpacing}
-              autoScale={autoScale}
-              onAutoScaleChange={setAutoScale}
+              onButtonSpacingChange={(value) => {
+                setButtonSpacing(value);
+                localStorage.setItem('buttonSpacing', value);
+              }}
+              minButtonSize={minButtonSize}
+              onMinButtonSizeChange={(value) => {
+                setMinButtonSize(value);
+                localStorage.setItem('minButtonSize', value);
+              }}
+              layoutMode={layoutMode}
+              onLayoutModeChange={(value) => {
+                setLayoutMode(value);
+                localStorage.setItem('layoutMode', value);
+              }}
+              fixedLayout={fixedLayout}
+              onFixedLayoutChange={(value) => {
+                setFixedLayout(value);
+                localStorage.setItem('fixedLayout', value);
+              }}
               touchDwellEnabled={touchDwellEnabled}
               onTouchDwellEnabledChange={setTouchDwellEnabled}
               touchDwellTime={touchDwellTime}
