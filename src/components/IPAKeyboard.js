@@ -219,7 +219,7 @@ const IPAKeyboard = ({
       const button1 = buttons[0].getBoundingClientRect();
       const button2 = buttons[1].getBoundingClientRect();
       const actualSpacing = button2.left - (button1.left + button1.width);
-      console.log('Actual spacing between buttons:', actualSpacing);
+      // Removed console log to reduce noise
     }
   }, [buttonSpacing, gridColumns]);
 
@@ -782,7 +782,7 @@ const IPAKeyboard = ({
 
     // Get stress markers list
     const stressMarkers = languageData.groups.stress?.phonemes || [];
-    console.log('Available stress markers:', stressMarkers);
+    // Removed console log to prevent render loop
 
     // Get base phoneme list (either from saved order or default)
     const savedOrder = phonemeOrder[validLanguage];
@@ -817,87 +817,96 @@ const IPAKeyboard = ({
       basePhonemes = basePhonemes.filter(phoneme => phoneme !== '');
     }
 
-    console.log('Showing stress markers:', showStressMarkers);
-    console.log('Allow blank cells:', allowBlankCells);
-    console.log('Filtered phonemes:', basePhonemes);
+    // Removed console logs to prevent render loop
     return basePhonemes;
   }, [validLanguage, showStressMarkers, phonemeOrder, gridConfig]);
 
   // Update effect to handle showStressMarkers changes
   useEffect(() => {
-    console.log('showStressMarkers changed:', showStressMarkers);
-    
     // Get the current phoneme list
     const languageData = phoneticData[validLanguage];
     if (!languageData?.groups) return;
 
     // Get stress markers list
     const stressMarkers = languageData.groups.stress?.phonemes || [];
-    console.log('Stress markers from data:', stressMarkers);
-    
+
     // Get current order or default list
     const currentOrder = phonemeOrder[validLanguage];
     let basePhonemes;
-    
+
     if (currentOrder && Array.isArray(currentOrder)) {
       basePhonemes = [...currentOrder];
     } else {
       basePhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
     }
 
+    // Check if we need to update the phoneme order
+    let needsUpdate = false;
+    let updatedPhonemes = [...basePhonemes];
+
     // Update phonemes based on showStressMarkers
     if (showStressMarkers) {
       // Add any missing stress markers
       stressMarkers.forEach(marker => {
-        if (!basePhonemes.includes(marker)) {
-          basePhonemes.push(marker);
+        if (!updatedPhonemes.includes(marker)) {
+          updatedPhonemes.push(marker);
+          needsUpdate = true;
         }
       });
     } else {
       // Remove stress markers
-      basePhonemes = basePhonemes.filter(phoneme => !stressMarkers.includes(phoneme));
+      const filteredPhonemes = updatedPhonemes.filter(phoneme => !stressMarkers.includes(phoneme));
+      if (filteredPhonemes.length !== updatedPhonemes.length) {
+        updatedPhonemes = filteredPhonemes;
+        needsUpdate = true;
+      }
     }
 
-    console.log('Setting new phoneme order. Show stress markers:', showStressMarkers);
-    console.log('Updated phonemes:', basePhonemes);
-
-    // Update the phoneme order
-    setPhonemeOrder(prev => ({
-      ...prev,
-      [validLanguage]: basePhonemes
-    }));
-
-    // Force grid recalculation only if not using custom config
-    const customConfig = gridConfig?.[validLanguage];
-    if (!customConfig?.columns) {
-      calculateOptimalGrid();
+    // Only update if there's actually a change to prevent infinite loops
+    if (needsUpdate) {
+      setPhonemeOrder(prev => ({
+        ...prev,
+        [validLanguage]: updatedPhonemes
+      }));
     }
-  }, [showStressMarkers, validLanguage, gridConfig, calculateOptimalGrid]);
+
+    // Grid recalculation is handled by other useEffects
+  }, [showStressMarkers, validLanguage]);
 
   const handlePhonemeMove = useCallback((phoneme, direction) => {
-    const currentPhonemes = getOrderedPhonemes();
+    // Get current phonemes directly from state to avoid circular dependency
+    const currentOrder = phonemeOrder[validLanguage];
+    const languageData = phoneticData[validLanguage];
+
+    let currentPhonemes;
+    if (currentOrder && Array.isArray(currentOrder)) {
+      currentPhonemes = [...currentOrder];
+    } else if (languageData?.groups) {
+      currentPhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
+    } else {
+      return;
+    }
+
     const currentIndex = currentPhonemes.indexOf(phoneme);
-    
     if (currentIndex === -1) return;
-    
+
     const newPhonemes = [...currentPhonemes];
     if (direction === 'left' && currentIndex > 0) {
-      [newPhonemes[currentIndex - 1], newPhonemes[currentIndex]] = 
+      [newPhonemes[currentIndex - 1], newPhonemes[currentIndex]] =
       [newPhonemes[currentIndex], newPhonemes[currentIndex - 1]];
     } else if (direction === 'right' && currentIndex < newPhonemes.length - 1) {
-      [newPhonemes[currentIndex], newPhonemes[currentIndex + 1]] = 
+      [newPhonemes[currentIndex], newPhonemes[currentIndex + 1]] =
       [newPhonemes[currentIndex + 1], newPhonemes[currentIndex]];
     }
-    
+
     setPhonemeOrder(prev => ({
       ...prev,
       [validLanguage]: newPhonemes
     }));
-  }, [validLanguage, getOrderedPhonemes]);
+  }, [validLanguage, phonemeOrder]);
 
   const handleStressMarkersToggle = (e) => {
     const newValue = e.target.checked;
-    console.log('Toggle stress markers:', newValue);
     if (onStressMarkersChange) {
       onStressMarkersChange(newValue);
     }
@@ -1618,7 +1627,7 @@ const IPAKeyboard = ({
           </Box>
 
           <Divider
-            orientation={{ xs: 'horizontal', sm: 'vertical' }}
+            orientation="vertical"
             flexItem
             sx={{
               mx: { xs: 0, sm: 1 },
