@@ -6,9 +6,10 @@ const axios = require('axios');
  */
 class TTSConfig {
   constructor() {
-    this.azureKey = process.env.AZURE_TTS_KEY;
-    this.azureRegion = process.env.AZURE_TTS_REGION;
-    this.phonemizeApiUrl = process.env.PHONEMIZE_API_URL;
+    // Support both naming conventions for backward compatibility
+    this.azureKey = process.env.REACT_APP_AZURE_KEY || process.env.AZURE_TTS_KEY;
+    this.azureRegion = process.env.REACT_APP_AZURE_REGION || process.env.AZURE_TTS_REGION;
+    this.phonemizeApiUrl = process.env.REACT_APP_PHONEMIZE_API || process.env.PHONEMIZE_API_URL;
     
     this.validateConfig();
   }
@@ -20,11 +21,11 @@ class TTSConfig {
     const missing = [];
     
     if (!this.azureKey) {
-      missing.push('AZURE_TTS_KEY');
+      missing.push('REACT_APP_AZURE_KEY (or AZURE_TTS_KEY for backward compatibility)');
     }
-    
+
     if (!this.azureRegion) {
-      missing.push('AZURE_TTS_REGION');
+      missing.push('REACT_APP_AZURE_REGION (or AZURE_TTS_REGION for backward compatibility)');
     }
     
     if (missing.length > 0) {

@@ -1,35 +1,64 @@
 # IPA Chat React
 
-A Progressive Web App for exploring IPA (International Phonetic Alphabet) phonemes with speech synthesis support. WIP. 
+A Progressive Web App for exploring IPA (International Phonetic Alphabet) phonemes with speech synthesis support. Perfect for language learners, teachers, and speech professionals.
 
 ## Features
 
-- Interactive IPA keyboard with customizable buttons
-- Two modes of operation:
-  - Babble mode: Immediate phoneme playback
-  - Message mode: Compose and speak IPA sequences
-- Language and voice selection
-- SSML support for accurate phoneme pronunciation
-- Customizable IPA buttons (supports images and label hiding)
+- **Multiple Modes**: Build, Search, Babble, Edit, and Game modes
+- **Interactive IPA Keyboard**: Customizable phoneme buttons with audio feedback
+- **Speech Synthesis**: Azure TTS integration with high-quality voices
+- **Flexible UI**: Multiple interface modes (full, simplified, minimal, kiosk)
+- **Configuration Loading**: Load settings from URLs or files
+- **Accessibility**: Touch dwell, haptic feedback, and keyboard shortcuts
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **PWA Support**: Install as a Progressive Web App
 
-## Setup
+## Quick Start
 
-1. Install dependencies:
+1. **Install dependencies:**
 ```bash
 npm install
 ```
 
-2. Configure Azure Speech Services:
+2. **Configure Azure Speech Services:**
    - Create a `.env` file in the root directory
    - Add your Azure credentials:
-```
-REACT_APP_AZURE_KEY=your_azure_key_here
+```bash
+REACT_APP_AZURE_KEY=your_azure_speech_key_here
 REACT_APP_AZURE_REGION=your_azure_region_here
 ```
 
-3. Start the development server:
+3. **Start the development server:**
 ```bash
-npm start
+npm run dev
+```
+
+The app will be available at http://localhost:3000 (frontend) and the API at http://localhost:3001 (backend).
+
+## Documentation
+
+- **[User Guide](docs/USER_GUIDE.md)** - Complete user documentation
+- **[Development Guide](docs/DEVELOPMENT.md)** - Setup and development instructions
+- **[UI Modes](docs/UI_MODES.md)** - Interface customization options
+
+## Usage Examples
+
+### Basic Usage
+```
+https://yourapp.com/                    # Full interface
+https://yourapp.com/?ui=simplified      # Simplified interface
+https://yourapp.com/?ui=kiosk          # Kiosk mode
+```
+
+### Load Configurations
+```
+https://yourapp.com/?config=example1                    # Local config
+https://yourapp.com/?config=https://example.com/my.json # Remote config
+```
+
+### Custom Toolbar
+```
+https://yourapp.com/?toolbar=build,settings,search      # Specific buttons only
 ```
 
 ## Pull Request Preview Deployments
