@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPA Chat React - UI Mode Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .mode-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .mode-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .test-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 16px;
+            background-color: #1976d2;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .test-link:hover {
+            background-color: #1565c0;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .keyboard-shortcut {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>IPA Chat React - UI Mode Testing</h1>
+    <p>This page provides links to test different UI modes implemented in the multi-level configuration hierarchy.</p>
+
+    <div class="mode-section">
+        <h3>🎯 Full Mode (Default)</h3>
+        <div class="description">Shows all toolbar buttons based on user preferences</div>
+        <a href="/" class="test-link">Default UI</a>
+        <a href="/?ui=full" class="test-link">Explicit Full Mode</a>
+    </div>
+
+    <div class="mode-section">
+        <h3>📱 Simplified Mode</h3>
+        <div class="description">Shows only Build Mode and Settings buttons</div>
+        <a href="/?ui=simplified" class="test-link">Simplified UI</a>
+        <a href="/?simplified=true" class="test-link">Legacy Simplified</a>
+    </div>
+
+    <div class="mode-section">
+        <h3>🔧 Minimal Mode</h3>
+        <div class="description">Shows only Settings button</div>
+        <a href="/?ui=minimal" class="test-link">Minimal UI</a>
+        <a href="/?simplified=minimal" class="test-link">Legacy Minimal</a>
+    </div>
+
+    <div class="mode-section">
+        <h3>🖥️ Kiosk Mode</h3>
+        <div class="description">Hides entire toolbar for distraction-free experience</div>
+        <a href="/?ui=kiosk" class="test-link">Kiosk Mode</a>
+        <a href="/?toolbar=none" class="test-link">No Toolbar</a>
+        <div class="keyboard-shortcut">
+            <strong>Kiosk Mode:</strong> Press <kbd>Ctrl+Shift+S</kbd> to access Settings
+        </div>
+    </div>
+
+    <div class="mode-section">
+        <h3>🎛️ Custom Toolbar</h3>
+        <div class="description">Show only specific toolbar buttons</div>
+        <a href="/?toolbar=build,settings" class="test-link">Build + Settings</a>
+        <a href="/?toolbar=build,babble,settings" class="test-link">Build + Babble + Settings</a>
+        <a href="/?toolbar=search,edit,settings" class="test-link">Search + Edit + Settings</a>
+        <a href="/?toolbar=game,settings" class="test-link">Game + Settings</a>
+    </div>
+
+    <div class="mode-section">
+        <h3>🔄 Combined with Examples</h3>
+        <div class="description">UI modes work with example configurations</div>
+        <a href="/?ui=simplified&config=example1" class="test-link">Simplified + Example 1</a>
+        <a href="/?ui=minimal&config=example-minimal" class="test-link">Minimal + Minimal Example</a>
+        <a href="/?ui=kiosk&config=example2" class="test-link">Kiosk + Example 2</a>
+        <a href="/?toolbar=build,settings&config=example3" class="test-link">Custom + Example 3</a>
+    </div>
+
+    <div class="mode-section">
+        <h3>📋 Testing Notes</h3>
+        <ul>
+            <li>URL parameters override user preferences temporarily</li>
+            <li>User's localStorage settings remain unchanged</li>
+            <li>Settings UI still shows user's actual preferences</li>
+            <li>Refresh without URL params returns to user preferences</li>
+            <li>Console logs show UI mode detection (in development)</li>
+        </ul>
+    </div>
+</body>
+</html>
