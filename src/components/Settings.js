@@ -331,6 +331,94 @@ const Settings = ({
     }
   };
 
+  const handleResetAll = () => {
+    if (window.confirm('Are you sure you want to reset all settings to default? This will clear all customizations and cannot be undone.')) {
+      try {
+        // Define default values (matching App.js initialization)
+        const defaultSettings = {
+          ipaMode: 'build',
+          selectedLanguage: 'en-GB',
+          selectedRegion: 'en-GB-london',
+          selectedVoice: '', // Will be set to first available voice
+          buttonSpacing: 4,
+          minButtonSize: 60,
+          layoutMode: 'grid',
+          fixedLayout: false,
+          touchDwellEnabled: false,
+          touchDwellTime: 800,
+          dwellIndicatorType: 'border',
+          dwellIndicatorColor: 'primary',
+          hapticFeedback: false,
+          showStressMarkers: true,
+          showIpaToText: true,
+          speakOnButtonPress: true,
+          speakWholeUtterance: true,
+          backgroundSettings: {
+            type: 'color',
+            color: '#ffffff',
+            gradientStart: '#ffffff',
+            gradientEnd: '#000000',
+            gradientDirection: 'to bottom',
+            image: ''
+          },
+          toolbarConfig: {
+            showBuild: true,
+            showSearch: true,
+            showBabble: true,
+            showEdit: true,
+            showGame: true,
+            showSettings: true,
+            showSetupWizard: true
+          }
+        };
+
+        // Clear all localStorage items related to the app
+        const keysToRemove = [
+          'ipaMode', 'selectedLanguage', 'selectedRegion', 'selectedVoice',
+          'buttonSpacing', 'minButtonSize', 'layoutMode', 'fixedLayout',
+          'touchDwellEnabled', 'touchDwellTime', 'dwellIndicatorType', 'dwellIndicatorColor',
+          'hapticFeedback', 'showStressMarkers', 'showIpaToText', 'speakOnButtonPress',
+          'speakWholeUtterance', 'backgroundSettings', 'toolbarConfig',
+          'ipaCustomizations', 'phonemeOrder', 'wordMastery', 'hasVisitedBefore'
+        ];
+
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+
+        // Set default values in localStorage
+        Object.entries(defaultSettings).forEach(([key, value]) => {
+          if (typeof value === 'object') {
+            localStorage.setItem(key, JSON.stringify(value));
+          } else {
+            localStorage.setItem(key, value.toString());
+          }
+        });
+
+        // Apply settings through props
+        applySettings(defaultSettings);
+
+        // Reset language and mode
+        onLanguageChange('en-GB');
+        onModeChange('build');
+
+        // Close settings dialog
+        onClose();
+
+        // Show success message and reload
+        alert('All settings have been reset to default! The page will now reload.');
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 200);
+
+      } catch (error) {
+        console.error('Error resetting settings:', error);
+        alert('Failed to reset settings.');
+      }
+    }
+  };
+
   const handleExampleLoad = async (example) => {
     try {
       const response = await fetch(`/examples/${example}.json`);
@@ -528,6 +616,37 @@ const Settings = ({
                           </Typography>
                         </Box>
                       ))}
+                    </Box>
+
+                    {/* Reset All Button */}
+                    <Box sx={{ mt: 2, textAlign: 'center' }}>
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={handleResetAll}
+                        startIcon={<RestoreIcon />}
+                        sx={{
+                          borderColor: '#ff9800',
+                          color: '#ff9800',
+                          '&:hover': {
+                            borderColor: '#f57c00',
+                            backgroundColor: 'rgba(255, 152, 0, 0.04)'
+                          }
+                        }}
+                      >
+                        Reset All Settings
+                      </Button>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                          mt: 0.5,
+                          color: 'text.secondary',
+                          fontSize: '0.7rem'
+                        }}
+                      >
+                        Restore all settings to default values
+                      </Typography>
                     </Box>
                   </CardContent>
                 </Card>
