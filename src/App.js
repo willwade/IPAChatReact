@@ -799,10 +799,13 @@ const App = () => {
   const handlePhonemeClick = (phoneme) => {
     // In build mode, update the message
     if (mode === 'build') {
+      const previousMessage = message;
       setMessage(prev => prev + phoneme);
 
-      // Optionally speak the phoneme if setting is enabled
-      if (speakOnButtonPress) {
+      // Only speak individual phoneme if:
+      // 1. speakOnButtonPress is enabled AND
+      // 2. Either speakWholeUtterance is disabled OR this is the first phoneme (no previous message)
+      if (speakOnButtonPress && (!speakWholeUtterance || !previousMessage)) {
         playPhoneme(phoneme);
       }
       return;
