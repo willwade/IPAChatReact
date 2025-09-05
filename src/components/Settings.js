@@ -617,37 +617,6 @@ const Settings = ({
                         </Box>
                       ))}
                     </Box>
-
-                    {/* Reset All Button */}
-                    <Box sx={{ mt: 2, textAlign: 'center' }}>
-                      <Button
-                        variant="outlined"
-                        color="warning"
-                        onClick={handleResetAll}
-                        startIcon={<RestoreIcon />}
-                        sx={{
-                          borderColor: '#ff9800',
-                          color: '#ff9800',
-                          '&:hover': {
-                            borderColor: '#f57c00',
-                            backgroundColor: 'rgba(255, 152, 0, 0.04)'
-                          }
-                        }}
-                      >
-                        Reset All Settings
-                      </Button>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: 'block',
-                          mt: 0.5,
-                          color: 'text.secondary',
-                          fontSize: '0.7rem'
-                        }}
-                      >
-                        Restore all settings to default values
-                      </Typography>
-                    </Box>
                   </CardContent>
                 </Card>
               </Box>
@@ -989,6 +958,23 @@ const Settings = ({
           </List>
         </DialogContent>
         <DialogActions>
+          <Button
+            onClick={handleResetAll}
+            size="small"
+            color="inherit"
+            sx={{
+              fontSize: '0.75rem',
+              color: 'text.secondary',
+              textTransform: 'none',
+              '&:hover': {
+                color: 'warning.main',
+                backgroundColor: 'transparent'
+              }
+            }}
+          >
+            Reset All
+          </Button>
+          <Box sx={{ flexGrow: 1 }} />
           <Button onClick={onClose}>Close</Button>
         </DialogActions>
       </Dialog>
