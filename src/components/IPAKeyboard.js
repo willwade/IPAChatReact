@@ -384,7 +384,7 @@ const IPAKeyboard = ({
   const handleTouchStart = (event, phoneme) => {
     // For non-edit modes, immediately trigger the click
     if (mode !== 'edit') {
-      event.preventDefault(); // Prevent the subsequent click event
+      // Don't call preventDefault() - use touch position flag instead
       // Set a flag to prevent double triggering
       setTouchPosition({ x: event.touches[0].clientX, y: event.touches[0].clientY });
       handlePhonemeClick(phoneme, event);
@@ -393,7 +393,7 @@ const IPAKeyboard = ({
 
     // Edit mode handling
     if (editMode === 'move') {
-      event.preventDefault(); // Prevent default on the actual event
+      // Don't call preventDefault() - React uses passive listeners
       const touch = event.touches[0];
       const element = event.currentTarget;
       setTouchPosition({ x: touch.clientX, y: touch.clientY });
@@ -438,10 +438,8 @@ const IPAKeyboard = ({
       return;
     }
 
-    // Prevent any default behavior that might interfere
-    if (e) {
-      e.preventDefault();
-    }
+    // Don't call preventDefault() on React synthetic events
+    // React handles this appropriately
 
     if (mode === 'edit') {
       if (editMode === 'customize') {
@@ -1499,7 +1497,7 @@ const IPAKeyboard = ({
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
-        p: Math.round(buttonSpacing)
+        p: 0  // Removed padding - was Math.round(buttonSpacing)
       }}>
         <div
           className={`phoneme-grid ${shouldUseListLayout() ? 'list-layout' : ''} ${shouldUseFixedLayout() ? 'fixed-layout' : ''}`}

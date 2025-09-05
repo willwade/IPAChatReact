@@ -315,7 +315,10 @@ const App = () => {
       console.error('Voice name contains quotes:', voice);
     }
 
-    // Removed verbose logging - many phonemes don't need special mapping
+    // Debug logging for diphthongs to verify mapping
+    if (phoneme.length > 1 && /[aeiouɑɔəʊɪʊ]/.test(phoneme)) {
+      console.log(`Diphthong ${phoneme} → filename: ${fileName}`);
+    }
 
     return fileName;
   }, []);
@@ -325,6 +328,20 @@ const App = () => {
     // Removed HEAD requests to reduce console noise
     // Audio availability is now tested during actual loading attempts
   }, [selectedVoice]);
+
+  // Function to manually clear audio cache (useful for debugging)
+  const clearAudioCache = useCallback(() => {
+    setAudioCache({});
+    console.log('Audio cache manually cleared - this will force reload of all audio files');
+  }, []);
+
+  // Expose cache clear function to global scope for debugging
+  useEffect(() => {
+    window.clearAudioCache = clearAudioCache;
+    return () => {
+      delete window.clearAudioCache;
+    };
+  }, [clearAudioCache]);
 
   const cachePhonemeAudio = useCallback(async () => {
     if (!selectedVoice || cacheLoading) {
