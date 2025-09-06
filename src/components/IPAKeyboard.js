@@ -52,6 +52,14 @@ const IPAKeyboard = ({
     }
     return {};
   });
+  // Persist phoneme order whenever it changes so edits survive layout switches
+  useEffect(() => {
+    try {
+      localStorage.setItem('phonemeOrder', JSON.stringify(phonemeOrder));
+    } catch (err) {
+      console.error('Failed to save phoneme order', err);
+    }
+  }, [phonemeOrder]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [backgroundEditOpen, setBackgroundEditOpen] = useState(false);
   const containerRef = useRef(null);
