@@ -70,51 +70,6 @@ class AudioCacheService {
   }
 
   /**
-   * Preload and cache multiple phonemes
-   */
-  async preloadPhonemes(phonemes, { getPhonemeFileName, loadAudioFile, selectedVoice, audioCache }) {
-    const loadPromises = [];
-    let loadedCount = 0;
-
-    for (const phoneme of phonemes) {
-      // Skip special marks and complex phonemes
-      const isComplex = /^[aeiouɑɔəʊɪʊ][ɪʊə]$|ː/.test(phoneme);
-      if (/[↗↘↑↓|‖ˈˌ]/.test(phoneme) || isComplex) {
-        continue;
-      }
-
-      const fileName = getPhonemeFileName(phoneme, selectedVoice);
-      
-      // eslint-disable-next-line no-loop-func
-      const loadPromise = loadAudioFile(fileName)
-        .then(audio => {
-          audioCache[phoneme] = audio;
-          loadedCount++;
-          console.log(`Preloaded phoneme: ${phoneme} (${loadedCount}/${phonemes.length})`);
-          return { phoneme, success: true };
-        })
-        .catch(error => {
-          console.warn(`Failed to preload phoneme ${phoneme}:`, error.message);
-          return { phoneme, success: false, error: error.message };
-        });
-
-      loadPromises.push(loadPromise);
-    }
-
-    const results = await Promise.all(loadPromises);
-    const successful = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
-
-    console.log(`Phoneme preloading complete: ${successful} successful, ${failed} failed`);
-    return {
-      successful,
-      failed,
-      total: results.length,
-      results
-    };
-  }
-
-  /**
    * Clear the audio cache
    */
   clearCache(audioCache) {

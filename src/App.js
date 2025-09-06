@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, CircularProgress } from '@mui/material';
+import { Box, TextField, Button, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, CircularProgress } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -7,17 +7,14 @@ import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import ClearIcon from '@mui/icons-material/Clear';
 import UndoIcon from '@mui/icons-material/Undo';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import { voicesByLanguage, detailedPhoneticData as phoneticData, normalizePhoneme } from './data/phoneticData';
+import { detailedPhoneticData as phoneticData, normalizePhoneme } from './data/phoneticData';
 import { config } from './config';
-import { regions } from './data/gamePhases';
 import IPAKeyboard from './components/IPAKeyboard';
-import EditMode from './components/EditMode';
 import Settings from './components/Settings';
 import GameMode from './components/GameMode';
 import ttsService from './services/TTSService';
@@ -456,7 +453,7 @@ const App = () => {
   const testAudioAvailability = useCallback(async () => {
     // Removed HEAD requests to reduce console noise
     // Audio availability is now tested during actual loading attempts
-  }, [selectedVoice]);
+  }, []);
 
   // Function to manually clear audio cache (useful for debugging)
   const clearAudioCache = useCallback(() => {
@@ -511,7 +508,6 @@ const App = () => {
     try {
       // Load pre-generated audio files in parallel batches
       const batchSize = 5;
-      let loadedCount = 0;
 
       for (let i = 0; i < phonemes.length; i += batchSize) {
         const batch = phonemes.slice(i, i + batchSize);
@@ -528,7 +524,6 @@ const App = () => {
               try {
                 const audio = await loadAudioFile(fileName);
                 newCache[phoneme] = audio;
-                loadedCount++;
                 // Reduced logging to minimize console noise
               } catch (loadError) {
                 // If the primary voice fails, try fallback voices
@@ -541,7 +536,6 @@ const App = () => {
                     const fallbackFileName = getPhonemeFileName(phoneme, fallbackVoice);
                     const audio = await loadAudioFile(fallbackFileName);
                     newCache[phoneme] = audio;
-                    loadedCount++;
                     fallbackSuccess = true;
                     break;
                   } catch (fallbackError) {
@@ -571,7 +565,7 @@ const App = () => {
     } finally {
       setCacheLoading(false);
     }
-  }, [selectedVoice, selectedLanguage, cacheLoading, phoneticData, getPhonemeFileName, loadAudioFile]);
+  }, [selectedVoice, selectedLanguage, cacheLoading, getPhonemeFileName, loadAudioFile]);
 
   // Consolidated audio caching effect
   useEffect(() => {
@@ -732,7 +726,7 @@ const App = () => {
     if (voicesLoading || Object.keys(availableVoices).length === 0) {
       fetchVoices();
     }
-  }, [selectedLanguage, voicesLoading, availableVoices, selectedVoice, config.apiUrl]);
+  }, [selectedLanguage, voicesLoading, availableVoices, selectedVoice]);
 
   // Set initial voice when language changes
   useEffect(() => {
@@ -811,7 +805,7 @@ const App = () => {
     } else if (selectedLanguage !== 'en-GB') {
       setSelectedRegion(''); // Clear region for non-UK English
     }
-  }, [selectedLanguage]);
+  }, [selectedLanguage, selectedRegion]);
 
   const handleRegionChange = (region) => {
     setSelectedRegion(region);
@@ -872,16 +866,6 @@ const App = () => {
       }),
     [audioCache, getPhonemeFileName, loadAudioFile, selectedVoice, selectedLanguage]
   );
-
-  const handleModeChange = (event) => {
-    setMode(event.target.value);
-    // Clear message when switching from build mode
-    if (event.target.value !== 'build') {
-      setMessage('');
-    }
-  };
-
-
 
   const speak = async () => {
     if (!message) return;
