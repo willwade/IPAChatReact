@@ -137,6 +137,15 @@ const IPAKeyboard = ({
     return fixedLayout && getFixedLayoutColumns() !== null;
   }, [fixedLayout, getFixedLayoutColumns]);
 
+  // Get the actual number of columns from the rendered grid
+  const getDynamicColumns = useCallback(() => {
+    const grid = containerRef.current?.querySelector('.phoneme-grid');
+    if (!grid) return null;
+    const style = window.getComputedStyle(grid);
+    const columns = style.gridTemplateColumns.split(' ').length;
+    return columns;
+  }, []);
+
   // Track window resize for responsive behavior
   useEffect(() => {
     const handleResize = () => {
@@ -732,7 +741,8 @@ const IPAKeyboard = ({
 
     // Calculate grid dimensions for up/down movement
     const fixedColumns = getFixedLayoutColumns();
-    const columnsPerRow = fixedColumns || Math.ceil(Math.sqrt(currentPhonemes.length));
+    const dynamicColumns = getDynamicColumns();
+    const columnsPerRow = fixedColumns || dynamicColumns || Math.ceil(Math.sqrt(currentPhonemes.length));
 
     if (direction === 'left' && currentIndex > 0) {
       [newPhonemes[currentIndex - 1], newPhonemes[currentIndex]] =
@@ -759,7 +769,7 @@ const IPAKeyboard = ({
 
     // Save to localStorage immediately
     localStorage.setItem('phonemeOrder', JSON.stringify(newPhonemeOrder));
-  }, [validLanguage, phonemeOrder, getFixedLayoutColumns]);
+  }, [validLanguage, phonemeOrder, getFixedLayoutColumns, getDynamicColumns]);
 
   const handleStressMarkersToggle = (e) => {
     const newValue = e.target.checked;
@@ -919,7 +929,8 @@ const IPAKeyboard = ({
 
       // Calculate grid dimensions for up/down movement
       const fixedColumns = getFixedLayoutColumns();
-      const columnsPerRow = fixedColumns || Math.ceil(Math.sqrt(currentOrder.length));
+      const dynamicColumns = getDynamicColumns();
+      const columnsPerRow = fixedColumns || dynamicColumns || Math.ceil(Math.sqrt(currentOrder.length));
       const canMoveUp = currentIndex >= columnsPerRow;
       const canMoveDown = currentIndex + columnsPerRow < currentOrder.length;
 
@@ -960,6 +971,8 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'up');
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               sx={{
                 position: 'absolute',
                 top: -9,
@@ -1001,6 +1014,8 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'down');
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               sx={{
                 position: 'absolute',
                 bottom: -9,
@@ -1041,7 +1056,9 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'left');
               }}
-              sx={{ 
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              sx={{
                 position: 'absolute',
                 top: '50%',
                 left: -9,
@@ -1080,7 +1097,9 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'right');
               }}
-              sx={{ 
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              sx={{
                 position: 'absolute',
                 top: '50%',
                 right: -9,

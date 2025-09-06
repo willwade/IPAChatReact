@@ -66,6 +66,8 @@ const Settings = ({
   onSpeakOnButtonPressChange,
   speakWholeUtterance,
   onSpeakWholeUtteranceChange,
+  clearMessageAfterPlay,
+  onClearMessageAfterPlayChange,
   mode,
   onModeChange,
   toolbarConfig,
@@ -782,6 +784,23 @@ const Settings = ({
                   label="Read whole utterance as it's built"
                 />
                 <Tooltip title="Automatically speak the entire message when the message bar is updated in build mode">
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={clearMessageAfterPlay}
+                      onChange={(e) => onClearMessageAfterPlayChange(e.target.checked)}
+                    />
+                  }
+                  label="Clear message bar after playing"
+                />
+                <Tooltip title="After speaking a message in build mode, clear the message bar and show an undo option">
                   <IconButton size="small" sx={{ ml: 1 }}>
                     <HelpOutlineIcon fontSize="small" />
                   </IconButton>
