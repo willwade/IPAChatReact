@@ -6,6 +6,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import ClearIcon from '@mui/icons-material/Clear';
+import UndoIcon from '@mui/icons-material/Undo';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ChildCareIcon from '@mui/icons-material/ChildCare';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -79,6 +80,9 @@ const App = () => {
   const [hapticFeedback, setHapticFeedback] = useState(() => localStorage.getItem('hapticFeedback') === 'true');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [lastSpokenMessage, setLastSpokenMessage] = useState('');
+  const [lastConvertedText, setLastConvertedText] = useState('');
+  const [messageClearedAfterPlay, setMessageClearedAfterPlay] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [voicesLoading, setVoicesLoading] = useState(true);
   const [audioCache, setAudioCache] = useState({});
@@ -110,6 +114,10 @@ const App = () => {
   const [speakWholeUtterance, setSpeakWholeUtterance] = useState(() => {
     const saved = localStorage.getItem('speakWholeUtterance');
     return saved ? JSON.parse(saved) : true;
+  });
+  const [clearMessageAfterPlay, setClearMessageAfterPlay] = useState(() => {
+    const saved = localStorage.getItem('clearMessageAfterPlay');
+    return saved ? JSON.parse(saved) : false;
   });
   const [backgroundSettings, setBackgroundSettings] = useState(() => {
     const saved = localStorage.getItem('backgroundSettings');
@@ -821,6 +829,9 @@ const App = () => {
   const handlePhonemeClick = (phoneme) => {
     // In build mode, update the message
     if (mode === 'build') {
+      setMessageClearedAfterPlay(false);
+      setLastSpokenMessage('');
+      setLastConvertedText('');
       setMessage(prev => prev + phoneme);
 
       // Speak the phoneme if setting is enabled
@@ -875,6 +886,7 @@ const App = () => {
   const speak = async () => {
     if (!message) return;
 
+    let converted = '';
     // Only fetch conversion if the feature is enabled
     if (showIpaToText) {
       try {
@@ -883,7 +895,8 @@ const App = () => {
         });
 
         if (response.data && response.data.text) {
-          setConvertedText(response.data.text);
+          converted = response.data.text;
+          setConvertedText(converted);
         }
       } catch (error) {
         console.warn('Error converting IPA to text:', error);
@@ -902,11 +915,27 @@ const App = () => {
         // For short messages, use single phoneme approach
         await ttsService.synthesizePhonemeSequence(message, selectedVoice, selectedLanguage);
       }
+
+      if (clearMessageAfterPlay) {
+        setLastSpokenMessage(message);
+        setLastConvertedText(converted);
+        setMessage('');
+        setConvertedText('');
+        setMessageClearedAfterPlay(true);
+      }
     } catch (error) {
       console.error('Azure TTS failed:', error);
       // Show user-friendly error message using notification service
       notificationService.showTTSError(error, 'speech synthesis');
     }
+  };
+
+  const handleUndo = () => {
+    setMessage(lastSpokenMessage);
+    setConvertedText(lastConvertedText);
+    setMessageClearedAfterPlay(false);
+    setLastSpokenMessage('');
+    setLastConvertedText('');
   };
 
   const handleSpeakRequest = async (text) => {
@@ -1159,6 +1188,10 @@ const App = () => {
   }, [speakWholeUtterance]);
 
   useEffect(() => {
+    localStorage.setItem('clearMessageAfterPlay', JSON.stringify(clearMessageAfterPlay));
+  }, [clearMessageAfterPlay]);
+
+  useEffect(() => {
     localStorage.setItem('backgroundSettings', JSON.stringify(backgroundSettings));
   }, [backgroundSettings]);
 
@@ -1364,7 +1397,14 @@ const App = () => {
                   <TextField
                     fullWidth
                     value={message}
-                    onChange={(e) => mode === 'build' && setMessage(e.target.value)}
+                    onChange={(e) => {
+                      if (mode === 'build') {
+                        setMessageClearedAfterPlay(false);
+                        setLastSpokenMessage('');
+                        setLastConvertedText('');
+                        setMessage(e.target.value);
+                      }
+                    }}
                     placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
                     disabled={mode === 'babble' || mode === 'search' || mode === 'edit'}
                     size="small"
@@ -1395,20 +1435,35 @@ const App = () => {
                     </Typography>
                   )}
                 </Box>
-                <Button 
-                  variant="contained" 
-                  onClick={speak}
-                  disabled={!message || mode === 'babble' || mode === 'edit'}
-                  size="small"
-                  sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
-                >
-                  <VolumeUpIcon />
-                </Button>
-                <Button 
-                  variant="outlined" 
+                {messageClearedAfterPlay ? (
+                  <Button
+                    variant="contained"
+                    onClick={handleUndo}
+                    disabled={mode === 'babble' || mode === 'edit'}
+                    size="small"
+                    sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
+                  >
+                    <UndoIcon />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    onClick={speak}
+                    disabled={!message || mode === 'babble' || mode === 'edit'}
+                    size="small"
+                    sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
+                  >
+                    <VolumeUpIcon />
+                  </Button>
+                )}
+                <Button
+                  variant="outlined"
                   onClick={() => {
                     setMessage('');
                     setConvertedText(''); // Clear converted text when clearing message
+                    setMessageClearedAfterPlay(false);
+                    setLastSpokenMessage('');
+                    setLastConvertedText('');
                     if (mode === 'search') {
                       setCurrentPhonemeIndex(0);
                     }
@@ -1561,6 +1616,8 @@ const App = () => {
               onSpeakOnButtonPressChange={setSpeakOnButtonPress}
               speakWholeUtterance={speakWholeUtterance}
               onSpeakWholeUtteranceChange={setSpeakWholeUtterance}
+              clearMessageAfterPlay={clearMessageAfterPlay}
+              onClearMessageAfterPlayChange={setClearMessageAfterPlay}
               mode={mode}
               onModeChange={setMode}
               toolbarConfig={toolbarConfig}

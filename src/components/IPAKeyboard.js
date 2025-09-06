@@ -960,6 +960,8 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'up');
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               sx={{
                 position: 'absolute',
                 top: -9,
@@ -1001,6 +1003,8 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'down');
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               sx={{
                 position: 'absolute',
                 bottom: -9,
@@ -1041,7 +1045,9 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'left');
               }}
-              sx={{ 
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              sx={{
                 position: 'absolute',
                 top: '50%',
                 left: -9,
@@ -1080,7 +1086,9 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'right');
               }}
-              sx={{ 
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              sx={{
                 position: 'absolute',
                 top: '50%',
                 right: -9,
