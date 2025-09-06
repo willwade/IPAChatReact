@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { ThemeProvider, CssBaseline } from '@mui/material';
@@ -9,6 +9,7 @@ import notificationService from './services/NotificationService';
 import NotificationDisplay from './components/NotificationDisplay';
 
 const App = () => {
+  const textFieldRef = useRef(null);
   const [message, setMessage] = useState('');
   const [selectedVoice, setSelectedVoice] = useState('en-GB-LibbyNeural');
   const [selectedLanguage, setSelectedLanguage] = useState('en-GB');
@@ -107,6 +108,15 @@ const App = () => {
       
       // Clear the message after successful speech
       setMessage('');
+      
+      // Refocus the text field after speaking
+      setTimeout(() => {
+        if (textFieldRef.current) {
+          textFieldRef.current.focus();
+          // Also try clicking on it to ensure focus
+          textFieldRef.current.click();
+        }
+      }, 10);
     } catch (error) {
       console.error('Speech synthesis failed:', error);
       notificationService.showTTSError(error, 'speech synthesis');
@@ -121,6 +131,26 @@ const App = () => {
       speak();
     }
   };
+
+  // Global keydown handler to focus text field when typing
+  useEffect(() => {
+    const handleGlobalKeyDown = (event) => {
+      // Don't interfere with special keys or if already focused on an input
+      if (event.ctrlKey || event.altKey || event.metaKey || 
+          event.target.tagName === 'INPUT' || 
+          event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // If it's a printable character, focus the text field
+      if (event.key.length === 1 && textFieldRef.current) {
+        textFieldRef.current.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   return (
     <ThemeProvider theme={theme}>
@@ -143,6 +173,7 @@ const App = () => {
           width: '100%'
         }}>
           <TextField
+            inputRef={textFieldRef}
             fullWidth
             value={message}
             onChange={(e) => handleMessageChange(e.target.value)}
