@@ -331,6 +331,82 @@ const Settings = ({
     }
   };
 
+  const handleExampleLoad = async (example) => {
+    try {
+      const response = await fetch(`/examples/${example}.json`);
+      const data = await response.json();
+      validateBackupData(data);
+
+      // First update language and essential settings
+      if (data.selectedLanguage) {
+        localStorage.setItem('selectedLanguage', JSON.stringify(data.selectedLanguage));
+        onLanguageChange(data.selectedLanguage);
+      }
+
+      // Wait a moment for language change to take effect
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Reset background settings to default if not included in example
+      if (!data.backgroundSettings) {
+        const defaultBackground = {
+          type: 'color',
+          color: '#ffffff',
+          gradientStart: '#ffffff',
+          gradientEnd: '#000000',
+          gradientDirection: 'to bottom',
+          image: ''
+        };
+        localStorage.setItem('backgroundSettings', JSON.stringify(defaultBackground));
+        console.log('Reset background settings to default when loading example');
+      }
+
+      // Then update the rest of localStorage, but force mode to "build"
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'selectedLanguage') { // Skip language since we already set it
+          try {
+            // Force mode to "build" when loading examples
+            const finalValue = key === 'ipaMode' ? 'build' : value;
+            // Only JSON.stringify objects and booleans, store strings directly
+            if (typeof finalValue === 'boolean' || typeof finalValue === 'object') {
+              localStorage.setItem(key, JSON.stringify(finalValue));
+              if (key === 'ipaCustomizations') {
+                console.log('Stored IPA customizations for example:', Object.keys(finalValue).length, 'phonemes');
+              }
+            } else {
+              localStorage.setItem(key, finalValue);
+            }
+          } catch {
+            // Force mode to "build" when loading examples
+            const finalValue = key === 'ipaMode' ? 'build' : value;
+            localStorage.setItem(key, finalValue);
+          }
+        }
+      });
+
+      // Force mode to build when loading examples
+      onModeChange('build');
+
+      // Then update the state through props, but force mode to "build"
+      const modifiedData = { ...data, ipaMode: 'build' };
+      applySettings(modifiedData);
+
+      // Close settings dialog if open
+      onClose();
+
+      // Show success message
+      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
+
+      // Reload the page after a delay to ensure IPA customizations are applied
+      setTimeout(() => {
+        window.location.reload();
+      }, 200);
+
+    } catch (error) {
+      console.error('Error loading example:', error);
+      alert('Failed to load example.');
+    }
+  };
+
   const handleResetAll = () => {
     if (window.confirm('Are you sure you want to reset all settings to default? This will clear all customizations and cannot be undone.')) {
       try {
@@ -416,82 +492,6 @@ const Settings = ({
         console.error('Error resetting settings:', error);
         alert('Failed to reset settings.');
       }
-    }
-  };
-
-  const handleExampleLoad = async (example) => {
-    try {
-      const response = await fetch(`/examples/${example}.json`);
-      const data = await response.json();
-      validateBackupData(data);
-
-      // First update language and essential settings
-      if (data.selectedLanguage) {
-        localStorage.setItem('selectedLanguage', JSON.stringify(data.selectedLanguage));
-        onLanguageChange(data.selectedLanguage);
-      }
-
-      // Wait a moment for language change to take effect
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Reset background settings to default if not included in example
-      if (!data.backgroundSettings) {
-        const defaultBackground = {
-          type: 'color',
-          color: '#ffffff',
-          gradientStart: '#ffffff',
-          gradientEnd: '#000000',
-          gradientDirection: 'to bottom',
-          image: ''
-        };
-        localStorage.setItem('backgroundSettings', JSON.stringify(defaultBackground));
-        console.log('Reset background settings to default when loading example');
-      }
-
-      // Then update the rest of localStorage, but force mode to "build"
-      Object.entries(data).forEach(([key, value]) => {
-        if (key !== 'selectedLanguage') { // Skip language since we already set it
-          try {
-            // Force mode to "build" when loading examples
-            const finalValue = key === 'ipaMode' ? 'build' : value;
-            // Only JSON.stringify objects and booleans, store strings directly
-            if (typeof finalValue === 'boolean' || typeof finalValue === 'object') {
-              localStorage.setItem(key, JSON.stringify(finalValue));
-              if (key === 'ipaCustomizations') {
-                console.log('Stored IPA customizations for example:', Object.keys(finalValue).length, 'phonemes');
-              }
-            } else {
-              localStorage.setItem(key, finalValue);
-            }
-          } catch {
-            // Force mode to "build" when loading examples
-            const finalValue = key === 'ipaMode' ? 'build' : value;
-            localStorage.setItem(key, finalValue);
-          }
-        }
-      });
-
-      // Force mode to build when loading examples
-      onModeChange('build');
-
-      // Then update the state through props, but force mode to "build"
-      const modifiedData = { ...data, ipaMode: 'build' };
-      applySettings(modifiedData);
-
-      // Close settings dialog if open
-      onClose();
-
-      // Show success message
-      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
-
-      // Reload the page after a delay to ensure IPA customizations are applied
-      setTimeout(() => {
-        window.location.reload();
-      }, 200);
-
-    } catch (error) {
-      console.error('Error loading example:', error);
-      alert('Failed to load example.');
     }
   };
 
