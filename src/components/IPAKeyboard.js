@@ -1,28 +1,33 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Switch, FormControlLabel, Button, Divider, CircularProgress } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress, Typography } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import { ChromePicker } from 'react-color';
 import { detailedPhoneticData as phoneticData } from '../data/phoneticData';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import EditMode from './EditMode';
-import EditPhonemeDialog from './EditPhonemeDialog';
-import './PhonemeGrid.css';
+import CloseIcon from '@mui/icons-material/Close';
+
+const debounce = (func, wait) => {
+  let timeout;
+  return function (...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+};
 
 const IPAKeyboard = ({
   mode = 'build',
   onPhonemeClick,
   onPhonemeSwap,
   disabledPhonemes,
+  buttonScale = 1,
   buttonSpacing = 1,
   selectedLanguage = 'en-GB',
-  minButtonSize = 75,
-  layoutMode = 'grid',
-  fixedLayout = false,
+  autoScale = true,
   touchDwellEnabled = false,
   touchDwellTime = 800,
-  backgroundSettings,
-  onBackgroundSave,
   dwellIndicatorType = 'border',
   dwellIndicatorColor = 'primary',
   hapticFeedback = false,
@@ -30,6 +35,7 @@ const IPAKeyboard = ({
   onStressMarkersChange,
 }) => {
   const [customizations, setCustomizations] = useState({});
+  const [calculatedScale, setCalculatedScale] = useState(buttonScale);
   const [editMode, setEditMode] = useState('move'); 
   const [selectedPhoneme, setSelectedPhoneme] = useState(null);
   const [phonemeOrder, setPhonemeOrder] = useState(() => {
@@ -43,17 +49,9 @@ const IPAKeyboard = ({
     }
     return {};
   });
-  // Persist phoneme order whenever it changes so edits survive layout switches
-  useEffect(() => {
-    try {
-      localStorage.setItem('phonemeOrder', JSON.stringify(phonemeOrder));
-    } catch (err) {
-      console.error('Failed to save phoneme order', err);
-    }
-  }, [phonemeOrder]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [backgroundEditOpen, setBackgroundEditOpen] = useState(false);
   const containerRef = useRef(null);
+  const [isJiggling, setIsJiggling] = useState(false);
   const [touchStartTime, setTouchStartTime] = useState(null);
   const [touchPosition, setTouchPosition] = useState(null);
   const [dwellProgress, setDwellProgress] = useState(0);
@@ -61,99 +59,97 @@ const IPAKeyboard = ({
   const [isSelecting, setIsSelecting] = useState(false);
   const animationFrameRef = useRef();
   const longPressTimer = useRef(null);
+  const [hoveredPhoneme, setHoveredPhoneme] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedPhoneme, setDraggedPhoneme] = useState(null);
+  const [draggedElement, setDraggedElement] = useState(null);
+  const [gridColumns, setGridColumns] = useState(8);
+  const [baseButtonSize, setBaseButtonSize] = useState(60);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [validLanguage, setValidLanguage] = useState('en-GB');
-  const [gridConfig, setGridConfig] = useState(null);
 
-  // State for tracking window size for responsive behavior
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const calculateOptimalGrid = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || !phoneticData || !phoneticData[validLanguage]) return;
 
-  // Helper functions for responsive button sizing
-  const getMinButtonSize = useCallback(() => {
-    // Use the configurable minimum button size as base, with responsive adjustments
-    const baseSize = minButtonSize;
-    if (windowWidth <= 480) return `${Math.max(baseSize - 15, 30)}px`;
-    if (windowWidth <= 768) return `${Math.max(baseSize - 10, 35)}px`;
-    if (windowWidth <= 1024) return `${Math.max(baseSize - 5, 40)}px`;
-    return `${baseSize}px`;
-  }, [minButtonSize, windowWidth]);
+    const rect = container.getBoundingClientRect();
+    const containerWidth = rect.width;
+    const containerHeight = rect.height;
+    
+    if (containerWidth <= 0 || containerHeight <= 0) return;
+    
+    // Account for container padding
+    const padding = Math.max(buttonSpacing * 2, 8); // Minimum 8px padding
+    const effectiveWidth = containerWidth - padding;
+    const effectiveHeight = containerHeight - padding;
+    
+    // Get total number of buttons
+    const totalButtons = Object.values(phoneticData[validLanguage]?.groups || {})
+      .reduce((sum, group) => sum + group.phonemes.length, 0);
 
-  const getMaxButtonSize = useCallback(() => {
-    // Calculate max size based on minimum size with better scaling
-    const baseSize = minButtonSize;
-    if (windowWidth <= 480) return `${baseSize + 5}px`;
-    if (windowWidth <= 768) return `${baseSize + 15}px`;
-    if (windowWidth <= 1024) return `${baseSize + 25}px`;
-    if (windowWidth <= 1440) return `${baseSize + 35}px`;
-    return `${baseSize + 45}px`; // Larger buttons for big screens
-  }, [minButtonSize, windowWidth]);
+    if (totalButtons === 0) return;
 
-  // Check if we should use list layout
-  const shouldUseListLayout = useCallback(() => {
-    return layoutMode === 'list' && windowWidth <= 480;
-  }, [layoutMode, windowWidth]);
+    // Start with a base button size that's proportional to screen size
+    const calculatedBaseButtonSize = Math.min(
+      Math.max(effectiveWidth / 12, 30), // Minimum 30px, scale with width
+      Math.max(effectiveHeight / 8, 30)  // Minimum 30px, scale with height  
+    );
+    
+    const gap = Math.max(buttonSpacing, 2); // Minimum 2px gap
 
-  // Calculate fixed layout columns based on phoneme order structure
-  const getFixedLayoutColumns = useCallback(() => {
-    if (!fixedLayout) return null;
-
-    const savedOrder = phonemeOrder[validLanguage];
-    if (!savedOrder || !Array.isArray(savedOrder)) return null;
-
-    // For QWERTY-style layouts, detect the pattern by looking for empty cells
-    // and calculating the likely column count
-    const hasEmptyCells = savedOrder.includes('');
-    if (hasEmptyCells) {
-      // Common QWERTY-style layouts typically have 12 columns
-      // We can detect this by finding the pattern of non-empty cells
-      const totalCells = savedOrder.length;
-
-      // Try common column counts and see which makes most sense
-      const possibleColumns = [10, 11, 12, 13, 14, 15];
-      for (const cols of possibleColumns) {
-        const rows = Math.ceil(totalCells / cols);
-        if (rows * cols === totalCells) {
-          return cols;
-        }
+    // Calculate maximum possible columns based on proportional sizing
+    const maxColumns = Math.max(1, Math.floor((effectiveWidth + gap) / (calculatedBaseButtonSize + gap)));
+    
+    let bestColumns = 1;
+    let bestScale = 0;
+    
+    // Find the column configuration that gives the best scale
+    for (let cols = 1; cols <= Math.min(maxColumns, totalButtons); cols++) {
+      const rows = Math.ceil(totalButtons / cols);
+      
+      // Calculate required grid size
+      const requiredWidth = cols * calculatedBaseButtonSize + (cols - 1) * gap;
+      const requiredHeight = rows * calculatedBaseButtonSize + (rows - 1) * gap;
+      
+      // Calculate scale to fit both dimensions
+      const scaleX = effectiveWidth / requiredWidth;
+      const scaleY = effectiveHeight / requiredHeight;
+      const scale = Math.min(scaleX, scaleY);
+      
+      if (scale > bestScale) {
+        bestScale = scale;
+        bestColumns = cols;
       }
-
-      // Default to 12 for QWERTY-style layouts
-      return 12;
     }
 
-    return null;
-  }, [fixedLayout, phonemeOrder, validLanguage]);
+    setGridColumns(bestColumns);
+    setBaseButtonSize(calculatedBaseButtonSize);
+    setCalculatedScale(bestScale * 0.95); // 5% safety margin
+  }, [buttonSpacing, validLanguage]);
 
-  // Check if we should use fixed layout
-  const shouldUseFixedLayout = useCallback(() => {
-    return fixedLayout && getFixedLayoutColumns() !== null;
-  }, [fixedLayout, getFixedLayoutColumns]);
-
-  // Get the actual number of columns from the rendered grid
-  const getDynamicColumns = useCallback(() => {
-    const grid = containerRef.current?.querySelector('.phoneme-grid');
-    if (!grid) return null;
-    const style = window.getComputedStyle(grid);
-    const columns = style.gridTemplateColumns.split(' ').length;
-    return columns;
-  }, []);
-
-  // Track window resize for responsive behavior
   useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
+    const resizeObserver = new ResizeObserver((entries) => {
+      requestAnimationFrame(() => {
+        calculateOptimalGrid();
+      });
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // Initial calculation
+    calculateOptimalGrid();
+    
+    return () => {
+      resizeObserver.disconnect();
     };
+  }, [calculateOptimalGrid]);
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-
-
-
+  useEffect(() => {
+    calculateOptimalGrid();
+  }, [calculateOptimalGrid, autoScale, buttonScale]);
 
   useEffect(() => {
     const saved = localStorage.getItem('ipaCustomizations');
@@ -165,22 +161,12 @@ const IPAKeyboard = ({
         console.error('Error loading customizations:', e);
       }
     }
-
-    // Load grid configuration
-    const savedGridConfig = localStorage.getItem('gridConfig');
-    if (savedGridConfig) {
-      try {
-        const parsedGridConfig = JSON.parse(savedGridConfig);
-        setGridConfig(parsedGridConfig);
-      } catch (e) {
-        console.error('Error loading grid config:', e);
-      }
-    }
-
   }, []);
 
-
-
+  useEffect(() => {
+    // Reset jiggling state when mode changes
+    setIsJiggling(false);
+  }, [mode]);
 
   useEffect(() => {
     return () => {
@@ -190,11 +176,64 @@ const IPAKeyboard = ({
     };
   }, []);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const buttons = container.querySelectorAll('.MuiButton-root');
+    if (buttons.length > 1) {
+      const button1 = buttons[0].getBoundingClientRect();
+      const button2 = buttons[1].getBoundingClientRect();
+      const actualSpacing = button2.left - (button1.left + button1.width);
+      console.log('Actual spacing between buttons:', actualSpacing);
+    }
+  }, [buttonSpacing, gridColumns]);
 
 
+  useEffect(() => {
+    if (!autoScale) {
+      setCalculatedScale(buttonScale);
+      return;
+    }
 
+    const debouncedCalculateGrid = debounce(calculateOptimalGrid, 150);
 
+    // Initial scale calculation with a delay to ensure container is ready
+    const initialTimer = setTimeout(() => {
+      calculateOptimalGrid();
+    }, 100);
 
+    // Add resize listener
+    window.addEventListener('resize', debouncedCalculateGrid);
+    
+    // Add orientation change listener
+    window.addEventListener('orientationchange', debouncedCalculateGrid);
+    
+    // Add visual viewport change listener for mobile browsers
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', debouncedCalculateGrid);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', debouncedCalculateGrid);
+      window.removeEventListener('orientationchange', debouncedCalculateGrid);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', debouncedCalculateGrid);
+      }
+      clearTimeout(initialTimer);
+    };
+  }, [calculateOptimalGrid, autoScale, buttonScale, buttonSpacing, selectedLanguage, mode]);
+
+  // Add an additional effect to handle container mounting
+  useEffect(() => {
+    if (autoScale && containerRef.current) {
+      // Force a recalculation after a short delay to ensure container is properly sized
+      const timer = setTimeout(() => {
+        calculateOptimalGrid();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [containerRef.current, autoScale, calculateOptimalGrid]);
 
   useEffect(() => {
     // Validate phoneticData and language on mount and when selectedLanguage changes
@@ -214,7 +253,13 @@ const IPAKeyboard = ({
       setIsLoading(false);
       setError(null);
     }
-  }, [selectedLanguage, validLanguage]);
+  }, [selectedLanguage, phoneticData]);
+
+  const triggerHapticFeedback = () => {
+    if (hapticFeedback && window.navigator.vibrate) {
+      window.navigator.vibrate(50); // Short vibration
+    }
+  };
 
   const handleDragStart = (event, phoneme, element) => {
     if (editMode !== 'move') return;
@@ -240,14 +285,110 @@ const IPAKeyboard = ({
       }
     }
     
-      setDraggedPhoneme(phoneme);
-      setIsDragging(true);
+    setDraggedPhoneme(phoneme);
+    setDraggedElement(element);
+    setIsDragging(true);
     
     // Add dragging class to element
     element.classList.add('dragging');
   };
 
+  const handleDragOver = (event) => {
+    if (!isDragging || editMode !== 'move') return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+
+    const targetButton = event.target.closest('[data-phoneme]');
+    if (!targetButton) return;
+
+    const targetPhoneme = targetButton.dataset.phoneme;
+    if (targetPhoneme !== draggedPhoneme) {
+      // Add visual indicator for drop target
+      const buttons = document.querySelectorAll('[data-phoneme]');
+      buttons.forEach(button => {
+        button.classList.remove('drop-target');
+        button.classList.remove('drop-target-before');
+        button.classList.remove('drop-target-after');
+      });
+
+      const rect = targetButton.getBoundingClientRect();
+      const isBeforeMiddle = event.clientX < rect.left + rect.width / 2;
+      
+      targetButton.classList.add('drop-target');
+      targetButton.classList.add(isBeforeMiddle ? 'drop-target-before' : 'drop-target-after');
+      setHoveredPhoneme(targetPhoneme);
+    }
+  };
+
+  const handleDrop = (event) => {
+    if (!isDragging || editMode !== 'move') return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+
+    const targetButton = event.target.closest('[data-phoneme]');
+    if (!targetButton) return;
+
+    const targetPhoneme = targetButton.dataset.phoneme;
+    if (targetPhoneme !== draggedPhoneme) {
+      // Get current order
+      const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
+      const fromIndex = currentOrder.indexOf(draggedPhoneme);
+      const toIndex = currentOrder.indexOf(targetPhoneme);
+      
+      if (fromIndex !== -1 && toIndex !== -1) {
+        // Create new order
+        const newOrder = [...currentOrder];
+        newOrder.splice(fromIndex, 1);
+        newOrder.splice(toIndex, 0, draggedPhoneme);
+        
+        // Update order
+        setPhonemeOrder(prev => ({
+          ...prev,
+          [selectedLanguage]: newOrder
+        }));
+        
+        // Save to localStorage
+        localStorage.setItem('phonemeOrder', JSON.stringify({
+          ...phonemeOrder,
+          [selectedLanguage]: newOrder
+        }));
+      }
+    }
+
+    // Clean up
+    const buttons = document.querySelectorAll('[data-phoneme]');
+    buttons.forEach(button => {
+      button.classList.remove('dragging');
+      button.classList.remove('drop-target');
+      button.classList.remove('drop-target-before');
+      button.classList.remove('drop-target-after');
+    });
+
+    setIsDragging(false);
+    setDraggedPhoneme(null);
+    setDraggedElement(null);
+    setHoveredPhoneme(null);
+  };
+
   // Add drag end handler to clean up if drop doesn't occur
+  const handleDragEnd = (event) => {
+    const buttons = document.querySelectorAll('[data-phoneme]');
+    buttons.forEach(button => {
+      button.classList.remove('dragging');
+      button.classList.remove('drop-target');
+      button.classList.remove('drop-target-before');
+      button.classList.remove('drop-target-after');
+    });
+
+    setIsDragging(false);
+    setDraggedPhoneme(null);
+    setDraggedElement(null);
+    setHoveredPhoneme(null);
+  };
+
   // Add styles for drag and drop
   const dragDropStyles = {
     '& .MuiButton-root.dragging': {
@@ -282,7 +423,7 @@ const IPAKeyboard = ({
   const handleTouchStart = (event, phoneme) => {
     // For non-edit modes, immediately trigger the click
     if (mode !== 'edit') {
-      // Don't call preventDefault() - use touch position flag instead
+      event.preventDefault(); // Prevent the subsequent click event
       // Set a flag to prevent double triggering
       setTouchPosition({ x: event.touches[0].clientX, y: event.touches[0].clientY });
       handlePhonemeClick(phoneme, event);
@@ -291,7 +432,7 @@ const IPAKeyboard = ({
 
     // Edit mode handling
     if (editMode === 'move') {
-      // Don't call preventDefault() - React uses passive listeners
+      event.preventDefault(); // Prevent default on the actual event
       const touch = event.touches[0];
       const element = event.currentTarget;
       setTouchPosition({ x: touch.clientX, y: touch.clientY });
@@ -336,8 +477,10 @@ const IPAKeyboard = ({
       return;
     }
 
-    // Don't call preventDefault() on React synthetic events
-    // React handles this appropriately
+    // Prevent any default behavior that might interfere
+    if (e) {
+      e.preventDefault();
+    }
 
     if (mode === 'edit') {
       if (editMode === 'customize') {
@@ -369,10 +512,10 @@ const IPAKeyboard = ({
       const targetButton = targetElement.closest('[data-phoneme]');
       if (!targetButton) return;
 
-        const targetPhoneme = targetButton.dataset.phoneme;
-        if (targetPhoneme !== draggedPhoneme) {
-          // Placeholder for hover logic if needed
-        }
+      const targetPhoneme = targetButton.dataset.phoneme;
+      if (targetPhoneme !== draggedPhoneme) {
+        setHoveredPhoneme(targetPhoneme);
+      }
     }
   };
 
@@ -399,21 +542,24 @@ const IPAKeyboard = ({
         onPhonemeSwap?.(draggedPhoneme, targetPhoneme);
       }
 
-        setIsDragging(false);
-        setDraggedPhoneme(null);
+      setIsDragging(false);
+      setDraggedPhoneme(null);
+      setDraggedElement(null);
+      setHoveredPhoneme(null);
     }
 
     cancelDwell();
   };
 
   const handleLongPress = (phoneme) => {
-      if (mode === 'edit') {
-        // Clear any existing timers
-        if (longPressTimer.current) {
-          clearTimeout(longPressTimer.current);
-          longPressTimer.current = null;
-        }
+    if (mode === 'edit') {
+      setIsJiggling(true);
+      // Clear any existing timers
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
       }
+    }
   };
 
   const handleMouseDown = (e, phoneme) => {
@@ -444,6 +590,37 @@ const IPAKeyboard = ({
         clearTimeout(longPressTimer.current);
       }
       setCurrentPhoneme(null);
+    }
+  };
+
+  const handleButtonClick = (phoneme) => {
+    // Don't handle click if it was triggered by touch
+    if (touchPosition) {
+      setTouchPosition(null);
+      return;
+    }
+
+    if (mode === 'edit') {
+      if (editMode === 'customize') {
+        setSelectedPhoneme(phoneme);
+        setEditDialogOpen(true);
+      } else if (editMode === 'move') {
+        // Handle move mode if needed
+      }
+    } else {
+      // Play audio immediately
+      onPhonemeClick?.(phoneme);
+      
+      // Visual feedback after audio starts
+      requestAnimationFrame(() => {
+        const button = document.querySelector(`[data-phoneme="${phoneme}"]`);
+        if (button) {
+          button.style.transform = 'scale(0.95)';
+          setTimeout(() => {
+            button.style.transform = 'none';
+          }, 100);
+        }
+      });
     }
   };
 
@@ -484,7 +661,7 @@ const IPAKeyboard = ({
 
     // Get stress markers list
     const stressMarkers = languageData.groups.stress?.phonemes || [];
-    // Removed console log to prevent render loop
+    console.log('Available stress markers:', stressMarkers);
 
     // Get base phoneme list (either from saved order or default)
     const savedOrder = phonemeOrder[validLanguage];
@@ -493,13 +670,17 @@ const IPAKeyboard = ({
     if (savedOrder && Array.isArray(savedOrder)) {
       basePhonemes = savedOrder;
     } else {
-      // If no saved order, get all phonemes including stress markers
-      basePhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
+      // If no saved order, get consonants first, then vowels (for English)
+      if (validLanguage === 'en-GB' || validLanguage === 'en-US') {
+        basePhonemes = [
+          ...(languageData.groups.consonants?.phonemes || []),
+          ...(languageData.groups.vowels?.phonemes || [])
+        ];
+      } else {
+        // For other languages, maintain original order
+        basePhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
+      }
     }
-
-    // Check if blank cells are allowed for this language
-    const customConfig = gridConfig?.[validLanguage];
-    const allowBlankCells = customConfig?.allowBlankCells || false;
 
     // If showing stress markers, ensure they're included in the list
     if (showStressMarkers) {
@@ -514,120 +695,83 @@ const IPAKeyboard = ({
       basePhonemes = basePhonemes.filter(phoneme => !stressMarkers.includes(phoneme));
     }
 
-    // If blank cells are not allowed, filter out empty strings
-    if (!allowBlankCells) {
-      basePhonemes = basePhonemes.filter(phoneme => phoneme !== '');
-    }
-
-    // Removed console logs to prevent render loop
+    console.log('Showing stress markers:', showStressMarkers);
+    console.log('Filtered phonemes:', basePhonemes);
     return basePhonemes;
-  }, [validLanguage, showStressMarkers, phonemeOrder, gridConfig]);
+  }, [validLanguage, showStressMarkers, phonemeOrder]);
 
   // Update effect to handle showStressMarkers changes
   useEffect(() => {
+    console.log('showStressMarkers changed:', showStressMarkers);
+    
     // Get the current phoneme list
     const languageData = phoneticData[validLanguage];
     if (!languageData?.groups) return;
 
     // Get stress markers list
     const stressMarkers = languageData.groups.stress?.phonemes || [];
-
+    console.log('Stress markers from data:', stressMarkers);
+    
     // Get current order or default list
     const currentOrder = phonemeOrder[validLanguage];
     let basePhonemes;
-
+    
     if (currentOrder && Array.isArray(currentOrder)) {
       basePhonemes = [...currentOrder];
     } else {
       basePhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
     }
 
-    // Check if we need to update the phoneme order
-    let needsUpdate = false;
-    let updatedPhonemes = [...basePhonemes];
-
     // Update phonemes based on showStressMarkers
     if (showStressMarkers) {
       // Add any missing stress markers
       stressMarkers.forEach(marker => {
-        if (!updatedPhonemes.includes(marker)) {
-          updatedPhonemes.push(marker);
-          needsUpdate = true;
+        if (!basePhonemes.includes(marker)) {
+          basePhonemes.push(marker);
         }
       });
     } else {
       // Remove stress markers
-      const filteredPhonemes = updatedPhonemes.filter(phoneme => !stressMarkers.includes(phoneme));
-      if (filteredPhonemes.length !== updatedPhonemes.length) {
-        updatedPhonemes = filteredPhonemes;
-        needsUpdate = true;
-      }
+      basePhonemes = basePhonemes.filter(phoneme => !stressMarkers.includes(phoneme));
     }
 
-    // Only update if there's actually a change to prevent infinite loops
-    if (needsUpdate) {
-      setPhonemeOrder(prev => ({
-        ...prev,
-        [validLanguage]: updatedPhonemes
-      }));
-    }
+    console.log('Setting new phoneme order. Show stress markers:', showStressMarkers);
+    console.log('Updated phonemes:', basePhonemes);
 
-    // Grid recalculation is handled by other useEffects
-  }, [showStressMarkers, validLanguage, phonemeOrder]);
+    // Update the phoneme order
+    setPhonemeOrder(prev => ({
+      ...prev,
+      [validLanguage]: basePhonemes
+    }));
+
+    // Force grid recalculation
+    calculateOptimalGrid();
+  }, [showStressMarkers, validLanguage]);
 
   const handlePhonemeMove = useCallback((phoneme, direction) => {
-    // Get current phonemes directly from state to avoid circular dependency
-    const currentOrder = phonemeOrder[validLanguage];
-    const languageData = phoneticData[validLanguage];
-
-    let currentPhonemes;
-    if (currentOrder && Array.isArray(currentOrder)) {
-      currentPhonemes = [...currentOrder];
-    } else if (languageData?.groups) {
-      currentPhonemes = Object.values(languageData.groups).flatMap(group => group.phonemes);
-    } else {
-      return;
-    }
-
+    const currentPhonemes = getOrderedPhonemes();
     const currentIndex = currentPhonemes.indexOf(phoneme);
+    
     if (currentIndex === -1) return;
-
+    
     const newPhonemes = [...currentPhonemes];
-
-    // Calculate grid dimensions for up/down movement
-    const fixedColumns = getFixedLayoutColumns();
-    const dynamicColumns = getDynamicColumns();
-    const columnsPerRow = fixedColumns || dynamicColumns || Math.ceil(Math.sqrt(currentPhonemes.length));
-
     if (direction === 'left' && currentIndex > 0) {
-      [newPhonemes[currentIndex - 1], newPhonemes[currentIndex]] =
+      [newPhonemes[currentIndex - 1], newPhonemes[currentIndex]] = 
       [newPhonemes[currentIndex], newPhonemes[currentIndex - 1]];
     } else if (direction === 'right' && currentIndex < newPhonemes.length - 1) {
-      [newPhonemes[currentIndex], newPhonemes[currentIndex + 1]] =
+      [newPhonemes[currentIndex], newPhonemes[currentIndex + 1]] = 
       [newPhonemes[currentIndex + 1], newPhonemes[currentIndex]];
-    } else if (direction === 'up' && currentIndex >= columnsPerRow) {
-      const upIndex = currentIndex - columnsPerRow;
-      [newPhonemes[upIndex], newPhonemes[currentIndex]] =
-      [newPhonemes[currentIndex], newPhonemes[upIndex]];
-    } else if (direction === 'down' && currentIndex + columnsPerRow < newPhonemes.length) {
-      const downIndex = currentIndex + columnsPerRow;
-      [newPhonemes[downIndex], newPhonemes[currentIndex]] =
-      [newPhonemes[currentIndex], newPhonemes[downIndex]];
     }
-
-    const newPhonemeOrder = {
-      ...phonemeOrder,
+    
+    setPhonemeOrder(prev => ({
+      ...prev,
       [validLanguage]: newPhonemes
-    };
-
-    setPhonemeOrder(newPhonemeOrder);
-
-    // Save to localStorage immediately
-    localStorage.setItem('phonemeOrder', JSON.stringify(newPhonemeOrder));
-  }, [validLanguage, phonemeOrder, getFixedLayoutColumns, getDynamicColumns]);
+    }));
+  }, [validLanguage, getOrderedPhonemes]);
 
   const handleStressMarkersToggle = (e) => {
     const newValue = e.target.checked;
+    console.log('Toggle stress markers:', newValue);
     if (onStressMarkersChange) {
       onStressMarkersChange(newValue);
     }
@@ -645,6 +789,37 @@ const IPAKeyboard = ({
     return 'inherit';
   };
 
+  const compressImage = (base64String, maxWidth = 200) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64String;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate new dimensions maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Using JPEG with 70% quality
+      };
+    });
+  };
+
+  const estimateStorageSize = (obj) => {
+    const str = JSON.stringify(obj);
+    return new Blob([str]).size;
+  };
+
   const saveCustomization = async (phoneme, customization) => {
     try {
       console.log('Saving customization for', phoneme, customization);
@@ -658,6 +833,43 @@ const IPAKeyboard = ({
     } catch (error) {
       console.error('Error saving customization:', error);
       alert('Error saving customization. Please try again.');
+    }
+  };
+
+  const handleImageUploadBase = async (event, setFieldValue) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check file size before processing
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('Image is too large. Please choose an image under 5MB.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          // Start with more aggressive compression for larger files
+          const initialMaxWidth = file.size > 1024 * 1024 ? 150 : 200;
+          const compressed = await compressImage(reader.result, initialMaxWidth);
+          
+          // Check if the compressed result would fit
+          const testCustomizations = {
+            ...customizations,
+            test: { image: compressed }
+          };
+          
+          if (estimateStorageSize(testCustomizations) > 4.5 * 1024 * 1024) {
+            alert('Even after compression, this image would be too large. Please try a smaller image.');
+            return;
+          }
+          
+          setFieldValue('image', compressed);
+        } catch (error) {
+          console.error('Error processing image:', error);
+          alert('Error processing image. Please try a different image.');
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -707,145 +919,50 @@ const IPAKeyboard = ({
   };
 
   const renderButtonContent = (phoneme, customization, getOpacity) => {
-    // In move mode, add move controls (for both image and text buttons)
+    if (customization.image) {
+      return (
+        <img 
+          src={customization.image} 
+          alt={phoneme} 
+          style={{ 
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: getOpacity(),
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }} 
+        />
+      );
+    }
+
+    // In move mode, add move controls
     if (mode === 'edit' && editMode === 'move') {
       const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
       const currentIndex = currentOrder.indexOf(phoneme);
       const canMoveLeft = currentIndex > 0;
       const canMoveRight = currentIndex < currentOrder.length - 1;
 
-      // Calculate grid dimensions for up/down movement
-      const fixedColumns = getFixedLayoutColumns();
-      const dynamicColumns = getDynamicColumns();
-      const columnsPerRow = fixedColumns || dynamicColumns || Math.ceil(Math.sqrt(currentOrder.length));
-      const canMoveUp = currentIndex >= columnsPerRow;
-      const canMoveDown = currentIndex + columnsPerRow < currentOrder.length;
-
       return (
-        <Box sx={{
-          position: 'relative',
-          width: '100%',
+        <Box sx={{ 
+          position: 'relative', 
+          width: '100%', 
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          {/* Render image if available */}
-          {customization.image && (
-            <img
-              src={customization.image}
-              alt={phoneme}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                opacity: getOpacity(),
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            />
-          )}
-          {/* Render text if no image or if label should be shown */}
-          {!customization.image && !customization.hideLabel && (customization.label || phoneme)}
-
-          {/* Up arrow */}
-          {canMoveUp && (
-            <Box
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePhonemeMove(phoneme, 'up');
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              sx={{
-                position: 'absolute',
-                top: -9,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                backgroundColor: 'white',
-                boxShadow: 2,
-                opacity: 1,
-                zIndex: 10,
-                padding: '3px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'text.primary',
-                border: '1px solid',
-                borderColor: 'divider',
-                width: '18px',
-                height: '18px',
-                '& .MuiSvgIcon-root': {
-                  fontSize: '14px'
-                },
-                '&:hover': {
-                  backgroundColor: 'white',
-                  opacity: 0.9,
-                  boxShadow: 3
-                }
-              }}
-            >
-              <KeyboardArrowUpIcon fontSize="small" />
-            </Box>
-          )}
-
-          {/* Down arrow */}
-          {canMoveDown && (
-            <Box
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePhonemeMove(phoneme, 'down');
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              sx={{
-                position: 'absolute',
-                bottom: -9,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                backgroundColor: 'white',
-                boxShadow: 2,
-                opacity: 1,
-                zIndex: 10,
-                padding: '3px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'text.primary',
-                border: '1px solid',
-                borderColor: 'divider',
-                width: '18px',
-                height: '18px',
-                '& .MuiSvgIcon-root': {
-                  fontSize: '14px'
-                },
-                '&:hover': {
-                  backgroundColor: 'white',
-                  opacity: 0.9,
-                  boxShadow: 3
-                }
-              }}
-            >
-              <KeyboardArrowDownIcon fontSize="small" />
-            </Box>
-          )}
-
+          {!customization.hideLabel && phoneme}
           {canMoveLeft && (
             <Box
               onClick={(e) => {
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'left');
               }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              sx={{
+              sx={{ 
                 position: 'absolute',
                 top: '50%',
                 left: -9,
@@ -884,9 +1001,7 @@ const IPAKeyboard = ({
                 e.stopPropagation();
                 handlePhonemeMove(phoneme, 'right');
               }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              sx={{
+              sx={{ 
                 position: 'absolute',
                 top: '50%',
                 right: -9,
@@ -923,42 +1038,11 @@ const IPAKeyboard = ({
       );
     }
 
-    // If not in move mode, render image or text normally
-    if (customization.image) {
-      return (
-        <img
-          src={customization.image}
-          alt={phoneme}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: getOpacity(),
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-          }}
-        />
-      );
-    }
-
     // If no image and not in move mode, show the phoneme text unless hideLabel is true
-    return !customization.hideLabel ? (customization.label || phoneme) : null;
+    return !customization.hideLabel ? phoneme : null;
   };
 
   const renderPhonemeButton = (phoneme, group) => {
-    // Handle blank cells - render invisible placeholder
-    if (phoneme === '') {
-      return (
-        <div
-          key={`blank-${Math.random()}`}
-          className="blank-cell"
-        />
-      );
-    }
-
     const isDisabled = typeof disabledPhonemes === 'function' 
       ? disabledPhonemes(phoneme) 
       : disabledPhonemes?.includes(phoneme);
@@ -967,13 +1051,10 @@ const IPAKeyboard = ({
     
     // Calculate opacity based on mode and button state
     const getOpacity = () => {
-      // Use custom opacity if set, otherwise use default behavior
-      const baseOpacity = customization.opacity !== undefined ? customization.opacity : 1;
-
       if (mode === 'edit') {
-        return customization.hideButton ? 0.3 : baseOpacity;
+        return customization.hideButton ? 0.3 : 1;
       }
-      return customization.hideButton ? 0 : (isDisabled ? 0.5 : baseOpacity);
+      return customization.hideButton ? 0 : (isDisabled ? 0.5 : 1);
     };
 
     return (
@@ -991,10 +1072,10 @@ const IPAKeyboard = ({
         disableRipple={true}
         sx={(theme) => ({
           minWidth: 'unset',
-          width: '100%',
-          height: '100%',
+          width: `${baseButtonSize}px`,
+          height: `${baseButtonSize}px`,
           p: 0.5,
-          fontSize: '1.1rem',
+          fontSize: '1rem',
           fontFamily: '"Noto Sans", sans-serif',
           backgroundColor: color,
           color: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.87)' : '#fff',
@@ -1009,15 +1090,7 @@ const IPAKeyboard = ({
           position: 'relative',
           '&:hover': {
             backgroundColor: color,
-            opacity: (() => {
-              const baseOpacity = customization.opacity !== undefined ? customization.opacity : 1;
-              const hoverOpacity = Math.min(baseOpacity * 0.9, 0.9); // Reduce opacity slightly on hover
-
-              if (mode === 'edit') {
-                return customization.hideButton ? 0.4 : hoverOpacity;
-              }
-              return isDisabled ? 0.5 : hoverOpacity;
-            })(),
+            opacity: mode === 'edit' ? (customization.hideButton ? 0.4 : 0.9) : (isDisabled ? 0.5 : 0.9),
           },
           '&:active': {
             transform: 'scale(0.95)',
@@ -1031,6 +1104,182 @@ const IPAKeyboard = ({
       >
         {renderButtonContent(phoneme, customization, getOpacity)}
       </Button>
+    );
+  };
+
+  const EditPhonemeDialog = ({ open, onClose, phoneme }) => {
+    const customization = customizations[phoneme] || {};
+    const [hideLabel, setHideLabel] = useState(customization.hideLabel || false);
+    const [hideButton, setHideButton] = useState(customization.hideButton || false);
+    const [showColorPicker, setShowColorPicker] = useState(false);
+    const [customColor, setCustomColor] = useState(customization.customColor || null);
+    const [previewSrc, setPreviewSrc] = useState(customization.image || '');
+
+    // Get current order and position for move controls
+    const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
+    const currentIndex = currentOrder.indexOf(phoneme);
+    const canMoveLeft = currentIndex > 0;
+    const canMoveRight = currentIndex < currentOrder.length - 1;
+
+    const handleMoveLeft = () => {
+      if (canMoveLeft) {
+        handlePhonemeMove(phoneme, 'left');
+      }
+    };
+
+    const handleMoveRight = () => {
+      if (canMoveRight) {
+        handlePhonemeMove(phoneme, 'right');
+      }
+    };
+
+    const handleSave = () => {
+      const newCustomization = {
+        hideLabel,
+        hideButton,
+        image: previewSrc,
+        customColor,
+      };
+      console.log('Saving new customization:', newCustomization);
+      saveCustomization(phoneme, newCustomization);
+      onClose();
+    };
+
+    const handleImageUpload = async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        // Check file size before processing
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          alert('Image is too large. Please choose an image under 5MB.');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            // Start with more aggressive compression for larger files
+            const initialMaxWidth = file.size > 1024 * 1024 ? 150 : 200;
+            const compressed = await compressImage(reader.result, initialMaxWidth);
+            
+            // Set both the image state and preview source
+            setPreviewSrc(compressed);
+          } catch (error) {
+            console.error('Error processing image:', error);
+            alert('Error processing image. Please try a different image.');
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleClearImage = () => {
+      setPreviewSrc('');
+    };
+
+    const handleColorChange = (color) => {
+      setCustomColor(color.hex);
+    };
+
+    return (
+      <Dialog open={open} onClose={onClose}>
+        <DialogTitle>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box display="flex" alignItems="center" gap={1}>
+              <IconButton 
+                onClick={handleMoveLeft} 
+                disabled={!canMoveLeft}
+                size="small"
+              >
+                <KeyboardArrowLeftIcon />
+              </IconButton>
+              <Typography variant="h6">Customize Phoneme: {phoneme}</Typography>
+              <IconButton 
+                onClick={handleMoveRight} 
+                disabled={!canMoveRight}
+                size="small"
+              >
+                <KeyboardArrowRightIcon />
+              </IconButton>
+            </Box>
+            <IconButton onClick={onClose}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: '300px', mt: 2 }}>
+            <FormControlLabel
+              control={<Switch checked={hideLabel} onChange={(e) => setHideLabel(e.target.checked)} />}
+              label="Hide Label"
+            />
+            <FormControlLabel
+              control={<Switch checked={hideButton} onChange={(e) => setHideButton(e.target.checked)} />}
+              label="Hide Button"
+            />
+            <Divider />
+            
+            {/* Image Upload Section */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                  id={`image-upload-${phoneme}`}
+                />
+                <label htmlFor={`image-upload-${phoneme}`}>
+                  <Button variant="outlined" component="span">
+                    Upload Image
+                  </Button>
+                </label>
+                {previewSrc && (
+                  <Button 
+                    variant="outlined" 
+                    color="error" 
+                    onClick={handleClearImage}
+                  >
+                    Clear Image
+                  </Button>
+                )}
+              </Box>
+              {previewSrc && (
+                <Box sx={{ mt: 1 }}>
+                  <img 
+                    src={previewSrc} 
+                    alt="Preview" 
+                    style={{ maxWidth: '100%', maxHeight: '100px', objectFit: 'contain' }} 
+                  />
+                </Box>
+              )}
+            </Box>
+
+            {/* Color Picker Section */}
+            <Box>
+              <Button
+                variant="outlined"
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                sx={{ mb: 1 }}
+              >
+                {showColorPicker ? 'Hide Color Picker' : 'Show Color Picker'}
+              </Button>
+              {showColorPicker && (
+                <Box sx={{ position: 'relative', zIndex: 1000 }}>
+                  <ChromePicker
+                    color={customColor || getPhonemeColor(phoneme)}
+                    onChange={handleColorChange}
+                    disableAlpha={true}
+                  />
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
     );
   };
 
@@ -1087,104 +1336,87 @@ const IPAKeyboard = ({
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
-        p: 0  // Removed padding - was Math.round(buttonSpacing)
+        p: Math.round(buttonSpacing)
       }}>
-        <div
-          className={`phoneme-grid ${shouldUseListLayout() ? 'list-layout' : ''} ${shouldUseFixedLayout() ? 'fixed-layout' : ''}`}
-          key={`grid-${showStressMarkers}-${validLanguage}-${windowWidth}-${fixedLayout}`}
-          style={{
-            '--button-spacing': `${buttonSpacing}px`,
-            '--min-button-size': getMinButtonSize(),
-            '--max-button-size': getMaxButtonSize(),
-            '--fixed-columns': getFixedLayoutColumns() || 'auto',
+        <Grid 
+          container
+          key={`grid-${showStressMarkers}-${validLanguage}`}
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${gridColumns}, ${baseButtonSize}px)`,
+            gap: `${Math.max(buttonSpacing, 2)}px`,
+            justifyContent: 'center',
+            alignContent: 'center',
+            height: 'auto',
+            maxHeight: '100%',
+            transform: `scale(${autoScale ? calculatedScale : buttonScale})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            touchAction: 'manipulation',
+            '& .MuiGrid-item': {
+              width: `${baseButtonSize}px !important`,
+              height: `${baseButtonSize}px !important`,  
+              padding: '0 !important',
+              margin: '0 !important',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              touchAction: 'manipulation'
+            }
           }}
         >
           {phoneticData && phoneticData[validLanguage]?.groups && getOrderedPhonemes().map((phoneme) => {
             const group = Object.values(phoneticData[validLanguage]?.groups || {}).find(group => group.phonemes.includes(phoneme));
             return renderPhonemeButton(phoneme, group);
           })}
-        </div>
+        </Grid>
       </Box>
 
       {mode === 'edit' && (
-        <Box sx={{
+        <Box sx={{ 
           position: 'fixed',
-          bottom: { xs: 8, sm: 16 },
+          bottom: 16,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
           backgroundColor: 'background.paper',
           borderRadius: 2,
           boxShadow: 3,
-          p: { xs: 0.5, sm: 1 },
+          p: 1,
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 0.5, sm: 1 },
-          alignItems: 'center',
-          maxWidth: { xs: '95vw', sm: 'auto' }
+          gap: 1,
+          flexShrink: 0,
+          alignItems: 'center'
         }}>
-          <Box sx={{
-            display: 'flex',
-            gap: { xs: 0.5, sm: 1 },
-            flexWrap: { xs: 'nowrap', sm: 'wrap' }
-          }}>
-            <Button
-              variant={editMode === 'move' ? 'contained' : 'outlined'}
-              onClick={() => {
-                setEditMode('move');
-              }}
-              size="small"
-              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
-            >
-              Move
-            </Button>
-            <Button
-              variant={editMode === 'customize' ? 'contained' : 'outlined'}
-              onClick={() => {
-                setEditMode('customize');
-              }}
-              size="small"
-              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
-            >
-              Customize
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setBackgroundEditOpen(true);
-              }}
-              size="small"
-              sx={{ minWidth: { xs: 'auto', sm: 'auto' }, px: { xs: 1, sm: 2 } }}
-            >
-              Background
-            </Button>
-          </Box>
-
-          <Divider
-            orientation="vertical"
-            flexItem
-            sx={{
-              mx: { xs: 0, sm: 1 },
-              my: { xs: 0.5, sm: 0 },
-              width: { xs: '100%', sm: 'auto' }
+          <Button
+            variant={editMode === 'move' ? 'contained' : 'outlined'}
+            onClick={() => {
+              setEditMode('move');
             }}
-          />
-
+            size="small"
+          >
+            Move
+          </Button>
+          <Button
+            variant={editMode === 'customize' ? 'contained' : 'outlined'}
+            onClick={() => {
+              setEditMode('customize');
+            }}
+            size="small"
+          >
+            Customize
+          </Button>
+          <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
           <FormControlLabel
             control={
-              <Switch
+              <Switch 
                 size="small"
                 checked={showStressMarkers}
                 onChange={handleStressMarkersToggle}
               />
             }
-            label="Stress"
-            sx={{
-              ml: 0,
-              '& .MuiFormControlLabel-label': {
-                fontSize: { xs: '0.8rem', sm: '0.875rem' }
-              }
-            }}
+            label="Show Stress Markers"
+            sx={{ ml: 0 }}
           />
         </Box>
       )}
@@ -1194,23 +1426,8 @@ const IPAKeyboard = ({
           open={editDialogOpen}
           onClose={() => setEditDialogOpen(false)}
           phoneme={selectedPhoneme}
-          customizations={customizations}
-          phonemeOrder={phonemeOrder}
-          selectedLanguage={selectedLanguage}
-          getAllPhonemes={getAllPhonemes}
-          handlePhonemeMove={handlePhonemeMove}
-          saveCustomization={saveCustomization}
-          getPhonemeColor={getPhonemeColor}
         />
       )}
-
-      <EditMode
-        open={backgroundEditOpen}
-        onClose={() => setBackgroundEditOpen(false)}
-        phoneme={null}
-        backgroundSettings={backgroundSettings}
-        onBackgroundSave={onBackgroundSave}
-      />
     </Box>
   );
 };

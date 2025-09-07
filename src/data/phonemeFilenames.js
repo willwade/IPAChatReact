@@ -1,6 +1,4 @@
-// Mapping of IPA phonemes to URL-friendly filenames for CACHED AUDIO FILES ONLY
-// NOTE: This mapping is NOT used for Azure TTS - Azure handles IPA symbols directly
-// This is only for generating filenames for pre-recorded audio files
+// Mapping of IPA phonemes to URL-friendly filenames
 export const phonemeToFilename = {
   // Single phonemes
   'æ': 'ae',    // as in "cat"
@@ -30,9 +28,6 @@ export const phonemeToFilename = {
   'ɡ': 'g',     // as in "go" (Unicode variant)
 
   // Combinations and long vowels
-  'aɪ': 'aɪ',       // as in "price" - keep raw IPA (files use raw characters)
-  'aʊ': 'aʊ',       // as in "mouth" - keep raw IPA (files use raw characters)
-  'eɪ': 'eɪ',       // as in "face" - keep raw IPA (files use raw characters)
   'ɔɪ': 'awih',     // as in "choice"
   'ɔː': 'awlng',    // as in "thought" (long)
   'ɑː': 'aalng',    // as in "father" (long)

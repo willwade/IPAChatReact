@@ -48,7 +48,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr comment ${{ github.event.number }} --body "Preview URL: ${{ steps.deploy.outputs.url }}"
+          gh pr comment ${{ github.event.number }} --body \
+            "Preview URL: ${{ steps.deploy.outputs.url }}"
       - name: Destroy preview
         if: github.event.action == 'closed'
         env:

@@ -1,0 +1,493 @@
+body, html {
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  padding: min(20px, 2vh, 2vw);
+  background-color: #f5f5f5;
+  overflow: hidden;
+  touch-action: manipulation;
+  box-sizing: border-box;
+}
+
+.mode-toggle-button {
+  margin-bottom: 0px;
+  padding: 8px 15px;
+  background: linear-gradient(145deg, #3498db, #2980b9);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mode-toggle-button:hover:not(:disabled) {
+  background: linear-gradient(145deg, #5dade2, #3498db);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mode-toggle-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0;
+  margin-bottom: min(10px, 1.5vh);
+  width: 100%;
+  padding-left: min(20px, 2vw, 2vh);
+  padding-right: min(20px, 2vw, 2vh);
+  height: min(60px, 8vh);
+  flex-shrink: 0;
+}
+
+.left-button, .left-element {
+  margin-left: 0;
+}
+
+.right-button {
+  margin-right: 0;
+}
+
+.mode-label {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.edit-button {
+  padding: 8px 16px;
+  background: linear-gradient(145deg, #f39c12, #e67e22);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.edit-button:hover:not(:disabled) {
+  background: linear-gradient(145deg, #f1c40f, #f39c12);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.edit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-button {
+  margin-bottom: 10px;
+  padding: 8px 20px;
+  background: linear-gradient(145deg, #27ae60, #229954);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.save-button:hover {
+  background: linear-gradient(145deg, #2ecc71, #27ae60);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.edit-mode-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: min(15px, 2vw);
+  margin-bottom: min(10px, 1.5vh);
+  width: 100%;
+  max-width: min(750px, 95vw);
+  height: min(60px, 8vh);
+  flex-shrink: 0;
+}
+
+.edit-instruction {
+  margin: 0;
+  margin-left: 30px;
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+}
+
+.word-display {
+  margin-bottom: 30px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.current-word {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+  background-color: white;
+  padding: 15px 30px;
+  border-radius: 12px;
+  border: 2px solid #3498db;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  text-align: center;
+}
+
+.phoneme-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: min(20px, 2vw, 2vh);
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: min(20px, 2vw, 2vh);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.grid-cell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 12px;
+  font-size: clamp(1rem, 4vw, 2rem);
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.phoneme-button {
+  background: linear-gradient(145deg, #ffffff, #e6e6e6);
+  color: #2c3e50;
+  border: 2px solid #bdc3c7;
+}
+
+.phoneme-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #e8f4fd, #cfe2f3);
+  border-color: #3498db;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Special styling for buttons with images */
+.phoneme-button.image-button {
+  border-radius: 15px;
+  padding: 0;
+  overflow: hidden;
+  background: white;
+}
+
+.phoneme-button.image-button:hover:not(.disabled) {
+  border-radius: 15px;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.grid-cell.phoneme-button.selected {
+  background: linear-gradient(145deg, #f39c12, #e67e22) !important;
+  color: white !important;
+  border: 3px solid #d35400 !important;
+  animation: confirmPulse 1.5s infinite !important;
+  position: relative;
+  cursor: pointer !important;
+}
+
+.grid-cell.phoneme-button.selected::after {
+  content: "Press again to use!";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2c3e50;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: normal;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  animation: bounce 0.5s ease-out;
+}
+
+@keyframes confirmPulse {
+  0% { 
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.8);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 0 15px rgba(243, 156, 18, 0);
+    transform: scale(1.05);
+  }
+  100% { 
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce {
+  0% { 
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  100% { 
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.play-button {
+  background: linear-gradient(145deg, #27ae60, #229954);
+  color: white;
+  border: 2px solid #229954;
+}
+
+.play-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #2ecc71, #27ae60);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.reset-button {
+  background: linear-gradient(145deg, #e74c3c, #c0392b);
+  color: white;
+  border: 2px solid #c0392b;
+}
+
+.reset-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #ec7063, #e74c3c);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.word-display-button {
+  background: linear-gradient(145deg, #ecf0f1, #d5dbdb);
+  color: #2c3e50;
+  border: max(2px, 0.3vw) solid #3498db;
+  font-size: clamp(0.8rem, 3vw, 1.5rem);
+  font-weight: bold;
+  cursor: default;
+  grid-column: span 2;
+  border-radius: min(15px, 2.5vw);
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 2/1;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.word-display-button .phoneme-symbol {
+  font-size: clamp(0.6rem, 2.5vw, 1.2rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  padding: 0 min(10px, 2vw);
+}
+
+.word-text {
+  font-size: calc(1.2rem - 0.1rem * var(--word-length, 0));
+  min-font-size: 0.8rem;
+}
+
+.empty-button {
+  background: transparent;
+  border: none;
+  cursor: default;
+  box-shadow: none;
+}
+
+.empty-button:hover {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+.backspace-button {
+  background: linear-gradient(145deg, #f39c12, #e67e22);
+  color: white;
+  border: 2px solid #d35400;
+}
+
+.backspace-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #f1c40f, #f39c12);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.vowel-toggle-button {
+  background: linear-gradient(145deg, #17a2b8, #138496);
+  color: white;
+  border: 2px solid #117a8b;
+  font-size: 0.8rem;
+}
+
+.vowel-toggle-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #20c0d7, #17a2b8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+
+.grid-cell.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.grid-cell.babble-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: grayscale(0.7);
+}
+
+.grid-cell.edit-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: grayscale(0.8);
+}
+
+.phoneme-symbol {
+  font-size: clamp(1rem, 4vw, 2rem);
+  font-weight: bold;
+}
+
+/* Enhanced responsive design with orientation handling */
+@media (max-width: 768px) {
+  .phoneme-grid {
+    gap: min(10px, 1.5vw);
+    padding: min(20px, 3vh) min(10px, 1.5vw);
+  }
+  
+  .button-group {
+    gap: min(50px, 8vw);
+    margin-bottom: min(10px, 1.5vh);
+  }
+  
+  .current-word {
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    padding: min(10px, 1.5vw) min(20px, 3vw);
+  }
+  
+  .grid-cell.phoneme-button.selected::after {
+    font-size: clamp(0.4rem, 1.5vw, 0.6rem);
+    padding: min(3px, 0.5vw) min(6px, 1vw);
+    top: min(-35px, -5vh);
+  }
+}
+
+@media (max-width: 480px) {
+  .phoneme-grid {
+    gap: min(8px, 1vw);
+    padding: min(15px, 2vh) min(8px, 1vw);
+  }
+  
+  .button-group {
+    gap: min(30px, 5vw);
+    margin-bottom: min(8px, 1vh);
+  }
+  
+  .current-word {
+    font-size: clamp(1rem, 3.5vw, 1.8rem);
+    padding: min(8px, 1vw) min(16px, 2vw);
+  }
+  
+  .grid-cell.phoneme-button.selected::after {
+    font-size: clamp(0.3rem, 1vw, 0.5rem);
+    padding: min(2px, 0.3vw) min(4px, 0.6vw);
+    top: min(-30px, -4vh);
+  }
+}
+
+/* Extra small screens and narrow aspect ratios */
+@media (max-width: 320px), (max-height: 600px) {
+  .app {
+    padding: min(10px, 2vw);
+  }
+  
+  .phoneme-grid {
+    gap: min(6px, 0.8vw);
+    padding: min(10px, 1.5vh) min(6px, 0.8vw);
+  }
+  
+  .button-group {
+    gap: min(20px, 3vw);
+    margin-bottom: min(6px, 0.8vh);
+  }
+}
+
+/* Landscape orientation adjustments for small screens */
+@media (max-height: 500px) and (orientation: landscape) {
+  .app {
+    padding: min(8px, 1vh);
+  }
+  
+  .button-group, .edit-mode-controls {
+    margin-bottom: min(5px, 1vh);
+    gap: min(50px, 8vw);
+    flex-shrink: 0;
+  }
+  
+  .phoneme-grid {
+    padding: min(8px, 1vh);
+    gap: min(6px, 1vh);
+    /* Force smaller gaps in landscape to fit better */
+    gap: min(4px, 0.8vh);
+  }
+}
+
+/* Extra short screens */
+@media (max-height: 400px) {
+  .app {
+    padding: min(5px, 1vh);
+  }
+  
+  .button-group, .edit-mode-controls {
+    margin-bottom: min(3px, 0.5vh);
+  }
+  
+  .phoneme-grid {
+    padding: min(5px, 1vh);
+    gap: min(4px, 0.5vh);
+  }
+}
