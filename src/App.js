@@ -26,12 +26,42 @@ const PHONEMES = {
 
 // Configuration for vowel image options
 const VOWEL_IMAGE_OPTIONS = {
-  '/ɒ/': ['octopus.png', 'pop.png', 'fox.png', 'miss-polly.png'], // "o" sounds
-  '/iː/': ['eagle.png', 'bee.png', 'sheep.png', 'squeak.png'], // "ee" sounds  
-  '/æ/': ['apple.png', 'cat-on-mat.png', 'nan.png', 'splash.png'], // "a" sounds
-  '/ɪ/': ['igloo.png', 'incy.png', 'six.png', 'thwip.png'], // short "i" sounds
-  '/ɛ/': ['elephant.png', 'red.png', 'head.png', 'squelch.png'], // "e" sounds
-  '/ɑː/': ['aardvark.png', 'aargh.png', 'car.png', 'bart.png'] // "ah" sounds
+  '/ɒ/': [
+    'octopus.png', 
+    'pop.png', 
+    'fox.png', 
+    'miss-polly.png',
+  ], // "o" sounds
+  '/iː/': [
+    'eagle.png', 
+    'bee.png', 
+    'sheep.png', 
+    'squeak.png',
+  ], // "ee" sounds  
+  '/æ/': [
+    'apple.png', 
+    'cat-on-mat.png', 
+    'nan.png', 
+    'splash.png',
+  ], // "a" sounds
+  '/ɪ/': [
+    'igloo.png', 
+    'incy.png', 
+    'six.png', 
+    'thwip.png',
+  ], // short "i" sounds
+  '/ɛ/': [
+    'elephant.png', 
+    'red.png', 
+    'head.png', 
+    'squelch.png',
+  ], // "e" sounds
+  '/ɑː/': [
+    'aardvark.png', 
+    'aargh.png', 
+    'car.png', 
+    'bart.png',
+  ] // "ah" sounds
 };
 
 // Configuration for cached vowel preferences
