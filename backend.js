@@ -30,8 +30,16 @@ app.use((req, res, next) => {
 // In-memory storage (replace with a database in production)
 let appState = null;
 
-// Import centralized TTS configuration
-const ttsConfig = require('./config/tts-config');
+// Azure TTS configuration
+const AZURE_KEY = process.env.REACT_APP_AZURE_KEY;
+const AZURE_REGION = process.env.REACT_APP_AZURE_REGION;
+
+// Log Azure configuration (without exposing the full key)
+console.log('Azure Configuration:', {
+  region: AZURE_REGION,
+  keyPresent: !!AZURE_KEY,
+  keyLength: AZURE_KEY ? AZURE_KEY.length : 0
+});
 
 // Voice data
 const voiceData = {
@@ -53,68 +61,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Test endpoint for connectivity
-app.get('/api/test', (req, res) => {
-  console.log('Test endpoint hit - API connectivity working');
-  res.json({
-    message: 'API is working',
-    timestamp: new Date().toISOString(),
-    port: port
-  });
-});
-
-// Azure credentials validation endpoint
-app.get('/api/azure/status', (req, res) => {
-  console.log('Azure status check requested');
-
-  const status = {
-    configured: !!ttsConfig.azureKey && !!ttsConfig.azureRegion,
-    hasKey: !!ttsConfig.azureKey,
-    hasRegion: !!ttsConfig.azureRegion,
-    region: ttsConfig.azureRegion || 'not configured',
-    keyLength: ttsConfig.azureKey ? ttsConfig.azureKey.length : 0,
-    endpoint: ttsConfig.azureRegion ? ttsConfig.getAzureEndpoint() : 'not available'
-  };
-
-  console.log('Azure configuration status:', {
-    ...status,
-    keyPreview: ttsConfig.azureKey ? `${ttsConfig.azureKey.substring(0, 8)}...` : 'not set'
-  });
-
-  res.json(status);
-});
-
-// Azure connectivity test endpoint
-app.post('/api/azure/test', async (req, res) => {
-  console.log('Azure connectivity test requested');
-
-  try {
-    const result = await ttsConfig.testConnection();
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: 'Azure TTS service test failed'
-    });
-  }
-});
-
 // Endpoint to get available voices
 app.get('/api/voices', (req, res) => {
   try {
-    console.log('📢 Voices endpoint hit by:', req.ip);
-    console.log('Request headers:', req.headers);
+    // Log the response for debugging
     console.log('Sending voice data:', voiceData);
-
-    // Add CORS headers explicitly
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-
     res.json(voiceData);
   } catch (error) {
     console.error('Error getting voices:', error);
-    res.status(500).json({ error: 'Failed to get voices', details: error.message });
+    res.status(500).json({ error: 'Failed to get voices' });
   }
 });
 
@@ -276,38 +231,108 @@ app.post('/api/tts', async (req, res) => {
     voice: req.body.voice,
     language: req.body.language,
     usePhonemes: req.body.usePhonemes,
-    isWholeUtterance: req.body.isWholeUtterance,
-    hasKey: !!ttsConfig.azureKey,
-    hasRegion: !!ttsConfig.azureRegion,
-    region: ttsConfig.azureRegion
+    hasKey: !!AZURE_KEY,
+    hasRegion: !!AZURE_REGION,
+    region: AZURE_REGION
   });
 
-  const { text, voice, language, usePhonemes = true, isWholeUtterance = false } = req.body;
+  const { text, voice, language, usePhonemes = true } = req.body;
 
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
   }
 
+  if (!AZURE_KEY || !AZURE_REGION) {
+    console.error('Azure credentials missing:', { 
+      hasKey: !!AZURE_KEY, 
+      hasRegion: !!AZURE_REGION,
+      region: AZURE_REGION 
+    });
+    return res.status(500).json({ error: 'Azure credentials not configured' });
+  }
+
   try {
-    // Use the centralized TTS configuration service
-    const result = await ttsConfig.makeRequest(text, voice, language, {
-      usePhonemes,
-      isWholeUtterance
+    const tts_endpoint = `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
+    console.log('Using TTS endpoint:', tts_endpoint);
+
+    // Generate SSML based on usePhonemes flag
+    const ssml = usePhonemes ? `
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+        <voice name="${voice}">
+          <prosody rate="slow" pitch="medium">
+            <phoneme alphabet="ipa" ph="${text}">
+              ${text === 'p' ? 'puh' : text === 'f' ? 'fuh' : '_'}
+            </phoneme>
+          </prosody>
+        </voice>
+      </speak>
+    `.trim() : `
+      <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${language}">
+        <voice name="${voice}">
+          ${text}
+        </voice>
+      </speak>
+    `.trim();
+    
+    console.log('Generated SSML:', ssml);
+
+    console.log('Making request to Azure...');
+    const response = await axios({
+      method: 'post',
+      url: tts_endpoint,
+      headers: {
+        'Ocp-Apim-Subscription-Key': AZURE_KEY,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'audio-48khz-192kbitrate-mono-mp3',
+        'User-Agent': 'IPAChat'
+      },
+      data: ssml,
+      responseType: 'arraybuffer'
     });
 
-    // Return the result from the TTS configuration service
+    console.log('Azure response received:', {
+      status: response.status,
+      headers: response.headers,
+      dataLength: response.data?.length || 0
+    });
+
+    // Convert audio buffer to base64
+    const base64Audio = Buffer.from(response.data).toString('base64');
+    console.log('Audio converted to base64, length:', base64Audio.length);
+
     res.json({
-      audio: result.audio,
-      format: result.format
+      audio: base64Audio
     });
   } catch (error) {
-    console.error('TTS request failed:', error.message);
-
-    res.status(500).json({
-      error: 'Speech synthesis failed',
-      details: error.message,
+    // Log the full error object
+    console.error('Full error object:', JSON.stringify(error, null, 2));
+    
+    // Log detailed error information
+    console.error('Error in TTS:', {
+      message: error.message,
       code: error.code,
-      statusCode: error.response?.status
+      response: {
+        data: error.response?.data ? error.response.data.toString() : null,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers
+      },
+      requestData: {
+        text: text,
+        voice: voice,
+        language: language,
+        endpoint: `https://${AZURE_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`
+      }
+    });
+
+    res.status(500).json({ 
+      error: 'Speech synthesis failed',
+      details: error.response?.data ? error.response.data.toString() : error.message,
+      requestInfo: {
+        text: text,
+        voice: voice,
+        language: language
+      }
     });
   }
 });

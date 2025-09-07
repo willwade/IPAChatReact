@@ -1,0 +1,283 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+.word-display {
+  margin-bottom: 30px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.current-word {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+  background-color: white;
+  padding: 15px 30px;
+  border-radius: 12px;
+  border: 2px solid #3498db;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  text-align: center;
+}
+
+.phoneme-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 20px;
+  max-width: 750px;
+  width: 100%;
+  padding: 40px 20px;
+}
+
+.grid-cell {
+  width: 120px;
+  height: 120px;
+  border: none;
+  border-radius: 50%;
+  font-size: 2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.phoneme-button {
+  background: linear-gradient(145deg, #ffffff, #e6e6e6);
+  color: #2c3e50;
+  border: 2px solid #bdc3c7;
+}
+
+.phoneme-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #e8f4fd, #cfe2f3);
+  border-color: #3498db;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Special styling for buttons with images */
+.phoneme-button.image-button {
+  border-radius: 15px;
+  padding: 0;
+  overflow: hidden;
+  background: white;
+}
+
+.phoneme-button.image-button:hover:not(.disabled) {
+  border-radius: 15px;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.grid-cell.phoneme-button.selected {
+  background: linear-gradient(145deg, #f39c12, #e67e22) !important;
+  color: white !important;
+  border: 3px solid #d35400 !important;
+  animation: confirmPulse 1.5s infinite !important;
+  position: relative;
+  cursor: pointer !important;
+}
+
+.grid-cell.phoneme-button.selected::after {
+  content: "Press again to use!";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2c3e50;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: normal;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  animation: bounce 0.5s ease-out;
+}
+
+@keyframes confirmPulse {
+  0% { 
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.8);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 0 15px rgba(243, 156, 18, 0);
+    transform: scale(1.05);
+  }
+  100% { 
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce {
+  0% { 
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  100% { 
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.play-button {
+  background: linear-gradient(145deg, #27ae60, #229954);
+  color: white;
+  border: 2px solid #229954;
+}
+
+.play-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #2ecc71, #27ae60);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.reset-button {
+  background: linear-gradient(145deg, #e74c3c, #c0392b);
+  color: white;
+  border: 2px solid #c0392b;
+}
+
+.reset-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #ec7063, #e74c3c);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.word-display-button {
+  background: linear-gradient(145deg, #ecf0f1, #d5dbdb);
+  color: #2c3e50;
+  border: 3px solid #3498db;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: default;
+  grid-column: span 2;
+  border-radius: 15px;
+  width: auto;
+  min-height: 120px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.word-display-button .phoneme-symbol {
+  font-size: 1.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+  padding: 0 10px;
+}
+
+.word-text {
+  font-size: calc(1.2rem - 0.1rem * var(--word-length, 0));
+  min-font-size: 0.8rem;
+}
+
+.empty-button {
+  background: transparent;
+  border: none;
+  cursor: default;
+  box-shadow: none;
+}
+
+.empty-button:hover {
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+.backspace-button {
+  background: linear-gradient(145deg, #f39c12, #e67e22);
+  color: white;
+  border: 2px solid #d35400;
+}
+
+.backspace-button:hover:not(.disabled) {
+  background: linear-gradient(145deg, #f1c40f, #f39c12);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.grid-cell.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.phoneme-symbol {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .phoneme-grid {
+    max-width: 480px;
+    gap: 10px;
+  }
+  
+  .grid-cell {
+    width: 100px;
+    height: 100px;
+    font-size: 1.5rem;
+    border-radius: 50%;
+  }
+  
+  .phoneme-symbol {
+    font-size: 1.5rem;
+  }
+  
+  .current-word {
+    font-size: 2rem;
+    padding: 10px 20px;
+  }
+  
+  .grid-cell.phoneme-button.selected::after {
+    font-size: 0.6rem;
+    padding: 3px 6px;
+    top: -35px;
+  }
+}
+
+@media (max-width: 480px) {
+  .phoneme-grid {
+    max-width: 360px;
+    gap: 8px;
+  }
+  
+  .grid-cell {
+    width: 80px;
+    height: 80px;
+    font-size: 1.2rem;
+    border-radius: 50%;
+  }
+  
+  .phoneme-symbol {
+    font-size: 1.2rem;
+  }
+  
+  .current-word {
+    font-size: 1.8rem;
+    padding: 8px 16px;
+  }
+  
+  .grid-cell.phoneme-button.selected::after {
+    font-size: 0.5rem;
+    padding: 2px 4px;
+    top: -30px;
+  }
+}
