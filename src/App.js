@@ -702,10 +702,19 @@ const App = () => {
                 src={`/images/${getCurrentImage(item.symbol) || item.display}`} 
                 alt={item.symbol}
                 className="phoneme-image"
+                loading="eager"
+                onLoad={(e) => {
+                  console.log('Image loaded:', e.target.src);
+                  e.target.style.opacity = '1';
+                }}
+                onError={(e) => {
+                  console.error('Image failed to load:', e.target.src);
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
                 style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'cover'
+                  opacity: '0',
+                  transition: 'opacity 0.2s ease-in-out'
                 }}
               />
             ) : (

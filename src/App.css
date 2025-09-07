@@ -214,6 +214,25 @@ body, html {
   padding: 0;
   overflow: hidden;
   background: white;
+  position: relative;
+}
+
+.phoneme-image {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+  border-radius: inherit;
+  /* Force container constraints on iOS Safari */
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  /* Force hardware acceleration for smoother rendering */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .phoneme-button.image-button:hover:not(.disabled) {
