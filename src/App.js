@@ -42,7 +42,7 @@ const App = () => {
   const [vowelCache, setVowelCache] = useState({});
   const [cacheInitialized, setCacheInitialized] = useState(false);
   const [audioContext, setAudioContext] = useState(null);
-  const [mode, setMode] = useState('speech'); // 'babble' or 'speech'
+  const [mode, setMode] = useState('babble'); // 'babble' or 'speech'
 
   useEffect(() => {
     fetchVoices();
