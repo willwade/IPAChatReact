@@ -1,0 +1,36 @@
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+envs:
+- key: REACT_APP_AZURE_KEY
+  scope: RUN_AND_BUILD_TIME
+  value: ${REACT_APP_AZURE_KEY}
+- key: REACT_APP_AZURE_REGION
+  scope: RUN_AND_BUILD_TIME
+  value: ${REACT_APP_AZURE_REGION}
+- key: REACT_APP_PHONEMIZE_API
+  scope: RUN_AND_BUILD_TIME
+  value: ${REACT_APP_PHONEMIZE_API}
+features:
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+    - component:
+        name: ipachatreact
+      match:
+        path:
+          prefix: /
+name: ${APP_NAME}
+region: lon
+services:
+- environment_slug: node-js
+  github:
+    branch: ${GITHUB_BRANCH}
+    repo: willwade/IPAChatReact
+    deploy_on_push: false
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-1gb
+  name: ipachatreact
+  run_command: npm start
+  source_dir: /

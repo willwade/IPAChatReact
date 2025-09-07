@@ -1,0 +1,62 @@
+---
+# DigitalOcean preview app workflow
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+  pull-requests: write   # or issues: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_API_TOKEN }}
+      - name: Generate app spec
+        id: spec
+        if: github.event.action != 'closed'
+        run: |
+          APP_NAME=ipachat-pr-${{ github.event.number }} \
+          GITHUB_BRANCH=${{ github.head_ref }} \
+          REACT_APP_AZURE_KEY=${{ secrets.REACT_APP_AZURE_KEY }} \
+          REACT_APP_AZURE_REGION=${{ secrets.REACT_APP_AZURE_REGION }} \
+          REACT_APP_PHONEMIZE_API=${{ secrets.REACT_APP_PHONEMIZE_API }} \
+          envsubst < .github/preview-app.yaml > app.yaml
+      - name: Deploy preview
+        id: deploy
+        if: github.event.action != 'closed'
+        env:
+          APP_NAME: ipachat-pr-${{ github.event.number }}
+        run: |
+          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header \
+            | awk -v app="$APP_NAME" '$2==app {print $1}')
+          if [ -z "$APP_ID" ]; then
+            APP_ID=$(doctl apps create --spec app.yaml --format ID --no-header)
+          else
+            doctl apps update $APP_ID --spec app.yaml
+          fi
+          doctl apps create-deployment $APP_ID --wait
+          URL=$(doctl apps get $APP_ID --format DefaultIngress --no-header)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+      - name: Comment PR
+        if: github.event.action != 'closed'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.number }} --body \
+            "Preview URL: ${{ steps.deploy.outputs.url }}"
+      - name: Destroy preview
+        if: github.event.action == 'closed'
+        env:
+          APP_NAME: ipachat-pr-${{ github.event.number }}
+        run: |
+          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header \
+            | awk -v app="$APP_NAME" '$2==app {print $1}')
+          if [ -n "$APP_ID" ]; then
+            doctl apps delete $APP_ID --force --dangerous
+          fi
