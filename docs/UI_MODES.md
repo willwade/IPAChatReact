@@ -38,10 +38,10 @@ The application uses a **multi-level configuration hierarchy**:
 ### 5. Custom Toolbar
 - **URL**: `/?toolbar=button1,button2,button3`
 - **Description**: Show only specified toolbar buttons
-- **Available Buttons**: `build`, `search`, `babble`, `edit`, `game`, `settings`, `setupwizard`
+- **Available Buttons**: `build`, `search`, `edit`, `game`, `settings`, `setupwizard`
 - **Examples**:
   - `/?toolbar=build,settings` - Build and Settings only
-  - `/?toolbar=build,babble,settings` - Build, Babble, and Settings
+  - `/?toolbar=build,edit,settings` - Build, Edit, and Settings
   - `/?toolbar=game,settings` - Game and Settings only
 
 ## URL Parameter Reference
@@ -104,7 +104,7 @@ https://yourapp.com/?ui=kiosk&config=example-minimal
 
 ### Custom Training Environment
 ```
-https://yourapp.com/?toolbar=build,babble,settings&config=example3
+https://yourapp.com/?toolbar=build,edit,settings&config=example3
 ```
 
 ## Testing

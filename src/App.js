@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, TextField, Button, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, CircularProgress } from '@mui/material';
+import { Box, SpeedDial, SpeedDialIcon, SpeedDialAction, TextField, Button, Select, MenuItem, FormControl, Typography, Tooltip, IconButton, Divider, Dialog, DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, CircularProgress } from '@mui/material';
 import MessageIcon from '@mui/icons-material/Message';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -7,14 +7,18 @@ import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import ClearIcon from '@mui/icons-material/Clear';
 import UndoIcon from '@mui/icons-material/Undo';
-import ChildCareIcon from '@mui/icons-material/ChildCare';
+import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SchoolIcon from '@mui/icons-material/School';
 import SearchIcon from '@mui/icons-material/Search';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import { detailedPhoneticData as phoneticData, normalizePhoneme } from './data/phoneticData';
+import { voicesByLanguage, detailedPhoneticData as phoneticData, normalizePhoneme } from './data/phoneticData';
 import { config } from './config';
+import { regions } from './data/gamePhases';
 import IPAKeyboard from './components/IPAKeyboard';
+import EditMode from './components/EditMode';
 import Settings from './components/Settings';
 import GameMode from './components/GameMode';
 import ttsService from './services/TTSService';
@@ -64,7 +68,7 @@ const App = () => {
     }
   });
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
-  const [minButtonSize, setMinButtonSize] = useState(() => parseInt(localStorage.getItem('minButtonSize')) || 75);
+  const [minButtonSize, setMinButtonSize] = useState(() => parseInt(localStorage.getItem('minButtonSize')) || 60);
   const [layoutMode, setLayoutMode] = useState(() => localStorage.getItem('layoutMode') || 'grid');
   const [fixedLayout, setFixedLayout] = useState(() => {
     const saved = localStorage.getItem('fixedLayout');
@@ -116,6 +120,14 @@ const App = () => {
     const saved = localStorage.getItem('clearMessageAfterPlay');
     return saved ? JSON.parse(saved) : false;
   });
+
+  // Babble mode states
+  const [babbleMode, setBabbleMode] = useState('off'); // 'off', 'single', 'persistent'
+  const [babbleClickCount, setBabbleClickCount] = useState(0);
+  const [showBabbleButton, setShowBabbleButton] = useState(() => {
+    const saved = localStorage.getItem('showBabbleButton');
+    return saved ? JSON.parse(saved) : true;
+  });
   const [backgroundSettings, setBackgroundSettings] = useState(() => {
     const saved = localStorage.getItem('backgroundSettings');
     return saved ? JSON.parse(saved) : {
@@ -132,7 +144,6 @@ const App = () => {
     return saved ? JSON.parse(saved) : {
       showBuild: true,
       showSearch: true,
-      showBabble: true,
       showEdit: true,
       showGame: true,
       showSettings: true,
@@ -174,7 +185,6 @@ const App = () => {
       const customConfig = {
         showBuild: false,
         showSearch: false,
-        showBabble: false,
         showEdit: false,
         showGame: false,
         showSettings: false,
@@ -187,7 +197,6 @@ const App = () => {
         const buttonMap = {
           'build': 'showBuild',
           'search': 'showSearch',
-          'babble': 'showBabble',
           'edit': 'showEdit',
           'game': 'showGame',
           'settings': 'showSettings',
@@ -216,7 +225,6 @@ const App = () => {
           showBuild: true,
           showSettings: true,
           showSearch: false,
-          showBabble: false,
           showEdit: false,
           showGame: false,
           showSetupWizard: false
@@ -227,7 +235,6 @@ const App = () => {
           showSettings: true,
           showBuild: false,
           showSearch: false,
-          showBabble: false,
           showEdit: false,
           showGame: false,
           showSetupWizard: false
@@ -236,7 +243,6 @@ const App = () => {
         return {
           showBuild: false,
           showSearch: false,
-          showBabble: false,
           showEdit: false,
           showGame: false,
           showSettings: false,
@@ -453,7 +459,7 @@ const App = () => {
   const testAudioAvailability = useCallback(async () => {
     // Removed HEAD requests to reduce console noise
     // Audio availability is now tested during actual loading attempts
-  }, []);
+  }, [selectedVoice]);
 
   // Function to manually clear audio cache (useful for debugging)
   const clearAudioCache = useCallback(() => {
@@ -508,6 +514,7 @@ const App = () => {
     try {
       // Load pre-generated audio files in parallel batches
       const batchSize = 5;
+      let loadedCount = 0;
 
       for (let i = 0; i < phonemes.length; i += batchSize) {
         const batch = phonemes.slice(i, i + batchSize);
@@ -524,6 +531,7 @@ const App = () => {
               try {
                 const audio = await loadAudioFile(fileName);
                 newCache[phoneme] = audio;
+                loadedCount++;
                 // Reduced logging to minimize console noise
               } catch (loadError) {
                 // If the primary voice fails, try fallback voices
@@ -536,6 +544,7 @@ const App = () => {
                     const fallbackFileName = getPhonemeFileName(phoneme, fallbackVoice);
                     const audio = await loadAudioFile(fallbackFileName);
                     newCache[phoneme] = audio;
+                    loadedCount++;
                     fallbackSuccess = true;
                     break;
                   } catch (fallbackError) {
@@ -565,7 +574,7 @@ const App = () => {
     } finally {
       setCacheLoading(false);
     }
-  }, [selectedVoice, selectedLanguage, cacheLoading, getPhonemeFileName, loadAudioFile]);
+  }, [selectedVoice, selectedLanguage, cacheLoading, phoneticData, getPhonemeFileName, loadAudioFile]);
 
   // Consolidated audio caching effect
   useEffect(() => {
@@ -592,7 +601,6 @@ const App = () => {
   const allActions = [
     { icon: <MessageIcon />, name: 'Build Mode', onClick: () => setMode('build'), key: 'showBuild' },
     { icon: <SearchIcon />, name: 'Search Mode', onClick: handleSearchModeClick, key: 'showSearch' },
-    { icon: <ChildCareIcon />, name: 'Babble Mode', onClick: () => setMode('babble'), key: 'showBabble' },
     { icon: <EditIcon />, name: 'Edit Mode', onClick: () => setMode('edit'), key: 'showEdit' },
     { icon: <SportsEsportsIcon />, name: 'Game Mode', onClick: () => setMode('game'), key: 'showGame' },
     { icon: <SettingsIcon />, name: 'Settings', onClick: () => setSettingsOpen(true), key: 'showSettings' },
@@ -726,7 +734,7 @@ const App = () => {
     if (voicesLoading || Object.keys(availableVoices).length === 0) {
       fetchVoices();
     }
-  }, [selectedLanguage, voicesLoading, availableVoices, selectedVoice]);
+  }, [selectedLanguage, voicesLoading, availableVoices, selectedVoice, config.apiUrl]);
 
   // Set initial voice when language changes
   useEffect(() => {
@@ -805,7 +813,7 @@ const App = () => {
     } else if (selectedLanguage !== 'en-GB') {
       setSelectedRegion(''); // Clear region for non-UK English
     }
-  }, [selectedLanguage, selectedRegion]);
+  }, [selectedLanguage]);
 
   const handleRegionChange = (region) => {
     setSelectedRegion(region);
@@ -821,18 +829,32 @@ const App = () => {
 
 
   const handlePhonemeClick = (phoneme) => {
-    // In build mode, update the message
+    // In build mode, handle babble modes
     if (mode === 'build') {
-      setMessageClearedAfterPlay(false);
-      setLastSpokenMessage('');
-      setLastConvertedText('');
-      setMessage(prev => prev + phoneme);
-
-      // Speak the phoneme if setting is enabled
-      if (speakOnButtonPress) {
+      // Handle babble modes
+      if (babbleMode === 'single') {
+        // Single babble mode - play phoneme but don't add to message
         playPhoneme(phoneme);
+        setBabbleMode('off'); // Exit single babble mode after one phoneme
+        setBabbleClickCount(0);
+        return;
+      } else if (babbleMode === 'persistent') {
+        // Persistent babble mode - play phoneme but don't add to message
+        playPhoneme(phoneme);
+        return;
+      } else {
+        // Normal build mode - add to message
+        setMessageClearedAfterPlay(false);
+        setLastSpokenMessage('');
+        setLastConvertedText('');
+        setMessage(prev => prev + phoneme);
+
+        // Speak the phoneme if setting is enabled
+        if (speakOnButtonPress) {
+          playPhoneme(phoneme);
+        }
+        return;
       }
-      return;
     }
     
     // In search mode, check if it's the correct next phoneme
@@ -847,11 +869,7 @@ const App = () => {
       }
       return;
     }
-    
-    // In babble mode, play audio immediately from cache
-    if (mode === 'babble') {
-      playPhoneme(phoneme);
-    }
+
   };
 
   // Function for playing single phonemes (button clicks) - uses cached audio with TTS fallback
@@ -866,6 +884,16 @@ const App = () => {
       }),
     [audioCache, getPhonemeFileName, loadAudioFile, selectedVoice, selectedLanguage]
   );
+
+  const handleModeChange = (event) => {
+    setMode(event.target.value);
+    // Clear message when switching from build mode
+    if (event.target.value !== 'build') {
+      setMessage('');
+    }
+  };
+
+
 
   const speak = async () => {
     if (!message) return;
@@ -920,6 +948,33 @@ const App = () => {
     setMessageClearedAfterPlay(false);
     setLastSpokenMessage('');
     setLastConvertedText('');
+  };
+
+  // Babble button click handler
+  const handleBabbleClick = () => {
+    const now = Date.now();
+    const timeSinceLastClick = now - (window.lastBabbleClick || 0);
+    window.lastBabbleClick = now;
+
+    // Double tap detection (within 300ms)
+    if (timeSinceLastClick < 300) {
+      // Double tap - toggle persistent mode
+      if (babbleMode === 'persistent') {
+        setBabbleMode('off');
+      } else {
+        setBabbleMode('persistent');
+      }
+      setBabbleClickCount(0);
+    } else {
+      // Single tap
+      if (babbleMode === 'off') {
+        setBabbleMode('single');
+        setBabbleClickCount(1);
+      } else if (babbleMode === 'persistent') {
+        setBabbleMode('off');
+        setBabbleClickCount(0);
+      }
+    }
   };
 
   const handleSpeakRequest = async (text) => {
@@ -1362,11 +1417,11 @@ const App = () => {
             overflow: 'hidden'
           }}>
             {/* Message bar - always visible but disabled in edit mode */}
-            {(mode === 'build' || mode === 'search' || mode === 'babble' || mode === 'edit') && (
+            {(mode === 'build' || mode === 'search' || mode === 'edit') && (
               <Box sx={{ 
                 p: 1.5, 
                 display: 'flex', 
-                gap: 2,
+                gap: 1,
                 borderBottom: 1,
                 borderColor: 'divider',
                 backgroundColor: 'background.paper',
@@ -1390,7 +1445,7 @@ const App = () => {
                       }
                     }}
                     placeholder={mode === 'search' ? `Find: ${searchWord}` : "Type or click IPA symbols..."}
-                    disabled={mode === 'babble' || mode === 'search' || mode === 'edit'}
+                    disabled={mode === 'search' || mode === 'edit'}
                     size="small"
                     sx={{
                       '& .MuiInputBase-input.Mui-disabled': {
@@ -1423,22 +1478,42 @@ const App = () => {
                   <Button
                     variant="contained"
                     onClick={handleUndo}
-                    disabled={mode === 'babble' || mode === 'edit'}
+                    disabled={mode === 'edit'}
                     size="small"
                     sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
                   >
                     <UndoIcon />
                   </Button>
                 ) : (
-                  <Button
-                    variant="contained"
-                    onClick={speak}
-                    disabled={!message || mode === 'babble' || mode === 'edit'}
-                    size="small"
-                    sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
-                  >
-                    <VolumeUpIcon />
-                  </Button>
+                  <>
+                    {mode === 'build' && showBabbleButton && (
+                      <Button
+                        variant={babbleMode === 'off' ? 'outlined' : 'contained'}
+                        onClick={handleBabbleClick}
+                        size="small"
+                        sx={{
+                          backgroundColor: babbleMode === 'persistent' ? 'secondary.main' :
+                                         babbleMode === 'single' ? 'warning.main' : 'transparent',
+                          color: babbleMode === 'off' ? 'primary.main' : 'white',
+                          '&:hover': {
+                            backgroundColor: babbleMode === 'persistent' ? 'secondary.dark' :
+                                           babbleMode === 'single' ? 'warning.dark' : 'primary.light'
+                          }
+                        }}
+                      >
+                        <RecordVoiceOverIcon />
+                      </Button>
+                    )}
+                    <Button
+                      variant="contained"
+                      onClick={speak}
+                      disabled={!message || mode === 'edit'}
+                      size="small"
+                      sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
+                    >
+                      <VolumeUpIcon />
+                    </Button>
+                  </>
                 )}
                 <Button
                   variant="outlined"
@@ -1452,7 +1527,7 @@ const App = () => {
                       setCurrentPhonemeIndex(0);
                     }
                   }}
-                  disabled={!message || mode === 'babble' || mode === 'edit'}
+                  disabled={!message || mode === 'edit'}
                   size="small"
                   sx={{ visibility: mode === 'edit' ? 'hidden' : 'visible' }}
                 >
@@ -1602,6 +1677,11 @@ const App = () => {
               onSpeakWholeUtteranceChange={setSpeakWholeUtterance}
               clearMessageAfterPlay={clearMessageAfterPlay}
               onClearMessageAfterPlayChange={setClearMessageAfterPlay}
+              showBabbleButton={showBabbleButton}
+              onShowBabbleButtonChange={(value) => {
+                setShowBabbleButton(value);
+                localStorage.setItem('showBabbleButton', JSON.stringify(value));
+              }}
               mode={mode}
               onModeChange={setMode}
               toolbarConfig={toolbarConfig}

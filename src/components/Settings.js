@@ -68,6 +68,8 @@ const Settings = ({
   onSpeakWholeUtteranceChange,
   clearMessageAfterPlay,
   onClearMessageAfterPlayChange,
+  showBabbleButton,
+  onShowBabbleButtonChange,
   mode,
   onModeChange,
   toolbarConfig,
@@ -431,6 +433,7 @@ const Settings = ({
           showIpaToText: true,
           speakOnButtonPress: true,
           speakWholeUtterance: true,
+          showBabbleButton: true,
           backgroundSettings: {
             type: 'color',
             color: '#ffffff',
@@ -442,7 +445,6 @@ const Settings = ({
           toolbarConfig: {
             showBuild: true,
             showSearch: true,
-            showBabble: true,
             showEdit: true,
             showGame: true,
             showSettings: true,
@@ -456,7 +458,7 @@ const Settings = ({
           'buttonSpacing', 'minButtonSize', 'layoutMode', 'fixedLayout',
           'touchDwellEnabled', 'touchDwellTime', 'dwellIndicatorType', 'dwellIndicatorColor',
           'hapticFeedback', 'showStressMarkers', 'showIpaToText', 'speakOnButtonPress',
-          'speakWholeUtterance', 'backgroundSettings', 'toolbarConfig',
+          'speakWholeUtterance', 'showBabbleButton', 'backgroundSettings', 'toolbarConfig',
           'ipaCustomizations', 'phonemeOrder', 'wordMastery', 'hasVisitedBefore'
         ];
 
@@ -806,6 +808,23 @@ const Settings = ({
                   </IconButton>
                 </Tooltip>
               </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showBabbleButton}
+                      onChange={(e) => onShowBabbleButtonChange(e.target.checked)}
+                    />
+                  }
+                  label="Show babble button in build mode"
+                />
+                <Tooltip title="Show a babble button in build mode for practicing phoneme sounds without adding to message">
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <HelpOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
 
             <Typography variant="h6" gutterBottom>Accessibility</Typography>
@@ -914,16 +933,6 @@ const Settings = ({
                       />
                     }
                     label="Search Mode"
-                  />
-
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={toolbarConfig?.showBabble !== false}
-                        onChange={(e) => handleToolbarConfigChange('showBabble', e.target.checked)}
-                      />
-                    }
-                    label="Babble Mode"
                   />
 
                   <FormControlLabel
