@@ -64,7 +64,7 @@ const App = () => {
     }
   });
   const [buttonSpacing, setButtonSpacing] = useState(() => parseInt(localStorage.getItem('buttonSpacing')) || 4);
-  const [minButtonSize, setMinButtonSize] = useState(() => parseInt(localStorage.getItem('minButtonSize')) || 60);
+  const [minButtonSize, setMinButtonSize] = useState(() => parseInt(localStorage.getItem('minButtonSize')) || 75);
   const [layoutMode, setLayoutMode] = useState(() => localStorage.getItem('layoutMode') || 'grid');
   const [fixedLayout, setFixedLayout] = useState(() => {
     const saved = localStorage.getItem('fixedLayout');

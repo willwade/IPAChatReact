@@ -63,7 +63,7 @@ const GameMode = ({
   });
   const [minButtonSize] = useState(() => {
     const saved = localStorage.getItem('minButtonSize');
-    return saved ? parseInt(saved) : 60;
+    return saved ? parseInt(saved) : 75;
   });
   const [layoutMode] = useState(() => {
     const saved = localStorage.getItem('layoutMode');
