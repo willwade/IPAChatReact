@@ -419,7 +419,7 @@ const Settings = ({
           selectedRegion: 'en-GB-london',
           selectedVoice: '', // Will be set to first available voice
           buttonSpacing: 4,
-          minButtonSize: 60,
+          minButtonSize: 75,
           layoutMode: 'grid',
           fixedLayout: false,
           touchDwellEnabled: false,
@@ -678,7 +678,7 @@ const Settings = ({
                   value={minButtonSize}
                   onChange={(_, value) => onMinButtonSizeChange(value)}
                   min={40}
-                  max={80}
+                  max={120}
                   step={5}
                   marks
                   valueLabelDisplay="auto"

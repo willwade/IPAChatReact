@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Switch, FormControlLabel, Button, IconButton, Divider, CircularProgress, Typography } from '@mui/material';
+import { Box, Switch, FormControlLabel, Button, Divider, CircularProgress } from '@mui/material';
 import { detailedPhoneticData as phoneticData } from '../data/phoneticData';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
@@ -9,15 +9,6 @@ import EditMode from './EditMode';
 import EditPhonemeDialog from './EditPhonemeDialog';
 import './PhonemeGrid.css';
 
-const debounce = (func, wait) => {
-  let timeout;
-  return function (...args) {
-    const context = this;
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(context, args), wait);
-  };
-};
-
 const IPAKeyboard = ({
   mode = 'build',
   onPhonemeClick,
@@ -25,7 +16,7 @@ const IPAKeyboard = ({
   disabledPhonemes,
   buttonSpacing = 1,
   selectedLanguage = 'en-GB',
-  minButtonSize = 60,
+  minButtonSize = 75,
   layoutMode = 'grid',
   fixedLayout = false,
   touchDwellEnabled = false,
@@ -63,7 +54,6 @@ const IPAKeyboard = ({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [backgroundEditOpen, setBackgroundEditOpen] = useState(false);
   const containerRef = useRef(null);
-  const [isJiggling, setIsJiggling] = useState(false);
   const [touchStartTime, setTouchStartTime] = useState(null);
   const [touchPosition, setTouchPosition] = useState(null);
   const [dwellProgress, setDwellProgress] = useState(0);
@@ -71,10 +61,8 @@ const IPAKeyboard = ({
   const [isSelecting, setIsSelecting] = useState(false);
   const animationFrameRef = useRef();
   const longPressTimer = useRef(null);
-  const [hoveredPhoneme, setHoveredPhoneme] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedPhoneme, setDraggedPhoneme] = useState(null);
-  const [draggedElement, setDraggedElement] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [validLanguage, setValidLanguage] = useState('en-GB');
@@ -122,7 +110,6 @@ const IPAKeyboard = ({
       // Common QWERTY-style layouts typically have 12 columns
       // We can detect this by finding the pattern of non-empty cells
       const totalCells = savedOrder.length;
-      const nonEmptyCells = savedOrder.filter(cell => cell !== '').length;
 
       // Try common column counts and see which makes most sense
       const possibleColumns = [10, 11, 12, 13, 14, 15];
@@ -194,10 +181,6 @@ const IPAKeyboard = ({
 
 
 
-  useEffect(() => {
-    // Reset jiggling state when mode changes
-    setIsJiggling(false);
-  }, [mode]);
 
   useEffect(() => {
     return () => {
@@ -231,13 +214,7 @@ const IPAKeyboard = ({
       setIsLoading(false);
       setError(null);
     }
-  }, [selectedLanguage, phoneticData]);
-
-  const triggerHapticFeedback = () => {
-    if (hapticFeedback && window.navigator.vibrate) {
-      window.navigator.vibrate(50); // Short vibration
-    }
-  };
+  }, [selectedLanguage, validLanguage]);
 
   const handleDragStart = (event, phoneme, element) => {
     if (editMode !== 'move') return;
@@ -263,110 +240,14 @@ const IPAKeyboard = ({
       }
     }
     
-    setDraggedPhoneme(phoneme);
-    setDraggedElement(element);
-    setIsDragging(true);
+      setDraggedPhoneme(phoneme);
+      setIsDragging(true);
     
     // Add dragging class to element
     element.classList.add('dragging');
   };
 
-  const handleDragOver = (event) => {
-    if (!isDragging || editMode !== 'move') return;
-    
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
-
-    const targetButton = event.target.closest('[data-phoneme]');
-    if (!targetButton) return;
-
-    const targetPhoneme = targetButton.dataset.phoneme;
-    if (targetPhoneme !== draggedPhoneme) {
-      // Add visual indicator for drop target
-      const buttons = document.querySelectorAll('[data-phoneme]');
-      buttons.forEach(button => {
-        button.classList.remove('drop-target');
-        button.classList.remove('drop-target-before');
-        button.classList.remove('drop-target-after');
-      });
-
-      const rect = targetButton.getBoundingClientRect();
-      const isBeforeMiddle = event.clientX < rect.left + rect.width / 2;
-      
-      targetButton.classList.add('drop-target');
-      targetButton.classList.add(isBeforeMiddle ? 'drop-target-before' : 'drop-target-after');
-      setHoveredPhoneme(targetPhoneme);
-    }
-  };
-
-  const handleDrop = (event) => {
-    if (!isDragging || editMode !== 'move') return;
-    
-    event.preventDefault();
-    event.stopPropagation();
-
-    const targetButton = event.target.closest('[data-phoneme]');
-    if (!targetButton) return;
-
-    const targetPhoneme = targetButton.dataset.phoneme;
-    if (targetPhoneme !== draggedPhoneme) {
-      // Get current order
-      const currentOrder = phonemeOrder[selectedLanguage] || getAllPhonemes(selectedLanguage);
-      const fromIndex = currentOrder.indexOf(draggedPhoneme);
-      const toIndex = currentOrder.indexOf(targetPhoneme);
-      
-      if (fromIndex !== -1 && toIndex !== -1) {
-        // Create new order
-        const newOrder = [...currentOrder];
-        newOrder.splice(fromIndex, 1);
-        newOrder.splice(toIndex, 0, draggedPhoneme);
-        
-        // Update order
-        setPhonemeOrder(prev => ({
-          ...prev,
-          [selectedLanguage]: newOrder
-        }));
-        
-        // Save to localStorage
-        localStorage.setItem('phonemeOrder', JSON.stringify({
-          ...phonemeOrder,
-          [selectedLanguage]: newOrder
-        }));
-      }
-    }
-
-    // Clean up
-    const buttons = document.querySelectorAll('[data-phoneme]');
-    buttons.forEach(button => {
-      button.classList.remove('dragging');
-      button.classList.remove('drop-target');
-      button.classList.remove('drop-target-before');
-      button.classList.remove('drop-target-after');
-    });
-
-    setIsDragging(false);
-    setDraggedPhoneme(null);
-    setDraggedElement(null);
-    setHoveredPhoneme(null);
-  };
-
   // Add drag end handler to clean up if drop doesn't occur
-  const handleDragEnd = (event) => {
-    const buttons = document.querySelectorAll('[data-phoneme]');
-    buttons.forEach(button => {
-      button.classList.remove('dragging');
-      button.classList.remove('drop-target');
-      button.classList.remove('drop-target-before');
-      button.classList.remove('drop-target-after');
-    });
-
-    setIsDragging(false);
-    setDraggedPhoneme(null);
-    setDraggedElement(null);
-    setHoveredPhoneme(null);
-  };
-
   // Add styles for drag and drop
   const dragDropStyles = {
     '& .MuiButton-root.dragging': {
@@ -488,10 +369,10 @@ const IPAKeyboard = ({
       const targetButton = targetElement.closest('[data-phoneme]');
       if (!targetButton) return;
 
-      const targetPhoneme = targetButton.dataset.phoneme;
-      if (targetPhoneme !== draggedPhoneme) {
-        setHoveredPhoneme(targetPhoneme);
-      }
+        const targetPhoneme = targetButton.dataset.phoneme;
+        if (targetPhoneme !== draggedPhoneme) {
+          // Placeholder for hover logic if needed
+        }
     }
   };
 
@@ -518,24 +399,21 @@ const IPAKeyboard = ({
         onPhonemeSwap?.(draggedPhoneme, targetPhoneme);
       }
 
-      setIsDragging(false);
-      setDraggedPhoneme(null);
-      setDraggedElement(null);
-      setHoveredPhoneme(null);
+        setIsDragging(false);
+        setDraggedPhoneme(null);
     }
 
     cancelDwell();
   };
 
   const handleLongPress = (phoneme) => {
-    if (mode === 'edit') {
-      setIsJiggling(true);
-      // Clear any existing timers
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
+      if (mode === 'edit') {
+        // Clear any existing timers
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
       }
-    }
   };
 
   const handleMouseDown = (e, phoneme) => {
@@ -566,37 +444,6 @@ const IPAKeyboard = ({
         clearTimeout(longPressTimer.current);
       }
       setCurrentPhoneme(null);
-    }
-  };
-
-  const handleButtonClick = (phoneme) => {
-    // Don't handle click if it was triggered by touch
-    if (touchPosition) {
-      setTouchPosition(null);
-      return;
-    }
-
-    if (mode === 'edit') {
-      if (editMode === 'customize') {
-        setSelectedPhoneme(phoneme);
-        setEditDialogOpen(true);
-      } else if (editMode === 'move') {
-        // Handle move mode if needed
-      }
-    } else {
-      // Play audio immediately
-      onPhonemeClick?.(phoneme);
-      
-      // Visual feedback after audio starts
-      requestAnimationFrame(() => {
-        const button = document.querySelector(`[data-phoneme="${phoneme}"]`);
-        if (button) {
-          button.style.transform = 'scale(0.95)';
-          setTimeout(() => {
-            button.style.transform = 'none';
-          }, 100);
-        }
-      });
     }
   };
 
@@ -726,7 +573,7 @@ const IPAKeyboard = ({
     }
 
     // Grid recalculation is handled by other useEffects
-  }, [showStressMarkers, validLanguage]);
+  }, [showStressMarkers, validLanguage, phonemeOrder]);
 
   const handlePhonemeMove = useCallback((phoneme, direction) => {
     // Get current phonemes directly from state to avoid circular dependency
@@ -798,37 +645,6 @@ const IPAKeyboard = ({
     return 'inherit';
   };
 
-  const compressImage = (base64String, maxWidth = 200) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = base64String;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Calculate new dimensions maintaining aspect ratio
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw and compress
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Using JPEG with 70% quality
-      };
-    });
-  };
-
-  const estimateStorageSize = (obj) => {
-    const str = JSON.stringify(obj);
-    return new Blob([str]).size;
-  };
-
   const saveCustomization = async (phoneme, customization) => {
     try {
       console.log('Saving customization for', phoneme, customization);
@@ -842,43 +658,6 @@ const IPAKeyboard = ({
     } catch (error) {
       console.error('Error saving customization:', error);
       alert('Error saving customization. Please try again.');
-    }
-  };
-
-  const handleImageUploadBase = async (event, setFieldValue) => {
-    const file = event.target.files[0];
-    if (file) {
-      // Check file size before processing
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('Image is too large. Please choose an image under 5MB.');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          // Start with more aggressive compression for larger files
-          const initialMaxWidth = file.size > 1024 * 1024 ? 150 : 200;
-          const compressed = await compressImage(reader.result, initialMaxWidth);
-          
-          // Check if the compressed result would fit
-          const testCustomizations = {
-            ...customizations,
-            test: { image: compressed }
-          };
-          
-          if (estimateStorageSize(testCustomizations) > 4.5 * 1024 * 1024) {
-            alert('Even after compression, this image would be too large. Please try a smaller image.');
-            return;
-          }
-          
-          setFieldValue('image', compressed);
-        } catch (error) {
-          console.error('Error processing image:', error);
-          alert('Error processing image. Please try a different image.');
-        }
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -1215,7 +994,7 @@ const IPAKeyboard = ({
           width: '100%',
           height: '100%',
           p: 0.5,
-          fontSize: '1rem',
+          fontSize: '1.1rem',
           fontFamily: '"Noto Sans", sans-serif',
           backgroundColor: color,
           color: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.87)' : '#fff',

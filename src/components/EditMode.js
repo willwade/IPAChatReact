@@ -3,7 +3,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  TextField,
   Button,
   Box,
   Typography,
@@ -26,10 +25,8 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
   const [hideLabel, setHideLabel] = useState(currentCustomization?.label || false);
   const [hideButton, setHideButton] = useState(currentCustomization?.hidden || false);
   const [imageUrl, setImageUrl] = useState(currentCustomization?.image || '');
-  const [selectedFile, setSelectedFile] = useState(null);
   const [customColor, setCustomColor] = useState(currentCustomization?.customColor || defaultColor);
   const [buttonOpacity, setButtonOpacity] = useState(currentCustomization?.opacity !== undefined ? currentCustomization.opacity : 1);
-  const [showColorPicker, setShowColorPicker] = useState(false);
   
   // Background customization states
   const [backgroundType, setBackgroundType] = useState(backgroundSettings?.type || 'color');
@@ -43,7 +40,6 @@ const EditMode = ({ open, onClose, phoneme, onSave, currentCustomization, defaul
   const handleImageChange = (event) => {
     const file = event.target.files[0];
     if (file) {
-      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImageUrl(reader.result);
