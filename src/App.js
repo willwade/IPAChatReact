@@ -24,6 +24,16 @@ const PHONEMES = {
   ]
 };
 
+// Configuration for vowel image options
+const VOWEL_IMAGE_OPTIONS = {
+  '/ɒ/': ['octopus.png', 'pop.png', 'fox.png', 'miss-polly.png'], // "o" sounds
+  '/iː/': ['eagle.png', 'bee.png', 'sheep.png', 'squeak.png'], // "ee" sounds  
+  '/æ/': ['apple.png', 'cat-on-mat.png', 'nan.png', 'splash.png'], // "a" sounds
+  '/ɪ/': ['igloo.png', 'incy.png', 'six.png', 'thwip.png'], // short "i" sounds
+  '/ɛ/': ['elephant.png', 'red.png', 'head.png', 'squelch.png'], // "e" sounds
+  '/ɑː/': ['aardvark.png', 'aargh.png', 'car.png', 'bart.png'] // "ah" sounds
+};
+
 // Configuration for cached vowel preferences
 const CACHED_VOWEL_PREFERENCES = {
   'ɪ': {
@@ -43,6 +53,10 @@ const App = () => {
   const [cacheInitialized, setCacheInitialized] = useState(false);
   const [audioContext, setAudioContext] = useState(null);
   const [mode, setMode] = useState('babble'); // 'babble' or 'speech'
+  const [editMode, setEditMode] = useState(false);
+  const [selectedImages, setSelectedImages] = useState({
+    '/ɒ/': 0, '/iː/': 0, '/æ/': 0, '/ɪ/': 0, '/ɛ/': 0, '/ɑː/': 0
+  });
 
   useEffect(() => {
     fetchVoices();
@@ -471,6 +485,12 @@ const App = () => {
   }, [selectedVoice, isPlaying, vowelCache, cacheInitialized]);
 
   const handlePhonemeClick = (phoneme) => {
+    if (editMode && VOWEL_IMAGE_OPTIONS[phoneme.symbol]) {
+      // In edit mode, cycle vowel images
+      cycleVowelImage(phoneme.symbol);
+      return;
+    }
+    
     if (mode === 'babble') {
       // In babble mode, just play the phoneme without adding to queue
       playPhoneme(phoneme.symbol);
@@ -534,6 +554,28 @@ const App = () => {
     }
   };
 
+  const toggleEditMode = () => {
+    setEditMode(prev => !prev);
+  };
+
+  const cycleVowelImage = (vowelSymbol) => {
+    const options = VOWEL_IMAGE_OPTIONS[vowelSymbol];
+    if (options) {
+      setSelectedImages(prev => ({
+        ...prev,
+        [vowelSymbol]: (prev[vowelSymbol] + 1) % options.length
+      }));
+    }
+  };
+
+  const getCurrentImage = (vowelSymbol) => {
+    const options = VOWEL_IMAGE_OPTIONS[vowelSymbol];
+    if (options) {
+      return options[selectedImages[vowelSymbol]];
+    }
+    return null;
+  };
+
 
   const gridItems = [
     // Row 1 - Controls only: Reset, Word Display (spans 2), Backspace, Play
@@ -566,13 +608,34 @@ const App = () => {
 
   return (
     <div className="app">
-      <button 
-        className="mode-toggle-button"
-        onClick={toggleMode}
-        disabled={isPlaying}
-      >
-        {mode === 'babble' ? 'Switch to Speech Mode' : 'Switch to Babble Mode'}
-      </button>
+      {!editMode ? (
+        <div className="button-group">
+          <button 
+            className="mode-toggle-button left-button"
+            onClick={toggleMode}
+            disabled={isPlaying}
+          >
+            {mode === 'babble' ? 'Switch to Speech Mode' : 'Switch to Babble Mode'}
+          </button>
+          <button 
+            className="edit-button right-button"
+            onClick={toggleEditMode}
+            disabled={isPlaying}
+          >
+            Edit Images
+          </button>
+        </div>
+      ) : (
+        <div className="edit-mode-controls">
+          <p className="edit-instruction left-element">Click a vowel to change the image</p>
+          <button 
+            className="save-button right-button"
+            onClick={toggleEditMode}
+          >
+            Save
+          </button>
+        </div>
+      )}
       <div className="phoneme-grid">
         {gridItems.map((item, index) => (
           <button
@@ -584,14 +647,17 @@ const App = () => {
               item.type === 'word-display' ? 'word-display-button' :
               item.type === 'empty' ? 'empty-button' :
               'phoneme-button'
-            } ${item.display && item.display.endsWith('.png') ? 'image-button' : ''} ${isPlaying ? 'disabled' : ''} ${
+            } ${(item.display && item.display.endsWith('.png')) || getCurrentImage(item.symbol) ? 'image-button' : ''} ${isPlaying ? 'disabled' : ''} ${
               mode === 'babble' && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play' || item.type === 'word-display') ? 'babble-disabled' : ''
+            } ${
+              editMode && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play' || item.type === 'word-display' || !VOWEL_IMAGE_OPTIONS[item.symbol]) ? 'edit-disabled' : ''
             }`}
             onTouchEnd={(e) => {
               e.preventDefault();
               if (isPlaying) return;
               if (item.type === 'word-display' || item.type === 'empty') return;
               if (mode === 'babble' && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play')) return;
+              if (editMode && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play' || !VOWEL_IMAGE_OPTIONS[item.symbol])) return;
               if (item.action) {
                 item.action();
               } else {
@@ -602,6 +668,7 @@ const App = () => {
               if (isPlaying) return;
               if (item.type === 'word-display' || item.type === 'empty') return;
               if (mode === 'babble' && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play')) return;
+              if (editMode && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play' || !VOWEL_IMAGE_OPTIONS[item.symbol])) return;
               if (item.action) {
                 item.action();
               } else {
@@ -630,9 +697,9 @@ const App = () => {
               >
                 {wordQueue.length > 0 ? wordQueue.map(p => p.replace(/[\/]/g, '')).join('') : 'Build your word...'}
               </span>
-            ) : item.display && item.display.endsWith('.png') ? (
+            ) : (getCurrentImage(item.symbol) || (item.display && item.display.endsWith('.png'))) ? (
               <img 
-                src={`/images/${item.display}`} 
+                src={`/images/${getCurrentImage(item.symbol) || item.display}`} 
                 alt={item.symbol}
                 className="phoneme-image"
                 style={{ 
