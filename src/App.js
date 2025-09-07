@@ -24,6 +24,17 @@ const PHONEMES = {
   ]
 };
 
+// Configuration for cached vowel preferences
+const CACHED_VOWEL_PREFERENCES = {
+  'ɪ': {
+    paddingBefore: 0,
+    paddingAfter: 9,
+    extensionFactor: 2.0,
+    comparisonVowels: ['ɒ', 'æ']  // Compare "bit" with "bot" and "bat"
+  }
+  // Additional vowels can be added here as needed
+};
+
 const App = () => {
   const [wordQueue, setWordQueue] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState('en-GB-LibbyNeural');
@@ -58,7 +69,28 @@ const App = () => {
 
     const cache = {};
     
-    for (const [vowel, word] of Object.entries(vowelWords)) {
+    // Collect all vowels to cache: target vowels + their comparison vowels
+    const targetVowels = Object.keys(CACHED_VOWEL_PREFERENCES);
+    const comparisonVowels = new Set();
+    
+    targetVowels.forEach(vowel => {
+      const prefs = CACHED_VOWEL_PREFERENCES[vowel];
+      if (prefs.comparisonVowels) {
+        prefs.comparisonVowels.forEach(comp => comparisonVowels.add(comp));
+      }
+    });
+    
+    const vowelsToCache = [...targetVowels, ...Array.from(comparisonVowels)];
+    console.log('Caching target vowels:', targetVowels);
+    console.log('Caching comparison vowels:', Array.from(comparisonVowels));
+    console.log('Total vowels to cache:', vowelsToCache);
+    
+    for (const vowel of vowelsToCache) {
+      const word = vowelWords[vowel];
+      if (!word) {
+        console.warn(`No context word defined for vowel: ${vowel}`);
+        continue;
+      }
       try {
         console.log(`Caching ${vowel} from ${word}...`);
         const response = await config.api.post('/api/tts', {
@@ -109,18 +141,14 @@ const App = () => {
 
   const extractVowelFromAudio = async (targetPhoneme) => {
     try {
-      // Find the best comparison pair for this vowel
-      const comparisonPairs = {
-        'ɪ': ['ɒ', 'æ'],  // Compare "bit" with "bot" and "bat"
-        'ɛ': ['ɪ', 'æ'],  // Compare "bet" with "bit" and "bat"  
-        'æ': ['ɪ', 'ɛ'],  // Compare "bat" with "bit" and "bet"
-        'ɒ': ['ɪ', 'æ'],  // Compare "bot" with "bit" and "bat"
-        'ɑː': ['ɪ', 'æ'], // Compare "bart" with "bit" and "bat"
-        'iː': ['ɪ', 'æ']  // Compare "beat" with "bit" and "bat"
-      };
+      // Get comparison vowels from preferences
+      const preferences = CACHED_VOWEL_PREFERENCES[targetPhoneme];
+      if (!preferences) {
+        throw new Error(`No preferences found for ${targetPhoneme}`);
+      }
       
       const targetAudio = vowelCache[targetPhoneme];
-      const comparisons = comparisonPairs[targetPhoneme] || ['ɪ'];
+      const comparisons = preferences.comparisonVowels || [];
       
       if (!targetAudio) {
         throw new Error(`No cached audio for ${targetPhoneme}`);
@@ -144,24 +172,75 @@ const App = () => {
       }
       
       // Use the region with highest average difference across all comparisons
-      const bestRegion = findBestDifferenceRegion(differences, targetBuffer.length);
-      console.log(`Found vowel region: ${bestRegion.start} to ${bestRegion.end} (${Math.round(bestRegion.start/targetBuffer.length*100)}% - ${Math.round(bestRegion.end/targetBuffer.length*100)}%)`);
+      const coreRegion = findBestDifferenceRegion(differences, targetBuffer.length);
       
-      // Extract the identified region
-      const extractedLength = bestRegion.end - bestRegion.start;
+      // Add padding around the core vowel region using preferences
+      const paddingBefore = Math.floor((coreRegion.end - coreRegion.start) * preferences.paddingBefore);
+      const paddingAfter = Math.floor((coreRegion.end - coreRegion.start) * preferences.paddingAfter);  
+      
+      const bestRegion = {
+        start: Math.max(0, coreRegion.start - paddingBefore),
+        end: Math.min(targetBuffer.length, coreRegion.end + paddingAfter)
+      };
+      
+      console.log(`Found vowel core: ${coreRegion.start} to ${coreRegion.end} (${Math.round(coreRegion.start/targetBuffer.length*100)}% - ${Math.round(coreRegion.end/targetBuffer.length*100)}%)`);
+      console.log(`With padding: ${bestRegion.start} to ${bestRegion.end} (${Math.round(bestRegion.start/targetBuffer.length*100)}% - ${Math.round(bestRegion.end/targetBuffer.length*100)}%)`);
+      
+      // Extract and extend the padded region
+      const originalLength = bestRegion.end - bestRegion.start;
+      const extensionFactor = preferences.extensionFactor;
+      const extractedLength = Math.floor(originalLength * extensionFactor);
+      
       const extractedBuffer = ctx.createBuffer(
         targetBuffer.numberOfChannels,
         extractedLength,
         targetBuffer.sampleRate
       );
       
-      // Copy the vowel portion to the new buffer
+      // Copy the vowel portion to the new buffer with smooth fade-out
       for (let channel = 0; channel < targetBuffer.numberOfChannels; channel++) {
         const originalData = targetBuffer.getChannelData(channel);
         const extractedData = extractedBuffer.getChannelData(channel);
         
+        // Get the first and last samples for padding
+        const firstSample = originalData[bestRegion.start];
+        const lastSample = originalData[bestRegion.end - 1];
+        
         for (let i = 0; i < extractedLength; i++) {
-          extractedData[i] = originalData[bestRegion.start + i];
+          let sample;
+          
+          // Determine which part of the extended audio we're in
+          const paddingLength = Math.floor((extractedLength - originalLength) / 2);
+          
+          if (i < paddingLength) {
+            // Beginning padding - use first sample value
+            sample = firstSample;
+          } else if (i >= paddingLength + originalLength) {
+            // End padding - use last sample value
+            sample = lastSample;
+          } else {
+            // Original audio in the middle
+            const originalIndex = i - paddingLength;
+            sample = originalData[bestRegion.start + originalIndex];
+          }
+          
+          // Apply smooth fade-in to the first 20% of the extended audio
+          const fadeInLength = Math.floor(extractedLength * 0.2);
+          if (i < fadeInLength) {
+            const fadePosition = i / fadeInLength; // 0.0 to 1.0
+            const fadeMultiplier = Math.pow(fadePosition, 0.5); // Smooth curve
+            sample *= fadeMultiplier;
+          }
+          
+          // Apply smooth fade-out to the last 50% of the extended audio
+          const fadeOutLength = Math.floor(extractedLength * 0.5);
+          if (i >= extractedLength - fadeOutLength) {
+            const fadePosition = (extractedLength - i) / fadeOutLength; // 1.0 to 0.0
+            const fadeMultiplier = Math.pow(fadePosition, 0.5); // Smooth curve
+            sample *= fadeMultiplier;
+          }
+          
+          extractedData[i] = sample;
         }
       }
       
@@ -334,14 +413,14 @@ const App = () => {
     try {
       const cleanPhoneme = phonemeText.replace(/[\/]/g, '');
       
-      // Check if we have a cached vowel - use it if available
+      // Check if we have a cached vowel
       console.log(`Checking cache for: ${cleanPhoneme}`, {
         hasCache: !!vowelCache[cleanPhoneme],
         cacheInitialized: cacheInitialized,
         cacheKeys: Object.keys(vowelCache)
       });
       
-      if (vowelCache[cleanPhoneme] && cacheInitialized) {
+      if (vowelCache[cleanPhoneme] && cacheInitialized && CACHED_VOWEL_PREFERENCES[cleanPhoneme]) {
         console.log(`Playing cached vowel: ${cleanPhoneme}`);
         const cached = vowelCache[cleanPhoneme];
         const mimeType = cached.format === 'wav' ? 'audio/wav' : 'audio/mp3';
@@ -507,7 +586,8 @@ const App = () => {
             title={item.description || (
               item.type === 'play' ? 'Play current word' : 
               item.type === 'reset' ? 'Reset word' : 
-              item.type === 'backspace' ? 'Delete last phoneme' : ''
+              item.type === 'backspace' ? 'Delete last phoneme' : 
+              ''
             )}
             disabled={isPlaying}
           >
