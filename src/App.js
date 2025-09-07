@@ -42,6 +42,7 @@ const App = () => {
   const [vowelCache, setVowelCache] = useState({});
   const [cacheInitialized, setCacheInitialized] = useState(false);
   const [audioContext, setAudioContext] = useState(null);
+  const [mode, setMode] = useState('speech'); // 'babble' or 'speech'
 
   useEffect(() => {
     fetchVoices();
@@ -470,16 +471,21 @@ const App = () => {
   }, [selectedVoice, isPlaying, vowelCache, cacheInitialized]);
 
   const handlePhonemeClick = (phoneme) => {
-    // Add to queue
-    const newQueue = [...wordQueue, phoneme.symbol];
-    setWordQueue(newQueue);
-    
-    // If it's a single phoneme, play it individually (with cached vowels if available)
-    if (newQueue.length === 1) {
+    if (mode === 'babble') {
+      // In babble mode, just play the phoneme without adding to queue
       playPhoneme(phoneme.symbol);
     } else {
-      // Play the whole word
-      playWord(newQueue);
+      // In speech mode, add to queue and play word
+      const newQueue = [...wordQueue, phoneme.symbol];
+      setWordQueue(newQueue);
+      
+      // If it's a single phoneme, play it individually (with cached vowels if available)
+      if (newQueue.length === 1) {
+        playPhoneme(phoneme.symbol);
+      } else {
+        // Play the whole word
+        playWord(newQueue);
+      }
     }
   };
 
@@ -520,6 +526,14 @@ const App = () => {
     }
   };
 
+  const toggleMode = () => {
+    setMode(prev => prev === 'babble' ? 'speech' : 'babble');
+    // Clear word queue when switching to babble mode
+    if (mode === 'speech') {
+      setWordQueue([]);
+    }
+  };
+
 
   const gridItems = [
     // Row 1 - Controls only: Reset, Word Display (spans 2), Backspace, Play
@@ -552,6 +566,13 @@ const App = () => {
 
   return (
     <div className="app">
+      <button 
+        className="mode-toggle-button"
+        onClick={toggleMode}
+        disabled={isPlaying}
+      >
+        {mode === 'babble' ? 'Switch to Speech Mode' : 'Switch to Babble Mode'}
+      </button>
       <div className="phoneme-grid">
         {gridItems.map((item, index) => (
           <button
@@ -563,11 +584,14 @@ const App = () => {
               item.type === 'word-display' ? 'word-display-button' :
               item.type === 'empty' ? 'empty-button' :
               'phoneme-button'
-            } ${item.display && item.display.endsWith('.png') ? 'image-button' : ''} ${isPlaying ? 'disabled' : ''}`}
+            } ${item.display && item.display.endsWith('.png') ? 'image-button' : ''} ${isPlaying ? 'disabled' : ''} ${
+              mode === 'babble' && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play' || item.type === 'word-display') ? 'babble-disabled' : ''
+            }`}
             onTouchEnd={(e) => {
               e.preventDefault();
               if (isPlaying) return;
               if (item.type === 'word-display' || item.type === 'empty') return;
+              if (mode === 'babble' && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play')) return;
               if (item.action) {
                 item.action();
               } else {
@@ -577,6 +601,7 @@ const App = () => {
             onClick={() => {
               if (isPlaying) return;
               if (item.type === 'word-display' || item.type === 'empty') return;
+              if (mode === 'babble' && (item.type === 'reset' || item.type === 'backspace' || item.type === 'play')) return;
               if (item.action) {
                 item.action();
               } else {
