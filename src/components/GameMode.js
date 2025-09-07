@@ -4,6 +4,7 @@ import {
   Typography,
   Button,
   LinearProgress,
+  Paper,
   Chip,
   IconButton,
   Alert,
@@ -14,19 +15,27 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon
+  ListItemIcon,
+  Container,
+  Card,
+  CardContent,
+  FormControlLabel,
+  Switch,
+  Slider,
+  Divider
 } from '@mui/material';
 import {
   VolumeUp as VolumeUpIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
+  ArrowForward as ArrowForwardIcon,
   School as SchoolIcon,
   Star as StarIcon,
   HelpOutline as HelpOutlineIcon
 } from '@mui/icons-material';
 import IPAKeyboard from './IPAKeyboard';
 import Confetti from 'react-confetti';
-import { gamePhases, getWordVariation } from '../data/gamePhases';
+import { gamePhases, getWordVariation, isCorrectIPA } from '../data/gamePhases';
 
 const DIFFICULTY_LEVELS = {
   LEVEL1: { id: 1, name: "All Cues", description: "Written word, IPA model, Audio, and Hints" },
@@ -57,21 +66,18 @@ const GameMode = ({
     const saved = localStorage.getItem('gameDifficulty');
     return saved ? JSON.parse(saved) : DIFFICULTY_LEVELS.LEVEL1;
   });
-  const [buttonSpacing] = useState(() => {
+  const [error, setError] = useState(null);
+  const [buttonScale, setButtonScale] = useState(() => {
+    const saved = localStorage.getItem('buttonScale');
+    return saved ? parseFloat(saved) : 1;
+  });
+  const [buttonSpacing, setButtonSpacing] = useState(() => {
     const saved = localStorage.getItem('buttonSpacing');
     return saved ? parseInt(saved) : 4;
   });
-  const [minButtonSize] = useState(() => {
-    const saved = localStorage.getItem('minButtonSize');
-    return saved ? parseInt(saved) : 75;
-  });
-  const [layoutMode] = useState(() => {
-    const saved = localStorage.getItem('layoutMode');
-    return saved || 'grid';
-  });
-  const [fixedLayout] = useState(() => {
-    const saved = localStorage.getItem('fixedLayout');
-    return saved === null ? false : saved === 'true';
+  const [autoScale, setAutoScale] = useState(() => {
+    const saved = localStorage.getItem('autoScale');
+    return saved ? JSON.parse(saved) : true;
   });
   const [currentWord, setCurrentWord] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
@@ -83,6 +89,10 @@ const GameMode = ({
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [wordMastery, setWordMastery] = useState(() => {
     const saved = localStorage.getItem('wordMastery');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [phaseProgress, setPhaseProgress] = useState(() => {
+    const saved = localStorage.getItem('phaseProgress');
     return saved ? JSON.parse(saved) : {};
   });
   const [overallProgress, setOverallProgress] = useState(0);
@@ -164,6 +174,10 @@ const GameMode = ({
   };
 
   // Handle backspace
+  const handleBackspace = () => {
+    setUserInput(prev => prev.slice(0, -1));
+  };
+
   // Initialize game state
   useEffect(() => {
     const initializeGame = () => {
@@ -213,7 +227,19 @@ const GameMode = ({
     });
   };
 
-    const shouldDisablePhoneme = useCallback((phoneme) => {
+  useEffect(() => {
+    if (!gameStarted && currentWord) {
+      setShowWordCue(true);
+      setGameStarted(true);
+      
+      // Play the word audio based on difficulty level
+      if (difficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
+        playWord(getCurrentWord());
+      }
+    }
+  }, [gameStarted, currentWord, difficulty]);
+
+  const shouldDisablePhoneme = useCallback((phoneme) => {
     if (!currentWord || difficulty.id !== DIFFICULTY_LEVELS.LEVEL1.id) {
       return false;
     }
@@ -229,6 +255,50 @@ const GameMode = ({
     return !variation.validPhonemes.includes(phoneme);
   }, [currentWord, difficulty.id, currentPhase, currentWordIndex, selectedRegion]);
 
+  const handleButtonScaleChange = (newScale) => {
+    setButtonScale(newScale);
+    localStorage.setItem('buttonScale', newScale);
+  };
+
+  const handleButtonSpacingChange = (newSpacing) => {
+    setButtonSpacing(newSpacing);
+    localStorage.setItem('buttonSpacing', newSpacing);
+  };
+
+  const handleAutoScaleChange = (newAutoScale) => {
+    setAutoScale(newAutoScale);
+    localStorage.setItem('autoScale', JSON.stringify(newAutoScale));
+  };
+
+  // Update difficulty and show appropriate cues
+  const handleDifficultyChange = (newDifficulty) => {
+    setDifficulty(newDifficulty);
+    localStorage.setItem('gameDifficulty', JSON.stringify(newDifficulty));
+    
+    // Show/hide IPA cue based on difficulty
+    setShowIPACue(newDifficulty.id === DIFFICULTY_LEVELS.LEVEL1.id);
+    
+    // Show word cue when difficulty changes
+    setShowWordCue(true);
+    
+    // Play the word audio for audio-enabled difficulty levels
+    if (currentWord && newDifficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
+      // Use onSpeakRequest for whole words
+      onSpeakRequest(getCurrentWord());
+    }
+  };
+
+  const playWord = async (text) => {
+    try {
+      await onSpeakRequest(text);
+    } catch (error) {
+      console.error('Error in speech synthesis:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+      }
+    }
+  };
+
   const getCurrentWord = useCallback(() => {
     const phase = `phase${currentPhase + 1}`;
     const words = Object.keys(gamePhases[phase].words);
@@ -243,40 +313,11 @@ const GameMode = ({
     return variation ? variation.ipa : '';
   }, [currentPhase, currentWordIndex, selectedRegion]);
 
-  // Update difficulty and show appropriate cues
-  const handleDifficultyChange = useCallback((newDifficulty) => {
-    setDifficulty(newDifficulty);
-    localStorage.setItem('gameDifficulty', JSON.stringify(newDifficulty));
-
-    setShowIPACue(newDifficulty.id === DIFFICULTY_LEVELS.LEVEL1.id);
-    setShowWordCue(true);
-
-    if (currentWord && newDifficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
-      onSpeakRequest(getCurrentWord());
-    }
-  }, [currentWord, onSpeakRequest, getCurrentWord]);
-
-  const playWord = useCallback(async (text) => {
-    try {
-      await onSpeakRequest(text);
-    } catch (error) {
-      console.error('Error in speech synthesis:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-      }
-    }
-  }, [onSpeakRequest]);
-
-    useEffect(() => {
-      if (!gameStarted && currentWord) {
-        setShowWordCue(true);
-        setGameStarted(true);
-
-      if (difficulty.id !== DIFFICULTY_LEVELS.LEVEL4.id) {
-        playWord(getCurrentWord());
-      }
-    }
-    }, [gameStarted, currentWord, difficulty, playWord, getCurrentWord]);
+  const checkAnswer = useCallback((input) => {
+    const phase = `phase${currentPhase + 1}`;
+    const words = Object.keys(gamePhases[phase].words);
+    return isCorrectIPA(words[currentWordIndex], phase, input, selectedRegion);
+  }, [currentPhase, currentWordIndex, selectedRegion]);
 
   // Effect to handle adaptive difficulty
   useEffect(() => {
@@ -287,7 +328,7 @@ const GameMode = ({
       }
       setConsecutiveCorrect(0);
     }
-  }, [consecutiveCorrect, difficulty.id, handleDifficultyChange]);
+  }, [consecutiveCorrect, difficulty.id]);
 
   // Effect to update overall progress
   useEffect(() => {
@@ -457,11 +498,10 @@ const GameMode = ({
         <IPAKeyboard
           mode="game"
           onPhonemeClick={handlePhonemeClick}
+          buttonScale={buttonScale}
           buttonSpacing={buttonSpacing}
           selectedLanguage={selectedLanguage}
-          minButtonSize={minButtonSize}
-          layoutMode={layoutMode}
-          fixedLayout={fixedLayout}
+          autoScale={autoScale}
           disabledPhonemes={shouldDisablePhoneme}
         />
       </Box>
@@ -589,6 +629,20 @@ const GameMode = ({
         </DialogActions>
       </Dialog>
 
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ 
+            position: 'absolute', 
+            top: 8, 
+            left: 8, 
+            right: 8, 
+            zIndex: 1 
+          }}
+        >
+          {error}
+        </Alert>
+      )}
       {showConfetti && (
         <Confetti
           count={100}
