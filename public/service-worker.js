@@ -1,5 +1,6 @@
 const BUILD_TIME = new Date().getTime(); // This will be different for each build
-const CACHE_NAME = `ipa-chat-${BUILD_TIME}`;
+const VERSION = '1.0.0'; // Increment this when you want to force cache refresh
+const CACHE_NAME = `ipa-chat-v${VERSION}-${BUILD_TIME}`;
 const urlsToCache = [
   '/',
   '/index.html',
@@ -53,32 +54,57 @@ self.addEventListener('fetch', event => {
     return fetch(event.request);
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-
-        return fetch(event.request).then(
-          response => {
-            // Check if we received a valid response
-            if(!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response
+  // Use network-first strategy for HTML files to ensure fresh content
+  if (event.request.destination === 'document' ||
+      event.request.url.includes('.html') ||
+      event.request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // If network request succeeds, cache and return it
+          if (response && response.status === 200) {
             const responseToCache = response.clone();
-
             caches.open(CACHE_NAME)
               .then(cache => {
                 cache.put(event.request, responseToCache);
               });
-
+          }
+          return response;
+        })
+        .catch(() => {
+          // Network failed, try cache as fallback
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // For other resources (JS, CSS, images), use cache-first strategy
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => {
+          // Cache hit - return response
+          if (response) {
             return response;
           }
-        );
-      })
-  );
+
+          return fetch(event.request).then(
+            response => {
+              // Check if we received a valid response
+              if(!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+              }
+
+              // Clone the response
+              const responseToCache = response.clone();
+
+              caches.open(CACHE_NAME)
+                .then(cache => {
+                  cache.put(event.request, responseToCache);
+                });
+
+              return response;
+            }
+          );
+        })
+    );
+  }
 });
