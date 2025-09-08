@@ -30,7 +30,7 @@
     },
     "ɪʊ": {
       "hideLabel": true,
-      "hideButton": false,
+      "hideButton": true,
       "image": "/images/music.png",
       "label": "",
       "customColor": "#fcd668"
@@ -171,7 +171,7 @@
     "θ": {
       "hideLabel": true,
       "hideButton": false,
-      "image": "/images/thumb2.jpeg",
+      "image": "/images/thumb2.png",
       "label": "",
       "customColor": "#C05D54"
     },
