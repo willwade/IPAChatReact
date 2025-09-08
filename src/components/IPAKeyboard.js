@@ -100,6 +100,12 @@ const IPAKeyboard = ({
   const getFixedLayoutColumns = useCallback(() => {
     if (!fixedLayout) return null;
 
+    // First check if there's an explicit gridConfig for this language
+    const customConfig = gridConfig?.[validLanguage];
+    if (customConfig?.columns) {
+      return customConfig.columns;
+    }
+
     const savedOrder = phonemeOrder[validLanguage];
     if (!savedOrder || !Array.isArray(savedOrder)) return null;
 
@@ -125,7 +131,7 @@ const IPAKeyboard = ({
     }
 
     return null;
-  }, [fixedLayout, phonemeOrder, validLanguage]);
+  }, [fixedLayout, phonemeOrder, validLanguage, gridConfig]);
 
   // Check if we should use fixed layout
   const shouldUseFixedLayout = useCallback(() => {
