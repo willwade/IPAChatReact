@@ -71,37 +71,18 @@ const IPAKeyboard = ({
   // State for tracking window size for responsive behavior
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  // Helper functions for responsive button sizing
-  const getMinButtonSize = useCallback(() => {
-    // Use the configurable minimum button size as base, with responsive adjustments
-    const baseSize = minButtonSize;
-    if (windowWidth <= 480) return `${Math.max(baseSize - 15, 30)}px`;
-    if (windowWidth <= 768) return `${Math.max(baseSize - 10, 35)}px`;
-    if (windowWidth <= 1024) return `${Math.max(baseSize - 5, 40)}px`;
-    return `${baseSize}px`;
-  }, [minButtonSize, windowWidth]);
-
-  const getMaxButtonSize = useCallback(() => {
-    // Calculate max size based on minimum size with better scaling
-    const baseSize = minButtonSize;
-    if (windowWidth <= 480) return `${baseSize + 5}px`;
-    if (windowWidth <= 768) return `${baseSize + 15}px`;
-    if (windowWidth <= 1024) return `${baseSize + 25}px`;
-    if (windowWidth <= 1440) return `${baseSize + 35}px`;
-    return `${baseSize + 45}px`; // Larger buttons for big screens
-  }, [minButtonSize, windowWidth]);
-
-  // Check if we should use list layout
-  const shouldUseListLayout = useCallback(() => {
-    return layoutMode === 'list' && windowWidth <= 480;
-  }, [layoutMode, windowWidth]);
-
   // Calculate fixed layout columns based on phoneme order structure
   const getFixedLayoutColumns = useCallback(() => {
     if (!fixedLayout) return null;
 
     const savedOrder = phonemeOrder[validLanguage];
     if (!savedOrder || !Array.isArray(savedOrder)) return null;
+
+    // First, check if there's an explicit column count in gridConfig
+    const customConfig = gridConfig?.[validLanguage];
+    if (customConfig?.columns) {
+      return customConfig.columns;
+    }
 
     // For QWERTY-style layouts, detect the pattern by looking for empty cells
     // and calculating the likely column count
@@ -125,12 +106,67 @@ const IPAKeyboard = ({
     }
 
     return null;
-  }, [fixedLayout, phonemeOrder, validLanguage]);
+  }, [fixedLayout, phonemeOrder, validLanguage, gridConfig]);
 
   // Check if we should use fixed layout
   const shouldUseFixedLayout = useCallback(() => {
     return fixedLayout && getFixedLayoutColumns() !== null;
   }, [fixedLayout, getFixedLayoutColumns]);
+
+  // Helper functions for responsive button sizing
+  const getMinButtonSize = useCallback(() => {
+    // Use the configurable minimum button size as base, with responsive adjustments
+    let baseSize = minButtonSize;
+
+    // For fixed layouts, ensure buttons can fit within the available space
+    if (fixedLayout && shouldUseFixedLayout()) {
+      const fixedColumns = getFixedLayoutColumns();
+      if (fixedColumns) {
+        // Calculate available space per button (accounting for gaps and padding)
+        const availableWidth = windowWidth - 32; // Account for padding
+        const gapSpace = (fixedColumns - 1) * buttonSpacing;
+        const maxButtonWidth = (availableWidth - gapSpace) / fixedColumns;
+
+        // Don't let buttons get smaller than 30px, but cap at available space
+        baseSize = Math.min(baseSize, Math.max(maxButtonWidth, 30));
+      }
+    }
+
+    if (windowWidth <= 480) return `${Math.max(baseSize - 15, 30)}px`;
+    if (windowWidth <= 768) return `${Math.max(baseSize - 10, 35)}px`;
+    if (windowWidth <= 1024) return `${Math.max(baseSize - 5, 40)}px`;
+    return `${baseSize}px`;
+  }, [minButtonSize, windowWidth, fixedLayout, shouldUseFixedLayout, getFixedLayoutColumns, buttonSpacing]);
+
+  const getMaxButtonSize = useCallback(() => {
+    // Calculate max size based on minimum size with better scaling
+    let baseSize = minButtonSize;
+
+    // For fixed layouts, ensure buttons can fit within the available space
+    if (fixedLayout && shouldUseFixedLayout()) {
+      const fixedColumns = getFixedLayoutColumns();
+      if (fixedColumns) {
+        // Calculate available space per button (accounting for gaps and padding)
+        const availableWidth = windowWidth - 32; // Account for padding
+        const gapSpace = (fixedColumns - 1) * buttonSpacing;
+        const maxButtonWidth = (availableWidth - gapSpace) / fixedColumns;
+
+        // Cap the max size to available space, but allow some growth
+        baseSize = Math.min(baseSize, maxButtonWidth);
+      }
+    }
+
+    if (windowWidth <= 480) return `${baseSize + 5}px`;
+    if (windowWidth <= 768) return `${baseSize + 15}px`;
+    if (windowWidth <= 1024) return `${baseSize + 25}px`;
+    if (windowWidth <= 1440) return `${baseSize + 35}px`;
+    return `${baseSize + 45}px`; // Larger buttons for big screens
+  }, [minButtonSize, windowWidth, fixedLayout, shouldUseFixedLayout, getFixedLayoutColumns, buttonSpacing]);
+
+  // Check if we should use list layout
+  const shouldUseListLayout = useCallback(() => {
+    return layoutMode === 'list' && windowWidth <= 480;
+  }, [layoutMode, windowWidth]);
 
   // Get the actual number of columns from the rendered grid
   const getDynamicColumns = useCallback(() => {
