@@ -46,6 +46,10 @@ const App = () => {
     const saved = localStorage.getItem('clearPhraseOnPlay');
     return saved ? JSON.parse(saved) : true; // Default to true since that's current behavior
   });
+  const [babbleMode, setBabbleMode] = useState(() => {
+    const saved = localStorage.getItem('babbleMode');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [overlayMessage, setOverlayMessage] = useState('');
 
   // Initialize TTS service
@@ -76,6 +80,10 @@ const App = () => {
     localStorage.setItem('clearPhraseOnPlay', JSON.stringify(clearPhraseOnPlay));
   }, [clearPhraseOnPlay]);
 
+  useEffect(() => {
+    localStorage.setItem('babbleMode', JSON.stringify(babbleMode));
+  }, [babbleMode]);
+
   // Function for playing single phonemes
   const playPhoneme = useCallback(async (phoneme) => {
     try {
@@ -100,6 +108,17 @@ const App = () => {
   // Handle text changes with phoneme reading logic
   const handleMessageChange = (newText) => {
     const previousMessage = message;
+    
+    // In babble mode, don't update the message, just play the sound
+    if (babbleMode) {
+      if (newText.length > previousMessage.length) {
+        const addedChar = newText.slice(-1);
+        // Always play phoneme in babble mode, regardless of other settings
+        playPhoneme(addedChar);
+      }
+      return; // Don't update the message state
+    }
+
     setMessage(newText);
 
     // If text was added (not deleted), check if we should play audio
@@ -191,6 +210,16 @@ const App = () => {
     showOverlay(`Clear phrase on play: ${newValue ? 'ON' : 'OFF'}`);
   }, [clearPhraseOnPlay, showOverlay]);
 
+  const toggleBabbleMode = useCallback(() => {
+    const newValue = !babbleMode;
+    setBabbleMode(newValue);
+    showOverlay(`Babble mode: ${newValue ? 'ON' : 'OFF'}`);
+    // Clear the message when entering babble mode
+    if (newValue) {
+      setMessage('');
+    }
+  }, [babbleMode, showOverlay]);
+
   // Global keydown handler to focus text field when typing and handle shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
@@ -208,6 +237,11 @@ const App = () => {
           case '3':
             event.preventDefault();
             toggleClearPhraseOnPlay();
+            return;
+          case 'b':
+          case 'B':
+            event.preventDefault();
+            toggleBabbleMode();
             return;
         }
       }
@@ -227,7 +261,7 @@ const App = () => {
 
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [toggleSpeakOnButtonPress, toggleSpeakWholeUtterance, toggleClearPhraseOnPlay]);
+  }, [toggleSpeakOnButtonPress, toggleSpeakWholeUtterance, toggleClearPhraseOnPlay, toggleBabbleMode]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -252,18 +286,28 @@ const App = () => {
           <TextField
             inputRef={textFieldRef}
             fullWidth
-            value={message}
+            value={babbleMode ? '' : message}
             onChange={(e) => handleMessageChange(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type IPA phonemes here..."
+            placeholder={babbleMode ? "BABBLE MODE - Type to hear sounds (not saved)" : "Type IPA phonemes here..."}
             variant="outlined"
             size="large"
             autoFocus
             sx={{
               '& .MuiInputBase-root': {
                 fontSize: '1.2rem',
-                fontFamily: 'monospace'
-              }
+                fontFamily: 'monospace',
+                ...(babbleMode && {
+                  backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                  border: '2px dashed #ff9800',
+                  fontStyle: 'italic'
+                })
+              },
+              '& .MuiInputBase-input::placeholder': babbleMode ? {
+                color: '#ff9800',
+                fontWeight: 'bold',
+                opacity: 1
+              } : {}
             }}
             disabled={isLoading}
           />
