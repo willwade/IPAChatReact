@@ -1,0 +1,11 @@
+<FileMap xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Entries>
+    <Entry StaticFile="Grids\Start\grid.xml">
+      <DynamicFiles>
+        <File>Grids\Start\0-1-0-text-0.png</File>
+        <File>Grids\Start\9-1.png</File>
+        <File>Grids\Start\9-2.png</File>
+      </DynamicFiles>
+    </Entry>
+  </Entries>
+</FileMap>
