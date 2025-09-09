@@ -8,6 +8,26 @@ import ttsService from './services/TTSService';
 import notificationService from './services/NotificationService';
 import NotificationDisplay from './components/NotificationDisplay';
 
+// CSS for the overlay fade animation
+const overlayStyles = `
+  @keyframes overlayFadeOut {
+    0% { opacity: 1; }
+    66% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .overlay-fade {
+    animation: overlayFadeOut 3s ease-in-out forwards;
+  }
+`;
+
+// Add styles to document head (only once)
+if (typeof document !== 'undefined' && !document.getElementById('overlay-styles')) {
+  const styleSheet = document.createElement('style');
+  styleSheet.id = 'overlay-styles';
+  styleSheet.textContent = overlayStyles;
+  document.head.appendChild(styleSheet);
+}
+
 const App = () => {
   const textFieldRef = useRef(null);
   const [message, setMessage] = useState('');
@@ -22,6 +42,11 @@ const App = () => {
     const saved = localStorage.getItem('speakWholeUtterance');
     return saved ? JSON.parse(saved) : false;
   });
+  const [clearPhraseOnPlay, setClearPhraseOnPlay] = useState(() => {
+    const saved = localStorage.getItem('clearPhraseOnPlay');
+    return saved ? JSON.parse(saved) : true; // Default to true since that's current behavior
+  });
+  const [overlayMessage, setOverlayMessage] = useState('');
 
   // Initialize TTS service
   useEffect(() => {
@@ -46,6 +71,10 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('speakWholeUtterance', JSON.stringify(speakWholeUtterance));
   }, [speakWholeUtterance]);
+
+  useEffect(() => {
+    localStorage.setItem('clearPhraseOnPlay', JSON.stringify(clearPhraseOnPlay));
+  }, [clearPhraseOnPlay]);
 
   // Function for playing single phonemes
   const playPhoneme = useCallback(async (phoneme) => {
@@ -106,8 +135,10 @@ const App = () => {
       // Use TTS service for phoneme sequence synthesis
       await ttsService.synthesizePhonemeSequence(message, selectedVoice, selectedLanguage);
       
-      // Clear the message after successful speech
-      setMessage('');
+      // Clear the message after successful speech if setting is enabled
+      if (clearPhraseOnPlay) {
+        setMessage('');
+      }
       
       // Refocus the text field after speaking
       setTimeout(() => {
@@ -132,9 +163,55 @@ const App = () => {
     }
   };
 
-  // Global keydown handler to focus text field when typing
+  // Function to show confirmatory overlay
+  const showOverlay = useCallback((message) => {
+    setOverlayMessage(message);
+    // Clear overlay after 3 seconds to match the fade animation
+    setTimeout(() => {
+      setOverlayMessage('');
+    }, 3000);
+  }, []);
+
+  // Toggle functions for settings
+  const toggleSpeakOnButtonPress = useCallback(() => {
+    const newValue = !speakOnButtonPress;
+    setSpeakOnButtonPress(newValue);
+    showOverlay(`Read each button: ${newValue ? 'ON' : 'OFF'}`);
+  }, [speakOnButtonPress, showOverlay]);
+
+  const toggleSpeakWholeUtterance = useCallback(() => {
+    const newValue = !speakWholeUtterance;
+    setSpeakWholeUtterance(newValue);
+    showOverlay(`Read whole utterance: ${newValue ? 'ON' : 'OFF'}`);
+  }, [speakWholeUtterance, showOverlay]);
+
+  const toggleClearPhraseOnPlay = useCallback(() => {
+    const newValue = !clearPhraseOnPlay;
+    setClearPhraseOnPlay(newValue);
+    showOverlay(`Clear phrase on play: ${newValue ? 'ON' : 'OFF'}`);
+  }, [clearPhraseOnPlay, showOverlay]);
+
+  // Global keydown handler to focus text field when typing and handle shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
+      // Handle keyboard shortcuts
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case '1':
+            event.preventDefault();
+            toggleSpeakOnButtonPress();
+            return;
+          case '2':
+            event.preventDefault();
+            toggleSpeakWholeUtterance();
+            return;
+          case '3':
+            event.preventDefault();
+            toggleClearPhraseOnPlay();
+            return;
+        }
+      }
+
       // Don't interfere with special keys or if already focused on an input
       if (event.ctrlKey || event.altKey || event.metaKey || 
           event.target.tagName === 'INPUT' || 
@@ -150,7 +227,7 @@ const App = () => {
 
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  }, [toggleSpeakOnButtonPress, toggleSpeakWholeUtterance, toggleClearPhraseOnPlay]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -192,6 +269,27 @@ const App = () => {
           />
         </Box>
       </Box>
+
+      {/* Settings Confirmation Overlay */}
+      {overlayMessage && (
+        <Box 
+          className="overlay-fade"
+          sx={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            padding: '16px 32px',
+            borderRadius: '8px',
+            fontSize: '1.2rem',
+            fontWeight: 'bold',
+            zIndex: 9999
+          }}>
+          {overlayMessage}
+        </Box>
+      )}
 
       {/* Notification Display */}
       <NotificationDisplay />
