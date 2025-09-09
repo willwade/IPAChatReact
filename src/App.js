@@ -51,6 +51,7 @@ const App = () => {
     return saved ? JSON.parse(saved) : false;
   });
   const [overlayMessage, setOverlayMessage] = useState('');
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
 
   // Initialize TTS service
   useEffect(() => {
@@ -220,6 +221,32 @@ const App = () => {
     }
   }, [babbleMode, showOverlay]);
 
+  // Window resize handler
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate responsive font size based on content length
+  const calculateFontSize = useCallback(() => {
+    const currentText = babbleMode ? 'BABBLE MODE' : (message || 'Type IPA phonemes here...');
+    const baseSize = 24; // Base font size in px
+    const minSize = 12;  // Minimum font size in px
+    const maxSize = 48;  // Maximum font size in px
+    
+    // Calculate ideal size based on text length and viewport
+    let fontSize = Math.min(baseSize, windowWidth / (currentText.length * 0.6));
+    
+    // Clamp between min and max
+    fontSize = Math.max(minSize, Math.min(maxSize, fontSize));
+    
+    return `${fontSize}px`;
+  }, [message, babbleMode, windowWidth]);
+
   // Global keydown handler to focus text field when typing and handle shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
@@ -270,18 +297,18 @@ const App = () => {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
+        alignItems: 'stretch',
         justifyContent: 'center',
         backgroundColor: '#f5f5f5',
-        padding: 3
+        padding: 1
       }}>
         {/* Input area */}
         <Box sx={{
           display: 'flex',
-          gap: 2,
+          gap: 1,
           alignItems: 'center',
-          maxWidth: '600px',
-          width: '100%'
+          width: '100%',
+          minHeight: 0
         }}>
           <TextField
             inputRef={textFieldRef}
@@ -289,25 +316,35 @@ const App = () => {
             value={babbleMode ? '' : message}
             onChange={(e) => handleMessageChange(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={babbleMode ? "BABBLE MODE - Type to hear sounds (not saved)" : "Type IPA phonemes here..."}
+            placeholder={babbleMode ? "BABBLE MODE" : "Type IPA phonemes here..."}
             variant="outlined"
             size="large"
             autoFocus
             sx={{
               '& .MuiInputBase-root': {
-                fontSize: '1.2rem',
+                fontSize: calculateFontSize(),
                 fontFamily: 'monospace',
+                padding: '8px 12px',
+                minHeight: 'auto',
                 ...(babbleMode && {
                   backgroundColor: 'rgba(255, 193, 7, 0.1)',
                   border: '2px dashed #ff9800',
                   fontStyle: 'italic'
                 })
               },
-              '& .MuiInputBase-input::placeholder': babbleMode ? {
-                color: '#ff9800',
-                fontWeight: 'bold',
-                opacity: 1
-              } : {}
+              '& .MuiInputBase-input': {
+                textAlign: 'center',
+                padding: 0
+              },
+              '& .MuiInputBase-input::placeholder': {
+                fontSize: calculateFontSize(),
+                textAlign: 'center',
+                ...(babbleMode ? {
+                  color: '#ff9800',
+                  fontWeight: 'bold',
+                  opacity: 1
+                } : {})
+              }
             }}
             disabled={isLoading}
           />
@@ -325,11 +362,15 @@ const App = () => {
             transform: 'translate(-50%, -50%)',
             backgroundColor: 'rgba(0, 0, 0, 0.8)',
             color: 'white',
-            padding: '16px 32px',
+            padding: '12px 24px',
             borderRadius: '8px',
-            fontSize: '1.2rem',
+            fontSize: `${Math.min(20, windowWidth / 30)}px`,
             fontWeight: 'bold',
-            zIndex: 9999
+            zIndex: 9999,
+            maxWidth: '90vw',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden'
           }}>
           {overlayMessage}
         </Box>
