@@ -1,5 +1,5 @@
 <Grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <GridGuid>2867f2f2-0a5a-42bf-9bf5-091bc389278e</GridGuid>
+  <GridGuid>892e9e60-8e2b-4278-a8ea-2dd9c94c3edc</GridGuid>
   <ColumnDefinitions>
     <ColumnDefinition />
     <ColumnDefinition />
@@ -69,7 +69,6 @@
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
-          <BorderColour>#030200FF</BorderColour>
         </Style>
       </Content>
     </Cell>
@@ -94,7 +93,7 @@
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
               <p>
-                <s Image="0.jpeg">
+                <s Image="[sstix#]51764.emf">
                   <r>e</r>
                 </s>
                 <s>
@@ -107,7 +106,7 @@
         </Commands>
         <CaptionAndImage>
           <Caption>e</Caption>
-          <Image>-0-text-0.jpeg</Image>
+          <Image>[sstix#]51764.emf</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -120,21 +119,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɪ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɪ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɪ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -147,21 +138,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɒ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɒ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɒ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -174,21 +157,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ʊ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ʊ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ʊ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -201,21 +176,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ʌ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ʌ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ʌ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -228,14 +195,7 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s>
-                  <r>i</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>i</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
@@ -273,25 +233,16 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɜː</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɜː</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɜː</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
-          <BorderColour>#1c5d90FF</BorderColour>
         </Style>
       </Content>
     </Cell>
@@ -301,25 +252,16 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>iː</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>iː</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>iː</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
-          <BorderColour>#1e537eFF</BorderColour>
         </Style>
       </Content>
     </Cell>
@@ -329,25 +271,16 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɔː</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɔː</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɔː</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
-          <BorderColour>#194d78FF</BorderColour>
         </Style>
       </Content>
     </Cell>
@@ -373,21 +306,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ð</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ð</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ð</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -400,21 +325,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>s</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>s</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>s</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -427,21 +344,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>z</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>z</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>z</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -454,21 +363,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>f</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>f</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>f</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -481,21 +382,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>k</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>k</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>k</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -508,21 +401,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>g</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>g</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>g</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -535,21 +420,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɹ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɹ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɹ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -562,21 +439,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>d</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>d</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>d</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -589,21 +458,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>t</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>t</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>t</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -657,21 +518,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>b</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>b</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>b</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -684,21 +537,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>n</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>n</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>n</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -711,21 +556,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>m</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>m</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>m</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -738,21 +575,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>əʊ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>əʊ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>əʊ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -765,21 +594,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>aʊ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>aʊ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>aʊ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -792,21 +613,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɪə</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɪə</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɪə</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -819,21 +632,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>eə</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>eə</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>eə</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -913,21 +718,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ʃ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ʃ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ʃ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -940,21 +737,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ŋ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ŋ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ŋ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -967,21 +756,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ʒ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ʒ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ʒ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -994,21 +775,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>θ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>θ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>θ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1101,21 +874,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>l</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>l</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>l</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1128,21 +893,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>w</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>w</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>w</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1155,21 +912,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>j</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>j</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>j</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1182,21 +931,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>v</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>v</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>v</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1209,21 +950,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>h</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>h</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>h</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1236,21 +969,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>tʃ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>tʃ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>tʃ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1279,21 +1004,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>dʒ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>dʒ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>dʒ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1306,21 +1023,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>eɪ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>eɪ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>eɪ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1333,21 +1042,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>aɪ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>aɪ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>aɪ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
@@ -1374,25 +1075,16 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɑː</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɑː</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɑː</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
-          <BorderColour>#1B629BFF</BorderColour>
         </Style>
       </Content>
     </Cell>
@@ -1402,21 +1094,13 @@
           <Command ID="Action.InsertText">
             <Parameter Key="indicatorenabled">1</Parameter>
             <Parameter Key="text">
-              <p>
-                <s Image="0.jpeg">
-                  <r>ɔɪ</r>
-                </s>
-                <s>
-                  <r><![CDATA[ ]]></r>
-                </s>
-              </p>
+              <r>ɔɪ</r>
             </Parameter>
             <Parameter Key="showincelllabel">Yes</Parameter>
           </Command>
         </Commands>
         <CaptionAndImage>
           <Caption>ɔɪ</Caption>
-          <Image>-0-text-0.jpeg</Image>
         </CaptionAndImage>
         <Style>
           <BasedOnStyle>Vocab cell</BasedOnStyle>
