@@ -52,6 +52,8 @@ const App = () => {
   });
   const [overlayMessage, setOverlayMessage] = useState('');
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
+  const [partialIPA, setPartialIPA] = useState('');
+  const [completedText, setCompletedText] = useState('');
 
   // Initialize TTS service
   useEffect(() => {
@@ -106,7 +108,7 @@ const App = () => {
     }
   }, [selectedVoice, selectedLanguage]);
 
-  // Handle text changes with phoneme reading logic
+  // Handle text changes with IPA slash parsing logic
   const handleMessageChange = (newText) => {
     const previousMessage = message;
     
@@ -120,43 +122,91 @@ const App = () => {
       return; // Don't update the message state
     }
 
-    setMessage(newText);
-
-    // If text was added (not deleted), check if we should play audio
-    if (newText.length > previousMessage.length) {
-      const addedChar = newText.slice(-1);
+    // Parse IPA slashes to handle multi-character phonemes
+    const parseIPA = (text) => {
+      let completed = '';
+      let partial = '';
+      let inIPA = false;
+      let currentIPA = '';
       
-      // Only speak individual phoneme if:
-      // 1. speakOnButtonPress is enabled AND
-      // 2. Either speakWholeUtterance is disabled OR this is the first phoneme (no previous message)
-      if (speakOnButtonPress && (!speakWholeUtterance || !previousMessage)) {
-        playPhoneme(addedChar);
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        
+        if (char === '/') {
+          if (inIPA) {
+            // Closing slash - complete the IPA chunk
+            completed += currentIPA;
+            currentIPA = '';
+            inIPA = false;
+          } else {
+            // Opening slash - start new IPA chunk
+            inIPA = true;
+            currentIPA = '';
+          }
+        } else {
+          if (inIPA) {
+            // Inside IPA chunk
+            currentIPA += char;
+          } else {
+            // Outside IPA, treat as regular text
+            completed += char;
+          }
+        }
+      }
+      
+      // If we're still in an IPA chunk, it's partial
+      if (inIPA && currentIPA) {
+        partial = '/' + currentIPA;
+      }
+      
+      return { completed, partial };
+    };
+
+    const { completed, partial } = parseIPA(newText);
+    setCompletedText(completed);
+    setPartialIPA(partial);
+    setMessage(completed + partial);
+
+    // Check if a new IPA chunk was just completed
+    const prevParsed = parseIPA(previousMessage);
+    const newCompletedLength = completed.length;
+    const prevCompletedLength = prevParsed.completed.length;
+    
+    if (newCompletedLength > prevCompletedLength) {
+      // New phoneme(s) were completed
+      const newPhonemes = completed.slice(prevCompletedLength);
+      
+      // Only speak if settings allow
+      if (speakOnButtonPress && (!speakWholeUtterance || !prevParsed.completed)) {
+        playPhoneme(newPhonemes);
       }
     }
   };
 
-  // Add effect to speak whole utterance when message changes
+  // Add effect to speak whole utterance when completed text changes
   useEffect(() => {
-    if (speakWholeUtterance && message) {
+    if (speakWholeUtterance && completedText) {
       // Add a small delay to avoid speaking on every character when typing
       const timeoutId = setTimeout(() => {
-        speakWholeUtteranceText(message);
+        speakWholeUtteranceText(completedText);
       }, 500); // 500ms delay
 
       return () => clearTimeout(timeoutId);
     }
-  }, [message, speakWholeUtterance, speakWholeUtteranceText]);
+  }, [completedText, speakWholeUtterance, speakWholeUtteranceText]);
 
   const speak = useCallback(async () => {
-    if (!message.trim()) return;
+    if (!completedText.trim()) return;
 
     setIsLoading(true);
     try {
       // Use TTS service for phoneme sequence synthesis
-      await ttsService.synthesizePhonemeSequence(message, selectedVoice, selectedLanguage);
+      await ttsService.synthesizePhonemeSequence(completedText, selectedVoice, selectedLanguage);
       
-      // Clear the message after successful speech if setting is enabled
+      // Clear the completed text after successful speech if setting is enabled
       if (clearPhraseOnPlay) {
+        setCompletedText('');
+        setPartialIPA('');
         setMessage('');
       }
       
@@ -174,7 +224,7 @@ const App = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [message, selectedVoice, selectedLanguage]);
+  }, [completedText, selectedVoice, selectedLanguage, clearPhraseOnPlay]);
 
   // Handle Enter key press
   const handleKeyPress = (event) => {
@@ -215,9 +265,11 @@ const App = () => {
     const newValue = !babbleMode;
     setBabbleMode(newValue);
     showOverlay(`Babble mode: ${newValue ? 'ON' : 'OFF'}`);
-    // Clear the message when entering babble mode
+    // Clear all text when entering babble mode
     if (newValue) {
       setMessage('');
+      setCompletedText('');
+      setPartialIPA('');
     }
   }, [babbleMode, showOverlay]);
 
@@ -310,44 +362,123 @@ const App = () => {
           width: '100%',
           minHeight: 0
         }}>
-          <TextField
-            inputRef={textFieldRef}
-            fullWidth
-            value={babbleMode ? '' : message}
-            onChange={(e) => handleMessageChange(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={babbleMode ? "BABBLE MODE" : "Type IPA phonemes here..."}
-            variant="outlined"
-            size="large"
-            autoFocus
-            sx={{
-              '& .MuiInputBase-root': {
-                fontSize: calculateFontSize(),
-                fontFamily: 'monospace',
-                padding: '8px 12px',
-                minHeight: 'auto',
-                ...(babbleMode && {
+          {babbleMode ? (
+            <TextField
+              inputRef={textFieldRef}
+              fullWidth
+              value=""
+              onChange={(e) => handleMessageChange(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="BABBLE MODE"
+              variant="outlined"
+              size="large"
+              autoFocus
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontSize: calculateFontSize(),
+                  fontFamily: 'monospace',
+                  padding: '8px 12px',
+                  minHeight: 'auto',
                   backgroundColor: 'rgba(255, 193, 7, 0.1)',
                   border: '2px dashed #ff9800',
                   fontStyle: 'italic'
-                })
-              },
-              '& .MuiInputBase-input': {
-                textAlign: 'center',
-                padding: 0
-              },
-              '& .MuiInputBase-input::placeholder': {
-                fontSize: calculateFontSize(),
-                textAlign: 'center',
-                ...(babbleMode ? {
+                },
+                '& .MuiInputBase-input': {
+                  textAlign: 'center',
+                  padding: 0
+                },
+                '& .MuiInputBase-input::placeholder': {
+                  fontSize: calculateFontSize(),
+                  textAlign: 'center',
                   color: '#ff9800',
                   fontWeight: 'bold',
                   opacity: 1
-                } : {})
-              }
-            }}
-            disabled={isLoading}
-          />
+                }
+              }}
+              disabled={isLoading}
+            />
+          ) : (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '80px',
+                height: 'auto',
+                border: '1px solid rgba(0, 0, 0, 0.23)',
+                borderRadius: '4px',
+                padding: '16px 12px',
+                fontSize: calculateFontSize(),
+                fontFamily: 'monospace',
+                textAlign: 'center',
+                position: 'relative',
+                backgroundColor: 'white',
+                cursor: 'text',
+                width: '100%',
+                flexGrow: 1,
+                '&:hover': {
+                  border: '1px solid rgba(0, 0, 0, 0.87)'
+                },
+                '&:focus-within': {
+                  border: '2px solid #1976d2',
+                  padding: '15px 11px'
+                }
+              }}
+              onClick={() => textFieldRef.current?.focus()}
+            >
+              {/* Completed text in black */}
+              <span style={{ 
+                color: 'black',
+                fontSize: calculateFontSize(),
+                fontFamily: 'monospace'
+              }}>
+                {completedText}
+              </span>
+              {/* Partial IPA text in orange */}
+              <span style={{ 
+                color: '#ff9800', 
+                fontWeight: 'bold',
+                fontSize: calculateFontSize(),
+                fontFamily: 'monospace'
+              }}>
+                {partialIPA}
+              </span>
+              {/* Hidden input for text entry */}
+              <input
+                ref={textFieldRef}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'text',
+                  fontSize: calculateFontSize(),
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent'
+                }}
+                value={message}
+                onChange={(e) => handleMessageChange(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={!completedText && !partialIPA ? "Type IPA phonemes here..." : ""}
+                disabled={isLoading}
+                autoFocus
+              />
+              {/* Placeholder text when empty */}
+              {!completedText && !partialIPA && (
+                <span style={{ 
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  fontSize: calculateFontSize(),
+                  position: 'absolute',
+                  pointerEvents: 'none'
+                }}>
+                  Type IPA phonemes here...
+                </span>
+              )}
+            </Box>
+          )}
         </Box>
       </Box>
 
