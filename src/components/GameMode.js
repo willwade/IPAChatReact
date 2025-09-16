@@ -36,6 +36,7 @@ import {
 import IPAKeyboard from './IPAKeyboard';
 import Confetti from 'react-confetti';
 import { gamePhases, getWordVariation, isCorrectIPA } from '../data/gamePhases';
+import { tokenizePhonemes, removeLastPhoneme } from '../utils/phonemeUtils';
 
 const DIFFICULTY_LEVELS = {
   LEVEL1: { id: 1, name: "All Cues", description: "Written word, IPA model, Audio, and Hints" },
@@ -83,6 +84,7 @@ const GameMode = ({
   const [gameStarted, setGameStarted] = useState(false);
   const [wordList, setWordList] = useState([]);
   const [userInput, setUserInput] = useState('');
+  const [userPhonemes, setUserPhonemes] = useState([]); // Track phonemes for backspace
   const [showIPACue, setShowIPACue] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackType, setFeedbackType] = useState('');
@@ -101,36 +103,50 @@ const GameMode = ({
   // Audio feedback
   const errorSound = new Audio('/error.mp3'); // We'll need to add this sound file
 
-  // Handle phoneme click in game mode
+  // Handle phoneme click in game mode - now processes whole phonemes
   const handlePhonemeClick = async (phoneme) => {
     if (!currentWord) return;
 
     // Always speak the phoneme using shared playback logic
     playPhoneme(phoneme);
 
+    // Add the complete phoneme to user input and phoneme tracking
     const newInput = userInput + phoneme;
+    const newPhonemes = [...userPhonemes, phoneme];
     setUserInput(newInput);
+    setUserPhonemes(newPhonemes);
 
     // Get the current word variation with all its accepted forms
     const phase = `phase${currentPhase + 1}`;
     const words = Object.keys(gamePhases[phase].words);
     const variation = getWordVariation(words[currentWordIndex], phase, selectedRegion);
-    
+
     if (!variation) {
       return;
     }
 
+    // Tokenize the new input to ensure we have complete phonemes
+    const inputTokens = tokenizePhonemes(newInput);
+
+    // Only proceed with validation if input is not in progress (no partial phonemes)
+    if (inputTokens.isInProgress) {
+      return; // Don't validate while user is typing a multi-character phoneme
+    }
+
     // Get all accepted IPA forms for this word
     const acceptedForms = [variation.ipa, ...variation.alternatives].map(form => form.toLowerCase());
-    const inputIPA = newInput.toLowerCase();
+    const inputIPA = inputTokens.completedText.toLowerCase();
 
     // Check if the input is a valid prefix of any accepted form
     const isValidPrefix = acceptedForms.some(form => form.startsWith(inputIPA));
     
     if (!isValidPrefix) {
-      // Wrong input - play error sound and remove the wrong character
+      // Wrong input - play error sound and revert input
       errorSound.play().catch(() => {}); // Ignore errors if sound fails
-      setTimeout(() => setUserInput(userInput), 200); // Remove the wrong character after a brief delay
+      setTimeout(() => {
+        setUserInput(userInput);
+        setUserPhonemes(userPhonemes); // Reset phonemes to previous state
+      }, 200);
       setConsecutiveCorrect(0);
       setStreakCount(0);
       return;
@@ -173,9 +189,23 @@ const GameMode = ({
     }
   };
 
-  // Handle backspace
+  // Handle phoneme-aware backspace
   const handleBackspace = () => {
-    setUserInput(prev => prev.slice(0, -1));
+    console.log('🎮 GameMode backspace called');
+    console.log('🎮 Current userInput:', `"${userInput}"`);
+
+    const backspaceResult = removeLastPhoneme(userInput);
+    console.log('🎮 Backspace result:', backspaceResult);
+
+    if (backspaceResult.newText !== userInput) {
+      setUserInput(backspaceResult.newText);
+      // Update phoneme tracking
+      const newTokens = tokenizePhonemes(backspaceResult.newText);
+      setUserPhonemes(newTokens.completedPhonemes);
+      console.log('🎮 GameMode state updated successfully');
+    } else {
+      console.log('🎮 No change in GameMode');
+    }
   };
 
   // Initialize game state
@@ -189,6 +219,7 @@ const GameMode = ({
         setCurrentWord(words[0]);
         setShowWordCue(true);
         setUserInput('');
+        setUserPhonemes([]);
       }
     };
     
@@ -205,6 +236,7 @@ const GameMode = ({
         // Move to next word in current phase
         setCurrentWord(currentPhaseWords[nextIndex]);
         setUserInput('');
+        setUserPhonemes([]);
         setShowFeedback(false);
         setShowIPACue(true);
         return nextIndex;
@@ -217,6 +249,7 @@ const GameMode = ({
           const nextPhaseWords = Object.keys(gamePhases[`phase${nextPhase + 1}`].words);
           setCurrentWord(nextPhaseWords[0]);
           setUserInput('');
+          setUserPhonemes([]);
           setShowFeedback(false);
           setShowIPACue(true);
           return 0;

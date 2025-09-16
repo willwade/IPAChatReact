@@ -7,6 +7,7 @@ import { config } from './config';
 import ttsService from './services/TTSService';
 import notificationService from './services/NotificationService';
 import NotificationDisplay from './components/NotificationDisplay';
+import { processPhonemeInputChange, getDisplayText, removeLastPhoneme, tokenizePhonemes } from './utils/phonemeUtils';
 
 // CSS for the overlay fade animation
 const overlayStyles = `
@@ -30,7 +31,6 @@ if (typeof document !== 'undefined' && !document.getElementById('overlay-styles'
 
 const App = () => {
   const textFieldRef = useRef(null);
-  const [message, setMessage] = useState('');
   const [selectedVoice, setSelectedVoice] = useState('en-GB-LibbyNeural');
   const [selectedLanguage, setSelectedLanguage] = useState('en-GB');
   const [isLoading, setIsLoading] = useState(false);
@@ -52,8 +52,12 @@ const App = () => {
   });
   const [overlayMessage, setOverlayMessage] = useState('');
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
-  const [partialIPA, setPartialIPA] = useState('');
-  const [completedText, setCompletedText] = useState('');
+  const [phonemes, setPhonemes] = useState([]); // Array of complete phonemes ["a", "tʃ", "b"]
+  const [partialPhoneme, setPartialPhoneme] = useState(''); // Current incomplete phoneme "/tʃ"
+
+  // Computed values for display and TTS
+  const completedText = phonemes.join(''); // "atʃb"
+  const displayText = completedText + partialPhoneme.replace(/^\//, ''); // "atʃ" + "tʃ" from "/tʃ"
 
   // Initialize TTS service
   useEffect(() => {
@@ -108,79 +112,82 @@ const App = () => {
     }
   }, [selectedVoice, selectedLanguage]);
 
-  // Handle text changes with IPA slash parsing logic
+  // Handle text changes with phoneme array processing
   const handleMessageChange = (newText) => {
-    const previousMessage = message;
-    
-    // In babble mode, don't update the message, just play the sound
-    if (babbleMode) {
-      if (newText.length > previousMessage.length) {
-        const addedChar = newText.slice(-1);
-        // Always play phoneme in babble mode, regardless of other settings
-        playPhoneme(addedChar);
-      }
-      return; // Don't update the message state
+    console.log('📝 Input changed to:', `"${newText}"`);
+    console.log('📝 Current displayText:', `"${displayText}"`);
+
+    // Detect if text was added or if we should ignore this change
+    if (newText.length < displayText.length) {
+      // Text was deleted - ignore this change, backspace handler will deal with it
+      console.log('🚫 Ignoring deletion, will be handled by backspace');
+      return;
     }
 
-    // Parse IPA slashes to handle multi-character phonemes
-    const parseIPA = (text) => {
-      let completed = '';
-      let partial = '';
-      let inIPA = false;
-      let currentIPA = '';
-      
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        
-        if (char === '/') {
-          if (inIPA) {
-            // Closing slash - complete the IPA chunk
-            completed += currentIPA;
-            currentIPA = '';
-            inIPA = false;
-          } else {
-            // Opening slash - start new IPA chunk
-            inIPA = true;
-            currentIPA = '';
+    // Check if this is just a re-render of current state
+    if (newText === displayText) {
+      console.log('🚫 No actual change detected');
+      return;
+    }
+
+    // Detect what was actually added
+    const addedText = newText.slice(displayText.length);
+    console.log('➕ Added text:', `"${addedText}"`);
+
+    if (!addedText) {
+      console.log('🚫 No new text added');
+      return;
+    }
+
+    // Process the added text
+    let currentPartial = partialPhoneme;
+    let currentPhonemes = [...phonemes];
+
+    for (const char of addedText) {
+      if (char === '/') {
+        if (currentPartial.startsWith('/')) {
+          // Closing slash - complete the phoneme
+          const newPhoneme = currentPartial.slice(1); // Remove leading /
+          if (newPhoneme) {
+            currentPhonemes.push(newPhoneme);
+            console.log('✅ Completed phoneme:', newPhoneme);
+            // Play phoneme if settings allow
+            if (speakOnButtonPress && !babbleMode && (!speakWholeUtterance || currentPhonemes.length === 1)) {
+              playPhoneme(newPhoneme);
+            }
           }
+          currentPartial = '';
         } else {
-          if (inIPA) {
-            // Inside IPA chunk
-            currentIPA += char;
-          } else {
-            // Outside IPA, treat as regular text
-            completed += char;
+          // Opening slash - start new phoneme
+          currentPartial = '/';
+        }
+      } else {
+        if (currentPartial.startsWith('/')) {
+          // Inside a multi-character phoneme
+          currentPartial += char;
+        } else {
+          // Single character phoneme
+          currentPhonemes.push(char);
+          console.log('✅ Added single phoneme:', char);
+          // Play phoneme if settings allow
+          if (speakOnButtonPress && !babbleMode && (!speakWholeUtterance || currentPhonemes.length === 1)) {
+            playPhoneme(char);
           }
         }
       }
-      
-      // If we're still in an IPA chunk, it's partial
-      if (inIPA && currentIPA) {
-        partial = '/' + currentIPA;
-      }
-      
-      return { completed, partial };
-    };
-
-    const { completed, partial } = parseIPA(newText);
-    setCompletedText(completed);
-    setPartialIPA(partial);
-    setMessage(completed + partial);
-
-    // Check if a new IPA chunk was just completed
-    const prevParsed = parseIPA(previousMessage);
-    const newCompletedLength = completed.length;
-    const prevCompletedLength = prevParsed.completed.length;
-    
-    if (newCompletedLength > prevCompletedLength) {
-      // New phoneme(s) were completed
-      const newPhonemes = completed.slice(prevCompletedLength);
-      
-      // Only speak if settings allow
-      if (speakOnButtonPress && (!speakWholeUtterance || !prevParsed.completed)) {
-        playPhoneme(newPhonemes);
-      }
     }
+
+    // In babble mode, don't update state
+    if (babbleMode) {
+      return;
+    }
+
+    // Update state
+    setPhonemes(currentPhonemes);
+    setPartialPhoneme(currentPartial);
+
+    console.log('✅ Updated phonemes:', currentPhonemes);
+    console.log('✅ Updated partial:', currentPartial);
   };
 
   // Add effect to speak whole utterance when completed text changes
@@ -205,9 +212,8 @@ const App = () => {
       
       // Clear the completed text after successful speech if setting is enabled
       if (clearPhraseOnPlay) {
-        setCompletedText('');
-        setPartialIPA('');
-        setMessage('');
+        setPhonemes([]);
+        setPartialPhoneme('');
       }
       
       // Refocus the text field after speaking
@@ -226,11 +232,58 @@ const App = () => {
     }
   }, [completedText, selectedVoice, selectedLanguage, clearPhraseOnPlay]);
 
-  // Handle Enter key press
+  // Handle special key presses (Enter and Backspace)
+  const handleKeyDown = (event) => {
+    console.log('🎹 Key pressed:', event.key);
+
+    if (event.key === 'Enter' && !isLoading) {
+      speak();
+      return;
+    }
+
+    if (event.key === 'Backspace') {
+      console.log('⬅️ Backspace detected, preventing default and using custom logic');
+      event.preventDefault(); // Override default backspace behavior
+      handlePhonemeBackspace();
+    }
+  };
+
   const handleKeyPress = (event) => {
     if (event.key === 'Enter' && !isLoading) {
       speak();
     }
+  };
+
+  // Handle phoneme-aware backspace
+  const handlePhonemeBackspace = () => {
+    console.log('🔄 handlePhonemeBackspace called');
+
+    if (babbleMode) {
+      console.log('🚫 Babble mode - ignoring backspace');
+      return; // Don't handle backspace in babble mode
+    }
+
+    console.log('📝 Current phonemes:', phonemes);
+    console.log('📝 Current partial:', partialPhoneme);
+
+    // If we have a partial phoneme, remove that first
+    if (partialPhoneme) {
+      console.log('✂️ Removing partial phoneme:', partialPhoneme);
+      setPartialPhoneme('');
+      return;
+    }
+
+    // If we have completed phonemes, remove the last one
+    if (phonemes.length > 0) {
+      const removedPhoneme = phonemes[phonemes.length - 1];
+      const newPhonemes = phonemes.slice(0, -1);
+      console.log('✂️ Removing last phoneme:', removedPhoneme);
+      console.log('✂️ New phonemes array:', newPhonemes);
+      setPhonemes(newPhonemes);
+      return;
+    }
+
+    console.log('🚫 Nothing to remove');
   };
 
   // Function to show confirmatory overlay
@@ -267,9 +320,8 @@ const App = () => {
     showOverlay(`Babble mode: ${newValue ? 'ON' : 'OFF'}`);
     // Clear all text when entering babble mode
     if (newValue) {
-      setMessage('');
-      setCompletedText('');
-      setPartialIPA('');
+      setPhonemes([]);
+      setPartialPhoneme('');
     }
   }, [babbleMode, showOverlay]);
 
@@ -285,19 +337,19 @@ const App = () => {
 
   // Calculate responsive font size based on content length
   const calculateFontSize = useCallback(() => {
-    const currentText = babbleMode ? 'BABBLE MODE' : (message || 'Type IPA phonemes here...');
+    const currentText = babbleMode ? 'BABBLE MODE' : (displayText || 'Type IPA phonemes here...');
     const baseSize = 24; // Base font size in px
     const minSize = 12;  // Minimum font size in px
     const maxSize = 48;  // Maximum font size in px
-    
+
     // Calculate ideal size based on text length and viewport
     let fontSize = Math.min(baseSize, windowWidth / (currentText.length * 0.6));
-    
+
     // Clamp between min and max
     fontSize = Math.max(minSize, Math.min(maxSize, fontSize));
-    
+
     return `${fontSize}px`;
-  }, [message, babbleMode, windowWidth]);
+  }, [displayText, babbleMode, windowWidth]);
 
   // Global keydown handler to focus text field when typing and handle shortcuts
   useEffect(() => {
@@ -368,6 +420,7 @@ const App = () => {
               fullWidth
               value=""
               onChange={(e) => handleMessageChange(e.target.value)}
+              onKeyDown={handleKeyDown}
               onKeyPress={handleKeyPress}
               placeholder="BABBLE MODE"
               variant="outlined"
@@ -427,21 +480,21 @@ const App = () => {
               onClick={() => textFieldRef.current?.focus()}
             >
               {/* Completed text in black */}
-              <span style={{ 
+              <span style={{
                 color: 'black',
                 fontSize: calculateFontSize(),
                 fontFamily: 'monospace'
               }}>
                 {completedText}
               </span>
-              {/* Partial IPA text in orange */}
-              <span style={{ 
-                color: '#ff9800', 
+              {/* Partial phoneme text in orange */}
+              <span style={{
+                color: '#ff9800',
                 fontWeight: 'bold',
                 fontSize: calculateFontSize(),
                 fontFamily: 'monospace'
               }}>
-                {partialIPA}
+                {partialPhoneme.replace(/^\//, '')}
               </span>
               {/* Hidden input for text entry */}
               <input
@@ -459,15 +512,16 @@ const App = () => {
                   outline: 'none',
                   background: 'transparent'
                 }}
-                value={message}
+                value={displayText}
                 onChange={(e) => handleMessageChange(e.target.value)}
+                onKeyDown={handleKeyDown}
                 onKeyPress={handleKeyPress}
-                placeholder={!completedText && !partialIPA ? "Type IPA phonemes here..." : ""}
+                placeholder={!completedText && !partialPhoneme ? "Type IPA phonemes here..." : ""}
                 disabled={isLoading}
                 autoFocus
               />
               {/* Placeholder text when empty */}
-              {!completedText && !partialIPA && (
+              {!completedText && !partialPhoneme && (
                 <span style={{ 
                   color: 'rgba(0, 0, 0, 0.6)',
                   fontSize: calculateFontSize(),
