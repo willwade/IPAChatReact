@@ -188,7 +188,7 @@ const App = () => {
             currentPhonemes.push(newPhoneme);
             console.log('✅ Completed phoneme:', newPhoneme);
             // Play phoneme if settings allow
-            if (speakOnButtonPress && !babbleMode && (!speakWholeUtterance || currentPhonemes.length === 1)) {
+            if (speakOnButtonPress && !babbleMode) {
               playPhoneme(newPhoneme);
             }
           }
@@ -206,7 +206,7 @@ const App = () => {
           currentPhonemes.push(char);
           console.log('✅ Added single phoneme:', char);
           // Play phoneme if settings allow
-          if (speakOnButtonPress && !babbleMode && (!speakWholeUtterance || currentPhonemes.length === 1)) {
+          if (speakOnButtonPress && !babbleMode) {
             playPhoneme(char);
           }
         }
@@ -229,6 +229,12 @@ const App = () => {
   // Add effect to speak whole utterance when completed text changes
   useEffect(() => {
     if (speakWholeUtterance && completedText) {
+      // Don't speak whole utterance if speakOnButtonPress is also enabled and there's only one phoneme
+      // (to avoid double speech of the same phoneme)
+      if (speakOnButtonPress && phonemes.length === 1) {
+        return;
+      }
+
       // Add a small delay to avoid speaking on every character when typing
       const timeoutId = setTimeout(() => {
         speakWholeUtteranceText(completedText);
@@ -236,7 +242,7 @@ const App = () => {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [completedText, speakWholeUtterance, speakWholeUtteranceText]);
+  }, [completedText, speakWholeUtterance, speakWholeUtteranceText, speakOnButtonPress, phonemes.length]);
 
   const speak = useCallback(async () => {
     if (!completedText.trim()) return;
