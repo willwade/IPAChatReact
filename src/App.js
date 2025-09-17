@@ -57,6 +57,79 @@ const App = () => {
   const [isOverflowing, setIsOverflowing] = useState(false); // Track if text is overflowing
   const textContainerRef = useRef(null);
 
+  // Undo stack state and management
+  const [undoStack, setUndoStack] = useState([]);
+  const undoStackRef = useRef([]);
+  const [lastUndoAction, setLastUndoAction] = useState(null);
+  const [multiPhonemeStartState, setMultiPhonemeStartState] = useState(null); // Track start of multi-phoneme
+  const maxUndoStackSize = 50; // Limit undo history
+
+  // Action types for undo stack
+  const UNDO_ACTION_TYPES = {
+    ADD_PHONEME: 'ADD_PHONEME',
+    START_MULTI_PHONEME: 'START_MULTI_PHONEME',
+    COMPLETE_MULTI_PHONEME: 'COMPLETE_MULTI_PHONEME',
+    REMOVE_PHONEME: 'REMOVE_PHONEME',
+    CLEAR_ALL: 'CLEAR_ALL',
+    SPEAK_CLEAR: 'SPEAK_CLEAR'
+  };
+
+  // Helper function to add action to undo stack
+  const addToUndoStack = useCallback((actionType, previousState, currentState) => {
+    if (babbleMode) return; // Don't track undo in babble mode
+
+    const undoAction = {
+      type: actionType,
+      timestamp: Date.now(),
+      previousState: {
+        phonemes: [...previousState.phonemes],
+        partialPhoneme: previousState.partialPhoneme
+      },
+      currentState: {
+        phonemes: [...currentState.phonemes],
+        partialPhoneme: currentState.partialPhoneme
+      }
+    };
+
+    setUndoStack(prev => {
+      const newStack = [...prev, undoAction];
+      // Limit stack size
+      const finalStack = newStack.length > maxUndoStackSize ? newStack.slice(-maxUndoStackSize) : newStack;
+      undoStackRef.current = finalStack; // Keep ref in sync
+      return finalStack;
+    });
+  }, [babbleMode, maxUndoStackSize]);
+
+  // Undo function
+  const performUndo = useCallback(() => {
+    const currentStack = undoStackRef.current;
+
+    // Special case: if we're in the middle of a multi-phoneme, undo to start state
+    if (partialPhoneme.startsWith('/') && multiPhonemeStartState) {
+      setPhonemes(multiPhonemeStartState.phonemes);
+      setPartialPhoneme(multiPhonemeStartState.partialPhoneme);
+      setMultiPhonemeStartState(null);
+      setLastUndoAction(UNDO_ACTION_TYPES.START_MULTI_PHONEME);
+      return;
+    }
+
+    if (babbleMode || currentStack.length === 0) return;
+
+    const lastAction = currentStack[currentStack.length - 1];
+
+    // Restore previous state
+    setPhonemes(lastAction.previousState.phonemes);
+    setPartialPhoneme(lastAction.previousState.partialPhoneme);
+
+    // Remove the undone action from stack
+    const newStack = currentStack.slice(0, -1);
+    setUndoStack(newStack);
+    undoStackRef.current = newStack;
+
+    // Set the undo action for overlay feedback
+    setLastUndoAction(lastAction.type);
+  }, [babbleMode, partialPhoneme, multiPhonemeStartState]);
+
   // Computed values for display and TTS
   const completedText = phonemes.join(''); // "atʃb" - for TTS (no spaces)
   const displayText = phonemes.join(' ') + (partialPhoneme ? ' ' + partialPhoneme.replace(/^\//, '') : ''); // "a tʃ b" - with spaces for display
@@ -175,6 +248,12 @@ const App = () => {
       return;
     }
 
+    // Store previous state for undo
+    const previousState = {
+      phonemes: [...phonemes],
+      partialPhoneme: partialPhoneme
+    };
+
     // Process the added text
     let currentPartial = partialPhoneme;
     let currentPhonemes = [...phonemes];
@@ -191,10 +270,26 @@ const App = () => {
             if (speakOnButtonPress && !babbleMode) {
               playPhoneme(newPhoneme);
             }
+
+            // Create undo action for the entire multi-phoneme sequence
+            if (!babbleMode && multiPhonemeStartState) {
+              const currentState = {
+                phonemes: [...currentPhonemes],
+                partialPhoneme: ''
+              };
+              addToUndoStack(UNDO_ACTION_TYPES.COMPLETE_MULTI_PHONEME, multiPhonemeStartState, currentState);
+              setMultiPhonemeStartState(null); // Clear the start state
+            }
           }
           currentPartial = '';
         } else {
-          // Opening slash - start new phoneme
+          // Opening slash - start new phoneme, record the starting state
+          if (!babbleMode) {
+            setMultiPhonemeStartState({
+              phonemes: [...currentPhonemes],
+              partialPhoneme: currentPartial
+            });
+          }
           currentPartial = '/';
         }
       } else {
@@ -202,12 +297,25 @@ const App = () => {
           // Inside a multi-character phoneme
           currentPartial += char;
         } else {
-          // Single character phoneme
+          // Single character phoneme - create immediate undo action
           currentPhonemes.push(char);
           console.log('✅ Added single phoneme:', char);
           // Play phoneme if settings allow
           if (speakOnButtonPress && !babbleMode) {
             playPhoneme(char);
+          }
+
+          // Create undo action for single character
+          if (!babbleMode) {
+            const previousState = {
+              phonemes: [...phonemes],
+              partialPhoneme: partialPhoneme
+            };
+            const currentState = {
+              phonemes: [...currentPhonemes],
+              partialPhoneme: currentPartial
+            };
+            addToUndoStack(UNDO_ACTION_TYPES.ADD_PHONEME, previousState, currentState);
           }
         }
       }
@@ -247,17 +355,30 @@ const App = () => {
   const speak = useCallback(async () => {
     if (!completedText.trim()) return;
 
+    // Store previous state before clearing (if we're going to clear)
+    const previousState = clearPhraseOnPlay ? {
+      phonemes: [...phonemes],
+      partialPhoneme: partialPhoneme
+    } : null;
+
     setIsLoading(true);
     try {
       // Use TTS service for phoneme sequence synthesis
       await ttsService.synthesizePhonemeSequence(completedText, selectedVoice, selectedLanguage);
-      
+
       // Clear the completed text after successful speech if setting is enabled
       if (clearPhraseOnPlay) {
         setPhonemes([]);
         setPartialPhoneme('');
+
+        // Add to undo stack
+        const currentState = {
+          phonemes: [],
+          partialPhoneme: ''
+        };
+        addToUndoStack(UNDO_ACTION_TYPES.SPEAK_CLEAR, previousState, currentState);
       }
-      
+
       // Refocus the text field after speaking
       setTimeout(() => {
         if (textFieldRef.current) {
@@ -272,7 +393,7 @@ const App = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [completedText, selectedVoice, selectedLanguage, clearPhraseOnPlay]);
+  }, [completedText, selectedVoice, selectedLanguage, clearPhraseOnPlay, phonemes, partialPhoneme, addToUndoStack, UNDO_ACTION_TYPES.SPEAK_CLEAR]);
 
   // Handle special key presses (Enter and Backspace)
   const handleKeyDown = (event) => {
@@ -308,10 +429,23 @@ const App = () => {
     console.log('📝 Current phonemes:', phonemes);
     console.log('📝 Current partial:', partialPhoneme);
 
+    // Store previous state for undo
+    const previousState = {
+      phonemes: [...phonemes],
+      partialPhoneme: partialPhoneme
+    };
+
     // If we have a partial phoneme, remove that first
     if (partialPhoneme) {
       console.log('✂️ Removing partial phoneme:', partialPhoneme);
       setPartialPhoneme('');
+
+      // Add to undo stack
+      const currentState = {
+        phonemes: [...phonemes],
+        partialPhoneme: ''
+      };
+      addToUndoStack(UNDO_ACTION_TYPES.REMOVE_PHONEME, previousState, currentState);
       return;
     }
 
@@ -322,6 +456,13 @@ const App = () => {
       console.log('✂️ Removing last phoneme:', removedPhoneme);
       console.log('✂️ New phonemes array:', newPhonemes);
       setPhonemes(newPhonemes);
+
+      // Add to undo stack
+      const currentState = {
+        phonemes: newPhonemes,
+        partialPhoneme: partialPhoneme
+      };
+      addToUndoStack(UNDO_ACTION_TYPES.REMOVE_PHONEME, previousState, currentState);
       return;
     }
 
@@ -336,6 +477,22 @@ const App = () => {
       setOverlayMessage('');
     }, 3000);
   }, []);
+
+  // Effect to show undo feedback
+  useEffect(() => {
+    if (lastUndoAction) {
+      const actionMessages = {
+        [UNDO_ACTION_TYPES.ADD_PHONEME]: 'Undid phoneme addition',
+        [UNDO_ACTION_TYPES.START_MULTI_PHONEME]: 'Undid multi-phoneme start',
+        [UNDO_ACTION_TYPES.COMPLETE_MULTI_PHONEME]: 'Undid multi-phoneme',
+        [UNDO_ACTION_TYPES.REMOVE_PHONEME]: 'Undid phoneme deletion',
+        [UNDO_ACTION_TYPES.CLEAR_ALL]: 'Undid clear all',
+        [UNDO_ACTION_TYPES.SPEAK_CLEAR]: 'Undid speak clear'
+      };
+      //showOverlay(actionMessages[lastUndoAction] || 'Undid last action');
+      setLastUndoAction(null); // Clear the trigger
+    }
+  }, [lastUndoAction, showOverlay, UNDO_ACTION_TYPES]);
 
   // Toggle functions for settings
   const toggleSpeakOnButtonPress = useCallback(() => {
@@ -435,8 +592,31 @@ const App = () => {
           case 'Backspace':
             event.preventDefault();
             if (!babbleMode) {
+              // Store previous state for undo
+              const previousState = {
+                phonemes: [...phonemes],
+                partialPhoneme: partialPhoneme
+              };
+
               setPhonemes([]);
-              setPartialPhoneme('');              
+              setPartialPhoneme('');
+
+              // Add to undo stack if there was something to clear
+              if (previousState.phonemes.length > 0 || previousState.partialPhoneme) {
+                const currentState = {
+                  phonemes: [],
+                  partialPhoneme: ''
+                };
+                addToUndoStack(UNDO_ACTION_TYPES.CLEAR_ALL, previousState, currentState);
+              }
+            }
+            return;
+          case 'z':
+          case 'Z':
+            event.preventDefault();
+            const currentStack = undoStackRef.current;
+            if (!babbleMode && currentStack.length > 0) {
+              performUndo();
             }
             return;
         }
