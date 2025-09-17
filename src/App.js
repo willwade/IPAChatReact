@@ -426,6 +426,13 @@ const App = () => {
             event.preventDefault();
             toggleBabbleMode();
             return;
+          case 'Backspace':
+            event.preventDefault();
+            if (!babbleMode) {
+              setPhonemes([]);
+              setPartialPhoneme('');              
+            }
+            return;
         }
       }
 
