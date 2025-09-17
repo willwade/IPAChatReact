@@ -56,8 +56,42 @@ const App = () => {
   const [partialPhoneme, setPartialPhoneme] = useState(''); // Current incomplete phoneme "/tʃ"
 
   // Computed values for display and TTS
-  const completedText = phonemes.join(''); // "atʃb"
-  const displayText = completedText + partialPhoneme.replace(/^\//, ''); // "atʃ" + "tʃ" from "/tʃ"
+  const completedText = phonemes.join(''); // "atʃb" - for TTS (no spaces)
+  const displayText = phonemes.join(' ') + (partialPhoneme ? ' ' + partialPhoneme.replace(/^\//, '') : ''); // "a tʃ b" - with spaces for display
+
+  // Render phonemes with alternating colors
+  const renderPhonemes = () => {
+    const colors = ['#003366', '#5577aa']; // Dark blue, light blue (alternating)    
+
+    return (
+      <>
+        { phonemes.map((phoneme, index) => (
+          <span
+            key={index}
+            style={{
+              color: colors[index % colors.length],
+              fontSize: calculateFontSize(),
+              fontFamily: 'monospace',
+              marginRight: '4px'
+            }}
+          >
+            {phoneme}
+          </span>
+        ))}
+        { partialPhoneme && (
+          <span style={{
+            color: '#ff9800',
+            fontStyle: 'italic',
+            fontSize: calculateFontSize(),
+            fontFamily: 'monospace',
+            marginLeft: phonemes.length > 0 ? '4px' : '0'
+          }}>
+            {partialPhoneme.replace(/^\//, '')}
+          </span>
+        )}
+      </>
+    );
+  };
 
   // Initialize TTS service
   useEffect(() => {
@@ -479,23 +513,8 @@ const App = () => {
               }}
               onClick={() => textFieldRef.current?.focus()}
             >
-              {/* Completed text in black */}
-              <span style={{
-                color: 'black',
-                fontSize: calculateFontSize(),
-                fontFamily: 'monospace'
-              }}>
-                {completedText}
-              </span>
-              {/* Partial phoneme text in orange */}
-              <span style={{
-                color: '#ff9800',
-                fontWeight: 'bold',
-                fontSize: calculateFontSize(),
-                fontFamily: 'monospace'
-              }}>
-                {partialPhoneme.replace(/^\//, '')}
-              </span>
+              {/* Render phonemes with alternating colors and spacing */}
+              { renderPhonemes() }
               {/* Hidden input for text entry */}
               <input
                 ref={textFieldRef}
