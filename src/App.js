@@ -54,14 +54,16 @@ const App = () => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
   const [phonemes, setPhonemes] = useState([]); // Array of complete phonemes ["a", "tʃ", "b"]
   const [partialPhoneme, setPartialPhoneme] = useState(''); // Current incomplete phoneme "/tʃ"
+  const [isOverflowing, setIsOverflowing] = useState(false); // Track if text is overflowing
+  const textContainerRef = useRef(null);
 
   // Computed values for display and TTS
   const completedText = phonemes.join(''); // "atʃb" - for TTS (no spaces)
   const displayText = phonemes.join(' ') + (partialPhoneme ? ' ' + partialPhoneme.replace(/^\//, '') : ''); // "a tʃ b" - with spaces for display
 
-  // Render phonemes with alternating colors
+  // Render phonemes with alternating colors (CSS will handle truncation)
   const renderPhonemes = () => {
-    const colors = ['#003366', '#5577aa']; // Dark blue, light blue (alternating)    
+    const colors = ['#003366', '#5577aa']; // Dark blue, light blue (alternating)
 
     return (
       <>
@@ -369,21 +371,37 @@ const App = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Calculate responsive font size based on content length
+  // Calculate font size - maintains minimum readable size, no more complex truncation logic
   const calculateFontSize = useCallback(() => {
-    const currentText = babbleMode ? 'BABBLE MODE' : (displayText || 'Type IPA phonemes here...');
     const baseSize = 24; // Base font size in px
-    const minSize = 12;  // Minimum font size in px
+    const minSize = 16;  // Minimum readable font size in px
     const maxSize = 48;  // Maximum font size in px
 
-    // Calculate ideal size based on text length and viewport
-    let fontSize = Math.min(baseSize, windowWidth / (currentText.length * 0.6));
+    // For short text, allow larger fonts, but don't shrink below minimum
+    const currentText = babbleMode ? 'BABBLE MODE' : (displayText || 'Type IPA phonemes here...');
 
-    // Clamp between min and max
-    fontSize = Math.max(minSize, Math.min(maxSize, fontSize));
+    // Only scale down for very short text, otherwise use base or min size
+    if (currentText.length < 10) {
+      let fontSize = Math.min(baseSize, windowWidth / (currentText.length * 0.6));
+      return `${Math.max(minSize, Math.min(maxSize, fontSize))}px`;
+    }
 
-    return `${fontSize}px`;
+    return `${baseSize}px`;
   }, [displayText, babbleMode, windowWidth]);
+
+  // Check if text is overflowing and update alignment
+  const checkOverflow = useCallback(() => {
+    if (textContainerRef.current) {
+      const container = textContainerRef.current;
+      const isCurrentlyOverflowing = container.scrollWidth > container.clientWidth;
+      setIsOverflowing(isCurrentlyOverflowing);
+    }
+  }, []);
+
+  // Check overflow whenever content changes
+  useEffect(() => {
+    checkOverflow();
+  }, [phonemes, partialPhoneme, windowWidth, checkOverflow]);
 
   // Global keydown handler to focus text field when typing and handle shortcuts
   useEffect(() => {
@@ -486,10 +504,10 @@ const App = () => {
             />
           ) : (
             <Box
+              ref={textContainerRef}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
                 minHeight: '80px',
                 height: 'auto',
                 border: '1px solid rgba(0, 0, 0, 0.23)',
@@ -497,12 +515,16 @@ const App = () => {
                 padding: '16px 12px',
                 fontSize: calculateFontSize(),
                 fontFamily: 'monospace',
-                textAlign: 'center',
                 position: 'relative',
                 backgroundColor: 'white',
                 cursor: 'text',
                 width: '100%',
                 flexGrow: 1,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                direction: isOverflowing ? 'rtl' : 'ltr', // RTL only when overflowing
+                textAlign: (phonemes.length === 0 && !partialPhoneme) || !isOverflowing ? 'center' : 'left', // Center when empty or not overflowing
+                textOverflow: 'clip', // Clean cut without ellipsis
                 '&:hover': {
                   border: '1px solid rgba(0, 0, 0, 0.87)'
                 },
@@ -514,7 +536,13 @@ const App = () => {
               onClick={() => textFieldRef.current?.focus()}
             >
               {/* Render phonemes with alternating colors and spacing */}
-              { renderPhonemes() }
+              <span style={{
+                direction: 'ltr',
+                paddingRight: isOverflowing ? '12px' : '0px',
+                paddingLeft: isOverflowing ? '0px' : '12px'
+              }}>
+                { renderPhonemes() }
+              </span>
               {/* Hidden input for text entry */}
               <input
                 ref={textFieldRef}
