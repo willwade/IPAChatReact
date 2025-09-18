@@ -540,16 +540,15 @@ const App = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Calculate font size - maintains minimum readable size, no more complex truncation logic
+  // Calculate font size 
   const calculateFontSize = useCallback(() => {
-    const baseSize = 24; // Base font size in px
-    const minSize = 16;  // Minimum readable font size in px
-    const maxSize = 48;  // Maximum font size in px
+    const baseSize = 48; // Base font size in px
+    const minSize = 36;  // Minimum readable font size in px
+    const maxSize = 64;  // Maximum font size in px
 
     // For short text, allow larger fonts, but don't shrink below minimum
     const currentText = babbleMode ? 'BABBLE MODE' : (displayText || 'Type IPA phonemes here...');
-
-    // Only scale down for very short text, otherwise use base or min size
+    
     if (currentText.length < 10) {
       let fontSize = Math.min(baseSize, windowWidth / (currentText.length * 0.6));
       return `${Math.max(minSize, Math.min(maxSize, fontSize))}px`;
@@ -689,7 +688,8 @@ const App = () => {
                 },
                 '& .MuiInputBase-input': {
                   textAlign: 'center',
-                  padding: 0
+                  padding: 0,
+                  caretColor: 'transparent'
                 },
                 '& .MuiInputBase-input::placeholder': {
                   fontSize: calculateFontSize(),
