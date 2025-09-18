@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import notificationService from '../services/NotificationService';
 import {
   Dialog,
   DialogTitle,
@@ -134,7 +135,7 @@ const Settings = ({
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error creating backup:', error);
-      alert('Failed to create backup. Please try again.');
+      notificationService.showNotification('Failed to create backup. Please try again.', 'error');
     }
   };
 
@@ -304,8 +305,8 @@ const Settings = ({
           setRestoreDialogOpen(false);
           
           // Show success message
-          alert('Settings restored successfully! The page will now reload to apply all changes.');
-          
+          notificationService.showNotification('Settings restored successfully! The page will now reload to apply all changes.', 'success');
+
           // Reload the page after a delay
           setTimeout(() => {
             window.location.reload();
@@ -389,7 +390,7 @@ const Settings = ({
       onClose();
 
       // Show success message
-      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
+      notificationService.showNotification('Example loaded successfully into build mode! The page will now reload to apply all changes.', 'success');
 
       // Reload the page after a delay to ensure IPA customizations are applied
       setTimeout(() => {
@@ -398,7 +399,7 @@ const Settings = ({
 
     } catch (error) {
       console.error('Error loading example:', error);
-      alert('Failed to load example.');
+      notificationService.showNotification('Failed to load example.', 'error');
     }
   };
 

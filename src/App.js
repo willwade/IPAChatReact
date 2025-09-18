@@ -802,7 +802,7 @@ const App = () => {
       )}
 
       {/* Notification Display */}
-      <NotificationDisplay />
+      <NotificationDisplay minimal={window.innerWidth < 500 || window.innerHeight < 400} />
     </ThemeProvider>
   );
 };

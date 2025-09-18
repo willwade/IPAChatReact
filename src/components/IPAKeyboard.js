@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import notificationService from '../services/NotificationService';
 import { Box, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Switch, FormControlLabel, Grid, Button, IconButton, Divider, CircularProgress, Typography, Slider } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -967,7 +968,7 @@ const IPAKeyboard = ({
       console.log('Saved customizations:', newCustomizations);
     } catch (error) {
       console.error('Error saving customization:', error);
-      alert('Error saving customization. Please try again.');
+      notificationService.showNotification('Error saving customization. Please try again.', 'error');
     }
   };
 
@@ -976,7 +977,7 @@ const IPAKeyboard = ({
     if (file) {
       // Check file size before processing
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('Image is too large. Please choose an image under 5MB.');
+        notificationService.showNotification('Image is too large. Please choose an image under 5MB.', 'warning');
         return;
       }
 
@@ -994,14 +995,14 @@ const IPAKeyboard = ({
           };
           
           if (estimateStorageSize(testCustomizations) > 4.5 * 1024 * 1024) {
-            alert('Even after compression, this image would be too large. Please try a smaller image.');
+            notificationService.showNotification('Even after compression, this image would be too large. Please try a smaller image.', 'warning');
             return;
           }
           
           setFieldValue('image', compressed);
         } catch (error) {
           console.error('Error processing image:', error);
-          alert('Error processing image. Please try a different image.');
+          notificationService.showNotification('Error processing image. Please try a different image.', 'error');
         }
       };
       reader.readAsDataURL(file);

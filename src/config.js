@@ -1,4 +1,5 @@
 import axios from 'axios';
+import notificationService from './services/NotificationService';
 
 const getApiUrl = () => {
   if (process.env.NODE_ENV === 'production') {
@@ -50,18 +51,37 @@ api.interceptors.response.use(
 
     console.error('API Error Details:', errorDetails);
 
-    // Log specific error types with more detail
+    // Show user-friendly error notifications
+    let userMessage = 'An error occurred. Please try again.';
+    let notificationType = 'error';
+
     if (error.code === 'ECONNABORTED') {
       console.error(`Request timed out after ${(error.config?.timeout || 30000) / 1000} seconds`);
+      userMessage = 'Request timed out. Please check your connection and try again.';
     } else if (error.code === 'ERR_NETWORK') {
       console.error('Network error - cannot reach server');
+      userMessage = 'Cannot reach server. Please check your internet connection.';
     } else if (error.response?.status >= 500) {
       console.error(`Server error: ${error.response.status} - ${error.response.statusText}`);
+      userMessage = 'Server error. Please try again later.';
     } else if (error.response?.status === 401) {
       console.error('Authentication error - check Azure credentials');
+      userMessage = 'Authentication failed. Please check your settings.';
+      notificationType = 'warning';
     } else if (error.response?.status === 429) {
       console.error('Rate limit exceeded - too many requests');
+      userMessage = 'Too many requests. Please wait a moment and try again.';
+      notificationType = 'warning';
+    } else if (error.response?.status === 403) {
+      userMessage = 'Access denied. Please check your permissions.';
+      notificationType = 'warning';
+    } else if (error.response?.status >= 400 && error.response?.status < 500) {
+      userMessage = 'Invalid request. Please check your input and try again.';
+      notificationType = 'warning';
     }
+
+    // Show notification to user
+    notificationService.showNotification(userMessage, notificationType, 6000);
 
     // Log the full error for debugging if it's a TTS endpoint
     if (error.config?.url?.includes('/api/tts')) {
