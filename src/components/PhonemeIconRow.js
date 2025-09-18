@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PhonemeIcon from './PhonemeIcon';
 
 const PhonemeIconRow = ({
@@ -10,6 +10,7 @@ const PhonemeIconRow = ({
 }) => {
   const [layout, setLayout] = useState(null);
   const [selectedLayout, setSelectedLayout] = useState('example2');
+  const containerRef = useRef(null);
 
   useEffect(() => {
     const loadLayout = async () => {
@@ -33,6 +34,13 @@ const PhonemeIconRow = ({
     loadLayout();
   }, [selectedLayout]);
 
+  // Auto-scroll to the right when phonemes are added
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollLeft = containerRef.current.scrollWidth;
+    }
+  }, [phonemes.length, partialPhoneme]);
+
   const containerStyle = {
     display: 'flex',
     flexDirection: 'row',
@@ -41,8 +49,8 @@ const PhonemeIconRow = ({
     flexWrap: 'nowrap',
     overflowX: 'auto',
     overflowY: 'hidden',
-    padding: '8px',
-    minHeight: `${iconSize + 20}px`,
+    padding: '4px',
+    minHeight: `${iconSize * 1.4 + 10}px`,
     border: '1px solid rgba(0, 0, 0, 0.23)',
     borderRadius: '4px',
     backgroundColor: 'white',
@@ -90,7 +98,7 @@ const PhonemeIconRow = ({
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={containerStyle}>
+      <div ref={containerRef} style={containerStyle}>
         {!hasContent && (
           <div style={placeholderStyle}>
             Type IPA phonemes to see icons here...
