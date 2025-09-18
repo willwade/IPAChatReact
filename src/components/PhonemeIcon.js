@@ -35,11 +35,7 @@ const PhonemeIcon = ({
     backgroundColor: isPartial ? 'rgba(255, 193, 7, 0.1)' : 'white',
     cursor: 'pointer',
     boxSizing: 'border-box',
-    transition: 'all 0.2s ease',
-    ':hover': {
-      transform: 'scale(1.1)',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-    }
+    transition: 'all 0.2s ease'
   };
 
   const imageStyle = {
