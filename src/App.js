@@ -12,7 +12,7 @@ import NotificationDisplay from './components/NotificationDisplay';
 import PhonemeIconRow from './components/PhonemeIconRow';
 import { processPhonemeInputChange, getDisplayText, removeLastPhoneme, tokenizePhonemes } from './utils/phonemeUtils';
 
-// CSS for the overlay fade animation
+// CSS for the overlay fade animation and scrollbar hiding
 const overlayStyles = `
   @keyframes overlayFadeOut {
     0% { opacity: 1; }
@@ -21,6 +21,9 @@ const overlayStyles = `
   }
   .overlay-fade {
     animation: overlayFadeOut 3s ease-in-out forwards;
+  }
+  .phoneme-container::-webkit-scrollbar {
+    display: none;
   }
 `;
 

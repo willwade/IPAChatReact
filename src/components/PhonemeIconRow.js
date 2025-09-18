@@ -56,8 +56,8 @@ const PhonemeIconRow = ({
     border: '1px solid rgba(0, 0, 0, 0.23)',
     borderRadius: '4px',
     backgroundColor: '#fff8ff',
-    scrollbarWidth: 'thin',
-    scrollbarColor: '#ccc transparent',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
     boxSizing: 'border-box'
   };
 
@@ -88,7 +88,7 @@ const PhonemeIconRow = ({
 
   return (
     <div style={{ position: 'relative', ...style }}>
-      <div ref={containerRef} style={containerStyle}>
+      <div ref={containerRef} style={containerStyle} className="phoneme-container">
         {!hasContent && (
           <div style={placeholderStyle}>
             Type sounds...
