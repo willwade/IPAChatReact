@@ -16,6 +16,9 @@ const PhonemeIcon = ({
     hideLabel = false
   } = customization;
 
+  // Debug logging
+  console.log(`PhonemeIcon: phoneme="${phoneme}", hasLayout=${!!layout}, hasCustomization=${!!Object.keys(customization).length}, hasImage=${!!image}, hideLabel=${hideLabel}`);
+
   const handleClick = () => {
     if (onClick) onClick(phoneme, index);
     if (onPlay) onPlay(phoneme);
@@ -64,20 +67,17 @@ const PhonemeIcon = ({
       onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
       onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
     >
-      {image && !hideLabel && (
+      {image && (
         <img
           src={image}
           alt={phoneme}
           style={imageStyle}
         />
       )}
-      {!hideLabel && (
+
+      {/* Always show text unless specifically hidden and image exists */}
+      {(!hideLabel || !image) && (
         <span style={textStyle}>
-          {phoneme}
-        </span>
-      )}
-      {hideLabel && !image && (
-        <span style={{...textStyle, fontSize: `${size * 0.5}px`}}>
           {phoneme}
         </span>
       )}

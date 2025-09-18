@@ -14,12 +14,14 @@ const PhonemeIconRow = ({
   useEffect(() => {
     const loadLayout = async () => {
       try {
+        console.log(`Loading layout: ${selectedLayout}`);
         const response = await fetch(`/examples/${selectedLayout}.json`);
         if (response.ok) {
           const layoutData = await response.json();
+          console.log(`Layout loaded:`, layoutData);
           setLayout(layoutData);
         } else {
-          console.warn(`Could not load layout: ${selectedLayout}`);
+          console.warn(`Could not load layout: ${selectedLayout}`, response.status);
           setLayout(null);
         }
       } catch (error) {
