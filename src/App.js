@@ -54,6 +54,7 @@ const App = () => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
   const [phonemes, setPhonemes] = useState([]); // Array of complete phonemes ["a", "tʃ", "b"]
   const [partialPhoneme, setPartialPhoneme] = useState(''); // Current incomplete phoneme "/tʃ"
+  const [hasEverTyped, setHasEverTyped] = useState(false); // Track if user has ever typed anything
   const [isOverflowing, setIsOverflowing] = useState(false); // Track if text is overflowing
   const textContainerRef = useRef(null);
 
@@ -246,6 +247,11 @@ const App = () => {
     if (!addedText) {
       console.log('🚫 No new text added');
       return;
+    }
+
+    // Mark that user has typed something (removes placeholder permanently)
+    if (!hasEverTyped) {
+      setHasEverTyped(true);
     }
 
     // Store previous state for undo
@@ -756,12 +762,12 @@ const App = () => {
                 onChange={(e) => handleMessageChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onKeyPress={handleKeyPress}
-                placeholder={!completedText && !partialPhoneme ? "Type IPA phonemes here..." : ""}
+                placeholder={!hasEverTyped && !completedText && !partialPhoneme ? "Type IPA phonemes here..." : ""}
                 disabled={isLoading}
                 autoFocus
               />
               {/* Placeholder text when empty */}
-              {!completedText && !partialPhoneme && (
+              {!hasEverTyped && !completedText && !partialPhoneme && (
                 <span style={{ 
                   color: 'rgba(0, 0, 0, 0.6)',
                   fontSize: calculateFontSize(),
