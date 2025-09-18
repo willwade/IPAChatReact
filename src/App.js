@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { theme } from './theme';
 import { config } from './config';
@@ -51,6 +53,7 @@ const App = () => {
     return saved ? JSON.parse(saved) : false;
   });
   const [overlayMessage, setOverlayMessage] = useState('');
+  const [overlayType, setOverlayType] = useState('info'); // 'info' or 'error'
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
   const [phonemes, setPhonemes] = useState([]); // Array of complete phonemes ["a", "tʃ", "b"]
   const [partialPhoneme, setPartialPhoneme] = useState(''); // Current incomplete phoneme "/tʃ"
@@ -201,14 +204,53 @@ const App = () => {
     localStorage.setItem('babbleMode', JSON.stringify(babbleMode));
   }, [babbleMode]);
 
+  // Function to show confirmatory overlay
+  const showOverlay = useCallback((message, type = 'info') => {
+    console.log(`🎯 showOverlay called: "${message}" (${type})`);
+    setOverlayMessage(message);
+    setOverlayType(type);
+    // Clear overlay after 3 seconds to match the fade animation
+    setTimeout(() => {
+      setOverlayMessage('');
+      setOverlayType('info');
+    }, 3000);
+  }, []);
+
+  // Helper function to get short TTS error messages
+  const getTTSErrorMessage = useCallback((error) => {
+    const errorData = error.response?.data;
+
+    // Check for invalid phonemes
+    if (errorData?.error === 'Speech synthesis failed' &&
+        (errorData?.statusCode === 400 || errorData?.details?.includes('400'))) {
+      return 'Error: Invalid IPA';
+    }
+
+    // Other error types
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      return 'ERROR: Request timeout';
+    }
+
+    if (error.code === 'ERR_NETWORK') {
+      return 'ERROR: Network error';
+    }
+
+    if (error.response?.status >= 500) {
+      return 'ERROR: Server error';
+    }
+
+    return 'ERROR: text-to-speech failed';
+  }, []);
+
   // Function for playing single phonemes
   const playPhoneme = useCallback(async (phoneme) => {
     try {
       await ttsService.synthesizePhonemeSequence(phoneme, selectedVoice, selectedLanguage);
     } catch (error) {
       console.error('Phoneme playback failed:', error);
+      showOverlay(getTTSErrorMessage(error), 'error');
     }
-  }, [selectedVoice, selectedLanguage]);
+  }, [selectedVoice, selectedLanguage, showOverlay, getTTSErrorMessage]);
 
   // Function for speaking whole utterance
   const speakWholeUtteranceText = useCallback(async (text) => {
@@ -218,9 +260,10 @@ const App = () => {
       await ttsService.synthesizePhonemeSequence(text, selectedVoice, selectedLanguage);
     } catch (error) {
       console.error('Whole utterance TTS failed:', error);
+      showOverlay(getTTSErrorMessage(error), 'error');
       throw error;
     }
-  }, [selectedVoice, selectedLanguage]);
+  }, [selectedVoice, selectedLanguage, showOverlay, getTTSErrorMessage]);
 
   // Handle text changes with phoneme array processing
   const handleMessageChange = (newText) => {
@@ -274,7 +317,9 @@ const App = () => {
             console.log('✅ Completed phoneme:', newPhoneme);
             // Play phoneme if settings allow
             if (speakOnButtonPress && !babbleMode) {
-              playPhoneme(newPhoneme);
+              playPhoneme(newPhoneme).catch(() => {
+                // Error is already handled in playPhoneme, just prevent unhandled rejection
+              });
             }
 
             // Create undo action for the entire multi-phoneme sequence
@@ -308,7 +353,9 @@ const App = () => {
           console.log('✅ Added single phoneme:', char);
           // Play phoneme if settings allow
           if (speakOnButtonPress && !babbleMode) {
-            playPhoneme(char);
+            playPhoneme(char).catch(() => {
+              // Error is already handled in playPhoneme, just prevent unhandled rejection
+            });
           }
 
           // Create undo action for single character
@@ -350,8 +397,13 @@ const App = () => {
       }
 
       // Add a small delay to avoid speaking on every character when typing
-      const timeoutId = setTimeout(() => {
-        speakWholeUtteranceText(completedText);
+      const timeoutId = setTimeout(async () => {
+        try {
+          await speakWholeUtteranceText(completedText);
+        } catch (error) {
+          // Error is already handled in speakWholeUtteranceText, just prevent unhandled rejection
+          console.log('Whole utterance TTS error caught in useEffect');
+        }
       }, 500); // 500ms delay
 
       return () => clearTimeout(timeoutId);
@@ -395,11 +447,11 @@ const App = () => {
       }, 10);
     } catch (error) {
       console.error('Speech synthesis failed:', error);
-      notificationService.showTTSError(error, 'speech synthesis');
+      showOverlay(getTTSErrorMessage(error), 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [completedText, selectedVoice, selectedLanguage, clearPhraseOnPlay, phonemes, partialPhoneme, addToUndoStack, UNDO_ACTION_TYPES.SPEAK_CLEAR]);
+  }, [completedText, selectedVoice, selectedLanguage, clearPhraseOnPlay, phonemes, partialPhoneme, addToUndoStack, UNDO_ACTION_TYPES.SPEAK_CLEAR, showOverlay, getTTSErrorMessage]);
 
   // Handle special key presses (Enter and Backspace)
   const handleKeyDown = (event) => {
@@ -474,15 +526,6 @@ const App = () => {
 
     console.log('🚫 Nothing to remove');
   };
-
-  // Function to show confirmatory overlay
-  const showOverlay = useCallback((message) => {
-    setOverlayMessage(message);
-    // Clear overlay after 3 seconds to match the fade animation
-    setTimeout(() => {
-      setOverlayMessage('');
-    }, 3000);
-  }, []);
 
   // Effect to show undo feedback
   useEffect(() => {
@@ -784,14 +827,14 @@ const App = () => {
 
       {/* Settings Confirmation Overlay */}
       {overlayMessage && (
-        <Box 
+        <Box
           className="overlay-fade"
           sx={{
             position: 'fixed',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: overlayType === 'error' ? 'rgba(211, 47, 47, 0.9)' : 'rgba(0, 0, 0, 0.8)',
             color: 'white',
             padding: '12px 24px',
             borderRadius: '8px',
@@ -801,8 +844,16 @@ const App = () => {
             maxWidth: '90vw',
             textAlign: 'center',
             whiteSpace: 'nowrap',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
+          {overlayType === 'error' ? (
+            <ErrorOutlineIcon sx={{ fontSize: `${Math.min(20, windowWidth / 30)}px` }} />
+          ) : (
+            <InfoOutlinedIcon sx={{ fontSize: `${Math.min(20, windowWidth / 30)}px` }} />
+          )}
           {overlayMessage}
         </Box>
       )}
