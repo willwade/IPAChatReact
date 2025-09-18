@@ -715,12 +715,12 @@ const App = () => {
         alignItems: 'stretch',
         justifyContent: 'center',
         backgroundColor: '#f5f5f5',
-        padding: 1
+        padding: windowWidth < 600 ? 0.25 : 1
       }}>
         {/* Input area */}
         <Box sx={{
           display: 'flex',
-          gap: 1,
+          gap: windowWidth < 600 ? 0.25 : 1,
           alignItems: 'center',
           width: '100%',
           minHeight: 0
