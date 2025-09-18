@@ -615,6 +615,23 @@ const App = () => {
     checkOverflow();
   }, [phonemes, partialPhoneme, windowWidth, checkOverflow]);
 
+  // Maintain focus on text input
+  useEffect(() => {
+    const maintainFocus = () => {
+      if (textFieldRef.current && document.activeElement !== textFieldRef.current) {
+        textFieldRef.current.focus();
+      }
+    };
+
+    // Focus immediately
+    maintainFocus();
+
+    // Set up interval to check focus periodically
+    const focusInterval = setInterval(maintainFocus, 100);
+
+    return () => clearInterval(focusInterval);
+  }, [phonemes, partialPhoneme]);
+
   // Global keydown handler to focus text field when typing and handle shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (event) => {
@@ -746,7 +763,14 @@ const App = () => {
               disabled={isLoading}
             />
           ) : (
-            <Box sx={{ position: 'relative', width: '100%' }}>
+            <Box
+              sx={{ position: 'relative', width: '100%' }}
+              onClick={() => {
+                if (textFieldRef.current) {
+                  textFieldRef.current.focus();
+                }
+              }}
+            >
               <PhonemeIconRow
                 phonemes={phonemes}
                 partialPhoneme={partialPhoneme}
@@ -758,7 +782,12 @@ const App = () => {
                   }
                 }}
                 onPhonemeClick={(phoneme, index) => {
-                  // Optional: Add phoneme click handling here
+                  // Refocus the input after clicking a phoneme
+                  setTimeout(() => {
+                    if (textFieldRef.current) {
+                      textFieldRef.current.focus();
+                    }
+                  }, 0);
                   console.log('Phoneme clicked:', phoneme, 'at index:', index);
                 }}
                 iconSize={Math.min(60, windowWidth / 15)}
