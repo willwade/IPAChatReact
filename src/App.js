@@ -9,6 +9,7 @@ import { config } from './config';
 import ttsService from './services/TTSService';
 import notificationService from './services/NotificationService';
 import NotificationDisplay from './components/NotificationDisplay';
+import PhonemeIconRow from './components/PhonemeIconRow';
 import { processPhonemeInputChange, getDisplayText, removeLastPhoneme, tokenizePhonemes } from './utils/phonemeUtils';
 
 // CSS for the overlay fade animation
@@ -745,46 +746,24 @@ const App = () => {
               disabled={isLoading}
             />
           ) : (
-            <Box
-              ref={textContainerRef}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                minHeight: '80px',
-                height: 'auto',
-                border: '1px solid rgba(0, 0, 0, 0.23)',
-                borderRadius: '4px',
-                padding: '16px 12px',
-                fontSize: calculateFontSize(),
-                fontFamily: 'monospace',
-                position: 'relative',
-                backgroundColor: 'white',
-                cursor: 'text',
-                width: '100%',
-                flexGrow: 1,
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                direction: isOverflowing ? 'rtl' : 'ltr', // RTL only when overflowing
-                textAlign: (phonemes.length === 0 && !partialPhoneme) || !isOverflowing ? 'center' : 'left', // Center when empty or not overflowing
-                textOverflow: 'clip', // Clean cut without ellipsis
-                '&:hover': {
-                  border: '1px solid rgba(0, 0, 0, 0.87)'
-                },
-                '&:focus-within': {
-                  border: '2px solid #1976d2',
-                  padding: '15px 11px'
-                }
-              }}
-              onClick={() => textFieldRef.current?.focus()}
-            >
-              {/* Render phonemes with alternating colors and spacing */}
-              <span style={{
-                direction: 'ltr',
-                paddingRight: isOverflowing ? '12px' : '0px',
-                paddingLeft: isOverflowing ? '0px' : '12px'
-              }}>
-                { renderPhonemes() }
-              </span>
+            <Box sx={{ position: 'relative', width: '100%' }}>
+              <PhonemeIconRow
+                phonemes={phonemes}
+                partialPhoneme={partialPhoneme}
+                onPhonemePlay={(phoneme) => {
+                  if (!babbleMode) {
+                    playPhoneme(phoneme).catch(() => {
+                      // Error handled in playPhoneme
+                    });
+                  }
+                }}
+                onPhonemeClick={(phoneme, index) => {
+                  // Optional: Add phoneme click handling here
+                  console.log('Phoneme clicked:', phoneme, 'at index:', index);
+                }}
+                iconSize={Math.min(60, windowWidth / 15)}
+              />
+
               {/* Hidden input for text entry */}
               <input
                 ref={textFieldRef}
@@ -799,27 +778,17 @@ const App = () => {
                   fontSize: calculateFontSize(),
                   border: 'none',
                   outline: 'none',
-                  background: 'transparent'
+                  background: 'transparent',
+                  pointerEvents: 'none'
                 }}
                 value={displayText}
                 onChange={(e) => handleMessageChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onKeyPress={handleKeyPress}
-                placeholder={!hasEverTyped && !completedText && !partialPhoneme ? "Type IPA phonemes here..." : ""}
+                placeholder=""
                 disabled={isLoading}
                 autoFocus
               />
-              {/* Placeholder text when empty */}
-              {!hasEverTyped && !completedText && !partialPhoneme && (
-                <span style={{ 
-                  color: 'rgba(0, 0, 0, 0.6)',
-                  fontSize: calculateFontSize(),
-                  position: 'absolute',
-                  pointerEvents: 'none'
-                }}>
-                  Type IPA phonemes here...
-                </span>
-              )}
             </Box>
           )}
         </Box>
