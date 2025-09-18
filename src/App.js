@@ -591,7 +591,7 @@ const App = () => {
     const maxSize = 64;  // Maximum font size in px
 
     // For short text, allow larger fonts, but don't shrink below minimum
-    const currentText = babbleMode ? 'BABBLE MODE' : (displayText || 'Type IPA phonemes here...');
+    const currentText = babbleMode ? 'Babble Mode' : (displayText || 'Type sounds...');
     
     if (currentText.length < 10) {
       let fontSize = Math.min(baseSize, windowWidth / (currentText.length * 0.6));
@@ -713,17 +713,17 @@ const App = () => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
-        padding: windowWidth < 600 ? 0.25 : 1
+        backgroundColor: '#f5f5f5'
+        // padding: 0
       }}>
         {/* Input area */}
         <Box sx={{
           display: 'flex',
-          gap: windowWidth < 600 ? 0.25 : 1,
-          alignItems: 'center',
+          // gap: 1,
+          alignItems: 'stretch', // Changed from 'center' to 'stretch'
           width: '100%',
-          minHeight: 0
+          flex: 1, // Take all available space in the column
+          backgroundColor: 'transparent' // INPUT AREA CONTAINER
         }}>
           {babbleMode ? (
             <TextField
@@ -764,7 +764,12 @@ const App = () => {
             />
           ) : (
             <Box
-              sx={{ position: 'relative', width: '100%' }}
+              sx={{
+                position: 'relative',
+                height: '100%',
+                width: '100%',
+                backgroundColor: 'transparent' // PHONEME CONTAINER WRAPPER
+              }}
               onClick={() => {
                 if (textFieldRef.current) {
                   textFieldRef.current.focus();
@@ -772,6 +777,7 @@ const App = () => {
               }}
             >
               <PhonemeIconRow
+                style={{ height: '100%' }}
                 phonemes={phonemes}
                 partialPhoneme={partialPhoneme}
                 onPhonemePlay={(phoneme) => {
@@ -791,7 +797,7 @@ const App = () => {
                   console.log('Phoneme clicked:', phoneme, 'at index:', index);
                 }}
                 iconSize={Math.min(
-                  Math.max(60, window.innerHeight * 0.6), // 60% of viewport height
+                  Math.max(60, window.innerHeight * 1.0), // 60% of viewport height
                   windowWidth / 12 // But not wider than 1/12 of screen width
                 )}
               />
@@ -848,7 +854,7 @@ const App = () => {
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            // gap: '8px'
           }}>
           {overlayType === 'error' ? (
             <ErrorOutlineIcon sx={{ fontSize: `${Math.min(20, windowWidth / 30)}px` }} />

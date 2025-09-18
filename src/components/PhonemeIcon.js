@@ -37,7 +37,7 @@ const PhonemeIcon = ({
     padding: '1px',
     borderRadius: '4px',
     border: isPartial ? '2px dashed #ff9800' : '1px solid #ccc',
-    backgroundColor: isPartial ? 'rgba(255, 193, 7, 0.1)' : 'white',
+    backgroundColor: isPartial ? 'rgba(255, 193, 7, 0.1)' : '#f8f9fa',
     cursor: 'pointer',
     boxSizing: 'border-box',
     transition: 'all 0.2s ease'

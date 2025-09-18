@@ -6,7 +6,8 @@ const PhonemeIconRow = ({
   partialPhoneme = '',
   onPhonemeClick,
   onPhonemePlay,
-  iconSize = 50
+  iconSize = 50,
+  style = {}
 }) => {
   const [layout, setLayout] = useState(null);
   const [selectedLayout, setSelectedLayout] = useState('example2');
@@ -50,13 +51,13 @@ const PhonemeIconRow = ({
     overflowX: 'auto',
     overflowY: 'hidden',
     padding: '2px',
-    height: `${iconSize * 1.3}px`,
-    minHeight: `${iconSize * 1.3}px`,
+    height: '95%', // Use 95% of available height instead of fixed icon size
     border: '1px solid rgba(0, 0, 0, 0.23)',
     borderRadius: '4px',
-    backgroundColor: 'white',
+    backgroundColor: '#fff8ff',
     scrollbarWidth: 'thin',
-    scrollbarColor: '#ccc transparent'
+    scrollbarColor: '#ccc transparent',
+    boxSizing: 'border-box'
   };
 
   const scrollContainerStyle = {
@@ -71,9 +72,14 @@ const PhonemeIconRow = ({
     color: 'rgba(0, 0, 0, 0.6)',
     fontSize: '16px',
     fontStyle: 'italic',
-    padding: '16px',
+    padding: '8px',
     textAlign: 'center',
-    width: '100%'
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    boxSizing: 'border-box'
   };
 
   const layoutSelectorStyle = {
@@ -98,11 +104,11 @@ const PhonemeIconRow = ({
   const hasContent = phonemes.length > 0 || partialPhoneme;
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', ...style }}>
       <div ref={containerRef} style={containerStyle}>
         {!hasContent && (
           <div style={placeholderStyle}>
-            Type IPA phonemes to see icons here...
+            Type sounds...
           </div>
         )}
 
