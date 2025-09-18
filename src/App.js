@@ -790,7 +790,10 @@ const App = () => {
                   }, 0);
                   console.log('Phoneme clicked:', phoneme, 'at index:', index);
                 }}
-                iconSize={Math.min(60, windowWidth / 15)}
+                iconSize={Math.min(
+                  Math.max(60, window.innerHeight * 0.6), // 60% of viewport height
+                  windowWidth / 12 // But not wider than 1/12 of screen width
+                )}
               />
 
               {/* Hidden input for text entry */}
