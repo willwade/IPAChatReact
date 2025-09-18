@@ -19,6 +19,10 @@ const PhonemeIcon = ({
   // Debug logging
   console.log(`PhonemeIcon: phoneme="${phoneme}", hasLayout=${!!layout}, hasCustomization=${!!Object.keys(customization).length}, hasImage=${!!image}, hideLabel=${hideLabel}`);
 
+  // Determine if text will be shown alongside image
+  const willShowText = !hideLabel || !image;
+  const willShowBoth = image && willShowText;
+
   const handleClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -45,13 +49,13 @@ const PhonemeIcon = ({
 
   const imageStyle = {
     width: `${size * 0.9}px`,
-    height: `${size * 0.95}px`,
+    height: `${size * 0.95}px`, // Full size since no text will be shown with images
     objectFit: 'contain',
     borderRadius: '6px'
   };
 
   const textStyle = {
-    fontSize: hideLabel ? `${size * 0.6}px` : `${size * 0.4}px`,
+    fontSize: `${size * 0.4}px`,
     fontFamily: 'monospace',
     color: customColor || (isPartial ? '#ff9800' : '#333'),
     fontWeight: isPartial ? 'bold' : 'normal',
@@ -78,8 +82,8 @@ const PhonemeIcon = ({
         />
       )}
 
-      {/* Always show text unless specifically hidden and image exists */}
-      {(!hideLabel || !image) && (
+      {/* Only show text if there's no image */}
+      {!image && (
         <span style={textStyle}>
           {phoneme}
         </span>

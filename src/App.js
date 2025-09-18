@@ -780,6 +780,7 @@ const App = () => {
                 style={{ height: '100%' }}
                 phonemes={phonemes}
                 partialPhoneme={partialPhoneme}
+                windowWidth={windowWidth}
                 onPhonemePlay={(phoneme) => {
                   if (!babbleMode) {
                     playPhoneme(phoneme).catch(() => {
@@ -797,8 +798,8 @@ const App = () => {
                   console.log('Phoneme clicked:', phoneme, 'at index:', index);
                 }}
                 iconSize={Math.min(
-                  Math.max(60, window.innerHeight * 1.0), // 60% of viewport height
-                  windowWidth / 12 // But not wider than 1/12 of screen width
+                  Math.max(60, window.innerHeight * 0.9), // 90% of viewport height for 95% row
+                  windowWidth / 8 // Allow wider icons for better utilization
                 )}
               />
 

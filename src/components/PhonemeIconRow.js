@@ -7,7 +7,8 @@ const PhonemeIconRow = ({
   onPhonemeClick,
   onPhonemePlay,
   iconSize = 50,
-  style = {}
+  style = {},
+  windowWidth = 800
 }) => {
   const [layout, setLayout] = useState(null);
   const [selectedLayout, setSelectedLayout] = useState('example2');
@@ -64,7 +65,7 @@ const PhonemeIconRow = ({
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: '4px',
+    gap: windowWidth < 600 ? '2px' : '4px', // Smaller gap on small viewports
     minWidth: 'fit-content'
   };
 
@@ -82,24 +83,6 @@ const PhonemeIconRow = ({
     boxSizing: 'border-box'
   };
 
-  const layoutSelectorStyle = {
-    position: 'absolute',
-    top: '4px',
-    right: '4px',
-    fontSize: '12px',
-    padding: '2px 6px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    cursor: 'pointer'
-  };
-
-  const changeLayout = () => {
-    const layouts = ['example1', 'example2', 'example3', 'example4', 'example5'];
-    const currentIndex = layouts.indexOf(selectedLayout);
-    const nextIndex = (currentIndex + 1) % layouts.length;
-    setSelectedLayout(layouts[nextIndex]);
-  };
 
   const hasContent = phonemes.length > 0 || partialPhoneme;
 
@@ -141,9 +124,6 @@ const PhonemeIconRow = ({
         )}
       </div>
 
-      <div style={layoutSelectorStyle} onClick={changeLayout} title="Click to change layout">
-        {selectedLayout}
-      </div>
     </div>
   );
 };
