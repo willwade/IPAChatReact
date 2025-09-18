@@ -50,7 +50,7 @@ const PhonemeIconRow = ({
     overflowX: 'auto',
     overflowY: 'hidden',
     padding: '4px',
-    minHeight: `${iconSize * 1.4 + 10}px`,
+    minHeight: `${iconSize * 1.4 + 20}px`,
     border: '1px solid rgba(0, 0, 0, 0.23)',
     borderRadius: '4px',
     backgroundColor: 'white',
