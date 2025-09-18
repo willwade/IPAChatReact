@@ -16,8 +16,9 @@ const PhonemeIcon = ({
     hideLabel = false
   } = customization;
 
-  // Debug logging
-  console.log(`PhonemeIcon: phoneme="${phoneme}", hasLayout=${!!layout}, hasCustomization=${!!Object.keys(customization).length}, hasImage=${!!image}, hideLabel=${hideLabel}`);
+  // Debug logging - includes size for cache busting
+  console.log(`PhonemeIcon: phoneme="${phoneme}", size=${size}, hasLayout=${!!layout}, hasCustomization=${!!Object.keys(customization).length}, hasImage=${!!image}, hideLabel=${hideLabel}`);
+  console.log(`Image dimensions: ${size * 0.98}px x ${size * 1.1}px`);
 
   const handleClick = () => {
     if (onClick) onClick(phoneme, index);
@@ -33,7 +34,7 @@ const PhonemeIcon = ({
     height: `${size * 1.4}px`,
     margin: '1px',
     padding: '1px',
-    borderRadius: '4px',
+    borderRadius: '1px',
     border: isPartial ? '2px dashed #ff9800' : '1px solid #ccc',
     backgroundColor: isPartial ? 'rgba(255, 193, 7, 0.1)' : 'white',
     cursor: 'pointer',
@@ -42,10 +43,12 @@ const PhonemeIcon = ({
   };
 
   const imageStyle = {
-    width: `${size * 0.85}px`,
-    height: `${size * 0.85}px`,
+    width: `${size * 0.98}px`,
+    height: `${size * 1.1}px`,
     objectFit: 'contain',
-    borderRadius: '2px'
+    borderRadius: '2px',
+    maxWidth: '100%',
+    maxHeight: '80%'
   };
 
   const textStyle = {
@@ -70,6 +73,7 @@ const PhonemeIcon = ({
     >
       {image && (
         <img
+          key={`img-${phoneme}-${size}`}
           src={image}
           alt={phoneme}
           style={imageStyle}
