@@ -26,6 +26,12 @@ const PhonemeIcon = ({
   const handleClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Prevent double-firing on touch devices
+    if (e.type === 'touchend') {
+      e.preventDefault();
+    }
+
     if (onClick) onClick(phoneme, index);
     if (onPlay) onPlay(phoneme);
   };
@@ -44,7 +50,8 @@ const PhonemeIcon = ({
     backgroundColor: isPartial ? 'rgba(255, 193, 7, 0.1)' : '#f8f9fa',
     cursor: 'pointer',
     boxSizing: 'border-box',
-    transition: 'all 0.2s ease'
+    transition: 'transform 0.2s ease',
+    transformOrigin: 'center center'
   };
 
   const imageStyle = {
@@ -71,6 +78,7 @@ const PhonemeIcon = ({
     <div
       style={containerStyle}
       onClick={handleClick}
+      onTouchEnd={handleClick} // Add touch support for mobile devices
       onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
       onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
     >
