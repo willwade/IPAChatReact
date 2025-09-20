@@ -1,0 +1,456 @@
+<Keyboard>
+  <Name>qwerty</Name>
+  <WindowState>Floating</WindowState>
+  <Position>Bottom</Position>
+  <Width>95%</Width>
+  <!-- <VerticalOffset>-5%</VerticalOffset> -->
+  <SymbolMargin>0</SymbolMargin>
+  <BorderThickness>0,0,0,20</BorderThickness>
+  <BackgroundColor>Transparent</BackgroundColor>
+  <HideFromKeyboardMenu>false</HideFromKeyboardMenu>
+
+  <BorderColor>Transparent</BorderColor>
+  <Height>85%</Height>
+  <Grid>
+      <Rows>8</Rows>
+      <Cols>12</Cols>
+  </Grid>
+  
+
+  <KeyGroup Name="abc" BackgroundColor="#E18676" ForegroundColor="#1C1D1E" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="abc_tdsnap" BackgroundColor="#" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="abc_vowels" BackgroundColor="#ACDFE1" ForegroundColor="#1C1D1E" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="123"  ForegroundColor="#1C1D1E" BackgroundColor="#7070aa" AutoScaleToOneKeyWidth="false"/>
+    
+  <KeyGroup Name="longvowels"    BackgroundColor="#A1DC7A" ForegroundColor="#1C1D1E" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="shortvowels"    BackgroundColor="#ACDFE1" ForegroundColor="#1C1D1E" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="diphthongs"    BackgroundColor="#fcd668" ForegroundColor="#1C1D1E" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="consonants" BackgroundColor="#E18676" ForegroundColor="#1C1D1E" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="consonants2" BackgroundColor="#C05D54" ForegroundColor="#1C1D1E" AutoScaleToOneKeyWidth="false"/>
+  
+    <!-- 
+  <KeyGroup Name="vowels" BackgroundColor="#907070" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="diphthongs" BackgroundColor="#7070aa" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="consonants" BackgroundColor="#007000" AutoScaleToOneKeyWidth="false"/>
+  
+  <KeyGroup Name="vowels2" BackgroundColor="#ba9090" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="diphthongs" BackgroundColor="#7070aa" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="consonants2" BackgroundColor="#003500" AutoScaleToOneKeyWidth="false"/>
+   -->
+
+  <KeyGroup Name="symbols" BackgroundColor="#709070" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="modifiers" AutoScaleToOneKeyWidth="false"/>
+  
+  <KeyGroup Name="functions1" BackgroundColor="#D69002" AutoScaleToOneKeyWidth="false"/>
+  <KeyGroup Name="functions2" BackgroundColor="#D6AA1A" AutoScaleToOneKeyWidth="false"/>
+  
+  <KeyGroup Name="arrows" BackgroundColor="#907090" AutoScaleToOneKeyWidth="false"/>
+
+  <Content>
+
+    <DynamicKey Width="6" AutoScaleToOneKeyWidth="false">
+        <Label>Sounding out</Label>
+    </DynamicKey>
+
+    <DynamicKey Width="3" AutoScaleToOneKeyWidth="false">
+      <KeyGroup>functions1</KeyGroup>
+      <Action>TypeLastPhoneme</Action>
+      <Action>Pronounce</Action>
+      <Label>Type last</Label>
+    </DynamicKey>    
+
+    <DynamicKey Width="3" AutoScaleToOneKeyWidth="false">
+      <KeyGroup>functions2</KeyGroup>      
+      <Label>Type many</Label>      
+      <ChangeKeyboard BackReturnsHere="false">qwerty_type2</ChangeKeyboard>
+    </DynamicKey>    
+
+
+    <DynamicKey Row="1">
+      <Label>clear</Label>
+      <Action>ClearScratchpad</Action>
+      <Symbol>ClearIcon</Symbol>      
+    </DynamicKey>
+    
+
+    <Scratchpad Row="1" Width="8"></Scratchpad>    
+
+
+    <DynamicKey>
+      <!-- <Label>Back</Label> -->
+      <Action>BackOne</Action>
+      <Symbol>BackOneIcon</Symbol>
+    </DynamicKey>
+
+      <!-- <Label>speak</Label> -->
+    <DynamicKey Width="2">
+      <Action>Pronounce</Action>
+      <Symbol>SpeakIcon</Symbol>
+    </DynamicKey>
+
+    
+    <DynamicKey Row="2" Width="2"></DynamicKey>
+    
+    <DynamicKey >
+        <KeyGroup>longvowels</KeyGroup>
+        <!-- <Label>ee</Label>  -->
+        <Symbol>images/sea.png</Symbol>
+        <PronounceSlow>iː</PronounceSlow>      
+    </DynamicKey>
+
+
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup>
+        <!-- <Label>ear</Label> -->
+        <Symbol>images/deer.jpg</Symbol>
+        <Pronounce>ɪə</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup>
+        <!-- <Label>pure</Label> -->
+        <Symbol>images/manure.jpg</Symbol>
+        <Pronounce>ʊə</Pronounce>      
+    </DynamicKey>  
+
+    <DynamicKey></DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>shortvowels</KeyGroup>
+        <Symbol>images/the.png</Symbol>
+        <Pronounce>ə</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup>
+        <!-- <Label>music</Label> -->
+        <Symbol>images/music.png</Symbol>
+        <Pronounce>ɪʊ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup>
+        <!-- <Label>oy</Label> -->
+        <Symbol>images/boy.png</Symbol>
+        <Pronounce>ɔɪ</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup>
+        <!-- <Label>oh</Label> -->
+        <Symbol>images/bow.png</Symbol>
+        <Pronounce>əʊ</Pronounce>      
+    </DynamicKey>
+
+
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup> 
+        <!-- <Label>ow</Label> -->
+        <Symbol>images/out.png</Symbol>
+        <Pronounce>aʊ</Pronounce>      
+    </DynamicKey>
+ 
+    <DynamicKey>
+        <KeyGroup>longvowels</KeyGroup>
+        <!-- <Label>oo</Label> -->
+        <Symbol>images/two.png</Symbol>
+        <PronounceSlow>uː</PronounceSlow>      
+    </DynamicKey>
+
+
+
+
+    
+    <!-- 
+    <DynamicKey>
+        <KeyGroup>shortvowels</KeyGroup>
+        <Label>uh</Label>
+        <Pronounce>a</Pronounce>      
+    </DynamicKey>
+     -->
+     
+
+    
+    
+    <DynamicKey Row="3">
+        <KeyGroup>consonants</KeyGroup>
+        <Label>q</Label>
+        <Pronounce>kw</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>w</Label>
+        <Pronounce>w</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey> <!-- e for bed -->
+        <KeyGroup>shortvowels</KeyGroup>
+        <Label>e</Label>
+        <Pronounce>e</Pronounce>      
+    </DynamicKey> 
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>r</Label>
+        <Pronounce>r</Pronounce>      
+    </DynamicKey>
+    
+
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>t</Label>
+        <Pronounce>t</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>y</Label>
+        <Pronounce>j</Pronounce>      
+    </DynamicKey>
+    <DynamicKey> <!--u for cup-->
+        <KeyGroup>shortvowels</KeyGroup>
+        <Label>u</Label>
+        <Pronounce>ʌ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey> <!-- i for sit (?) -->
+        <KeyGroup>shortvowels</KeyGroup>
+        <Label>i</Label>
+        <Pronounce>ɪ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey> <!-- o for dog -->
+        <KeyGroup>shortvowels</KeyGroup>
+        <Label>o</Label>
+        <Pronounce>ɒ</Pronounce>      
+    </DynamicKey>
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>p</Label>
+        <Pronounce>p</Pronounce>      
+    </DynamicKey>
+
+
+    <DynamicKey Width="2"></DynamicKey>
+
+
+
+
+
+    <DynamicKey Row="4">    
+        <KeyGroup>longvowels</KeyGroup>
+        <Symbol>images/car.png</Symbol>
+        <PronounceSlow>ɑː</PronounceSlow>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup>
+        <!-- <Label>ay</Label> -->
+        <Symbol>images/eight.png</Symbol>
+        <Pronounce>eɪ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>longvowels</KeyGroup>
+        <!-- <Label>air</Label> -->
+        <Symbol>images/pear.png</Symbol>
+        <Pronounce>eə</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>longvowels</KeyGroup>
+        <!-- <Label>er</Label> -->
+        <Symbol>images/shirt.jpg</Symbol>
+        <PronounceSlow>ɜː</PronounceSlow>      
+    </DynamicKey>    
+
+    <DynamicKey>
+        <KeyGroup>consonants2</KeyGroup>
+        <!-- <Label>this</Label> -->
+        <Symbol>images/this.png</Symbol>
+        <Pronounce>ð</Pronounce>      
+    </DynamicKey>
+    <DynamicKey>
+        <KeyGroup>consonants2</KeyGroup>
+        <!-- <Label>thumb</Label> -->
+        <Symbol>images/thumb2.jpeg</Symbol>
+        <Pronounce>θ</Pronounce>      
+    </DynamicKey>
+
+
+    <DynamicKey> <!--u for pull-->
+        <KeyGroup>shortvowels</KeyGroup>
+        <!-- <Label>u (ʊ)</Label> -->
+        <Symbol>images/book2.png</Symbol>
+        <Pronounce>ʊ</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>diphthongs</KeyGroup>
+        <!-- <Label>eye</Label> -->
+        <Symbol>images/eye.jpg</Symbol>
+        <Pronounce>aɪ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>longvowels</KeyGroup>
+        <Symbol>images/four.jpg</Symbol>
+        <PronounceSlow>ɔː</PronounceSlow>              
+    </DynamicKey>
+
+    <DynamicKey Width="3"></DynamicKey>
+
+    <DynamicKey Row="5"> <!-- a for cat -->
+        <KeyGroup>shortvowels</KeyGroup>
+        <Label>a</Label>
+        <Pronounce>æ</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>s</Label>
+        <Pronounce>s</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>d</Label>
+        <Pronounce>d</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>f</Label>        
+        <Pronounce>f</Pronounce>      
+    </DynamicKey>
+    
+
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>g</Label>
+        <Pronounce>g</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>h</Label>
+        <Pronounce>h</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>j</Label>
+        <Pronounce>dʒ</Pronounce> 
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>k</Label>
+        <Pronounce>k</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>l</Label>
+        <Pronounce>l</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey Width="2"></DynamicKey>
+
+
+    <DynamicKey>
+        <KeyGroup>shortvowels</KeyGroup>
+        <Label>?</Label>        
+        <Pronounce>ə</Pronounce>          
+    </DynamicKey>
+
+
+    <DynamicKey Row="6">
+        <KeyGroup>consonants2</KeyGroup>
+        <!-- <Label>ʒ</Label> -->
+        <Symbol>images/measure.png</Symbol>
+        <Pronounce>ʒ</Pronounce>  
+    </DynamicKey>
+    <DynamicKey>
+        <KeyGroup>consonants2</KeyGroup>
+        <!-- <Label>sh</Label> -->
+        <Symbol>images/shhh.png</Symbol>
+        <Pronounce>ʃ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>consonants2</KeyGroup>
+        <!-- <Label>ch</Label> -->
+        <Symbol>images/chair.png</Symbol>
+        <Pronounce>t͡ʃ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey Width="2"></DynamicKey>
+
+    <DynamicKey Col="5">
+        <KeyGroup>consonants2</KeyGroup>
+        <!-- <Label>ng</Label> -->
+        <Symbol>images/sing.jpg</Symbol>
+        <Pronounce>ŋ</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey Width="6"></DynamicKey>
+
+    <DynamicKey Row="7">
+        <KeyGroup>consonants</KeyGroup>
+        <Label>z</Label>
+        <Pronounce>z</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>x</Label>
+        <Pronounce>ks</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>c</Label>
+        <Pronounce>k</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>v</Label>
+        <Pronounce>v</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>b</Label>
+        <Pronounce>b</Pronounce>      
+    </DynamicKey>
+    
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>n</Label>
+        <Pronounce>n</Pronounce>      
+    </DynamicKey>
+
+    <DynamicKey>
+        <KeyGroup>consonants</KeyGroup>
+        <Label>m</Label>
+        <Pronounce>m</Pronounce>      
+    </DynamicKey>
+
+
+    <DynamicKey>
+    </DynamicKey>
+
+    <DynamicKey Width="2">
+      <Symbol>MinimiseIcon</Symbol>      
+      <ChangeKeyboard>HideUnder</ChangeKeyboard>
+    </DynamicKey>        
+        
+    <DynamicKey Col="10" Width="2">
+      <Symbol>BackIcon</Symbol>      
+      <Action>BackFromKeyboard</Action>
+    </DynamicKey>
+  </Content>
+</Keyboard>    

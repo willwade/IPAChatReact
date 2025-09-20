@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import notificationService from '../services/NotificationService';
 import {
   Dialog,
   DialogTitle,
@@ -41,14 +42,12 @@ const Settings = ({
   onVoiceChange,
   selectedRegion,
   onRegionChange,
+  buttonScale,
+  onButtonScaleChange,
   buttonSpacing,
   onButtonSpacingChange,
-  minButtonSize,
-  onMinButtonSizeChange,
-  layoutMode,
-  onLayoutModeChange,
-  fixedLayout,
-  onFixedLayoutChange,
+  autoScale,
+  onAutoScaleChange,
   touchDwellEnabled,
   onTouchDwellEnabledChange,
   touchDwellTime,
@@ -66,10 +65,6 @@ const Settings = ({
   onSpeakOnButtonPressChange,
   speakWholeUtterance,
   onSpeakWholeUtteranceChange,
-  clearMessageAfterPlay,
-  onClearMessageAfterPlayChange,
-  showBabbleButton,
-  onShowBabbleButtonChange,
   mode,
   onModeChange,
   toolbarConfig,
@@ -140,7 +135,7 @@ const Settings = ({
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error creating backup:', error);
-      alert('Failed to create backup. Please try again.');
+      notificationService.showNotification('Failed to create backup. Please try again.', 'error');
     }
   };
 
@@ -193,17 +188,14 @@ const Settings = ({
     }
 
     // Update scale settings
+    if (typeof backupData.buttonScale === 'number') {
+      onButtonScaleChange(backupData.buttonScale);
+    }
     if (typeof backupData.buttonSpacing === 'number') {
       onButtonSpacingChange(backupData.buttonSpacing);
     }
-    if (typeof backupData.minButtonSize === 'number') {
-      onMinButtonSizeChange(backupData.minButtonSize);
-    }
-    if (typeof backupData.layoutMode === 'string') {
-      onLayoutModeChange(backupData.layoutMode);
-    }
-    if (typeof backupData.fixedLayout === 'boolean') {
-      onFixedLayoutChange(backupData.fixedLayout);
+    if (typeof backupData.autoScale === 'boolean') {
+      onAutoScaleChange(backupData.autoScale);
     }
 
     // Update accessibility settings
@@ -313,8 +305,8 @@ const Settings = ({
           setRestoreDialogOpen(false);
           
           // Show success message
-          alert('Settings restored successfully! The page will now reload to apply all changes.');
-          
+          notificationService.showNotification('Settings restored successfully! The page will now reload to apply all changes.', 'success');
+
           // Reload the page after a delay
           setTimeout(() => {
             window.location.reload();
@@ -398,7 +390,7 @@ const Settings = ({
       onClose();
 
       // Show success message
-      alert('Example loaded successfully into build mode! The page will now reload to apply all changes.');
+      notificationService.showNotification('Example loaded successfully into build mode! The page will now reload to apply all changes.', 'success');
 
       // Reload the page after a delay to ensure IPA customizations are applied
       setTimeout(() => {
@@ -407,95 +399,7 @@ const Settings = ({
 
     } catch (error) {
       console.error('Error loading example:', error);
-      alert('Failed to load example.');
-    }
-  };
-
-  const handleResetAll = () => {
-    if (window.confirm('Are you sure you want to reset all settings to default? This will clear all customizations and cannot be undone.')) {
-      try {
-        // Define default values (matching App.js initialization)
-        const defaultSettings = {
-          ipaMode: 'build',
-          selectedLanguage: 'en-GB',
-          selectedRegion: 'en-GB-london',
-          selectedVoice: '', // Will be set to first available voice
-          buttonSpacing: 4,
-          minButtonSize: 75,
-          layoutMode: 'grid',
-          fixedLayout: false,
-          touchDwellEnabled: false,
-          touchDwellTime: 800,
-          dwellIndicatorType: 'border',
-          dwellIndicatorColor: 'primary',
-          hapticFeedback: false,
-          showStressMarkers: true,
-          showIpaToText: true,
-          speakOnButtonPress: true,
-          speakWholeUtterance: true,
-          showBabbleButton: true,
-          backgroundSettings: {
-            type: 'color',
-            color: '#ffffff',
-            gradientStart: '#ffffff',
-            gradientEnd: '#000000',
-            gradientDirection: 'to bottom',
-            image: ''
-          },
-          toolbarConfig: {
-            showBuild: true,
-            showSearch: true,
-            showEdit: true,
-            showGame: true,
-            showSettings: true,
-            showSetupWizard: true
-          }
-        };
-
-        // Clear all localStorage items related to the app
-        const keysToRemove = [
-          'ipaMode', 'selectedLanguage', 'selectedRegion', 'selectedVoice',
-          'buttonSpacing', 'minButtonSize', 'layoutMode', 'fixedLayout',
-          'touchDwellEnabled', 'touchDwellTime', 'dwellIndicatorType', 'dwellIndicatorColor',
-          'hapticFeedback', 'showStressMarkers', 'showIpaToText', 'speakOnButtonPress',
-          'speakWholeUtterance', 'showBabbleButton', 'backgroundSettings', 'toolbarConfig',
-          'ipaCustomizations', 'phonemeOrder', 'wordMastery', 'hasVisitedBefore'
-        ];
-
-        keysToRemove.forEach(key => {
-          localStorage.removeItem(key);
-        });
-
-        // Set default values in localStorage
-        Object.entries(defaultSettings).forEach(([key, value]) => {
-          if (typeof value === 'object') {
-            localStorage.setItem(key, JSON.stringify(value));
-          } else {
-            localStorage.setItem(key, value.toString());
-          }
-        });
-
-        // Apply settings through props
-        applySettings(defaultSettings);
-
-        // Reset language and mode
-        onLanguageChange('en-GB');
-        onModeChange('build');
-
-        // Close settings dialog
-        onClose();
-
-        // Show success message and reload
-        alert('All settings have been reset to default! The page will now reload.');
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 200);
-
-      } catch (error) {
-        console.error('Error resetting settings:', error);
-        alert('Failed to reset settings.');
-      }
+      notificationService.showNotification('Failed to load example.', 'error');
     }
   };
 
@@ -674,44 +578,31 @@ const Settings = ({
 
             {/* Layout Settings */}
             <ListItem>
-              <Box sx={{ width: '100%' }}>
-                <Typography gutterBottom>Minimum Button Size (px)</Typography>
-                <Slider
-                  value={minButtonSize}
-                  onChange={(_, value) => onMinButtonSizeChange(value)}
-                  min={40}
-                  max={120}
-                  step={5}
-                  marks
-                  valueLabelDisplay="auto"
-                />
-              </Box>
-            </ListItem>
-
-            <ListItem>
-              <FormControl fullWidth>
-                <InputLabel>Layout Mode on Small Screens</InputLabel>
-                <Select
-                  value={layoutMode}
-                  onChange={(e) => onLayoutModeChange(e.target.value)}
-                  label="Layout Mode on Small Screens"
-                >
-                  <MenuItem value="grid">Grid (default)</MenuItem>
-                  <MenuItem value="list">List</MenuItem>
-                </Select>
-              </FormControl>
-            </ListItem>
-
-            <ListItem>
               <FormControlLabel
                 control={
                   <Switch
-                    checked={fixedLayout}
-                    onChange={(e) => onFixedLayoutChange(e.target.checked)}
+                    checked={autoScale}
+                    onChange={(e) => onAutoScaleChange(e.target.checked)}
                   />
                 }
-                label="Fixed Layout (prevents button reordering on resize)"
+                label="Auto-scale buttons to screen"
               />
+            </ListItem>
+
+            <ListItem>
+              <Box sx={{ width: '100%' }}>
+                <Typography gutterBottom>Button Scale</Typography>
+                <Slider
+                  value={buttonScale}
+                  onChange={(_, value) => onButtonScaleChange(value)}
+                  min={0.5}
+                  max={2}
+                  step={0.1}
+                  marks
+                  valueLabelDisplay="auto"
+                  disabled={autoScale}
+                />
+              </Box>
             </ListItem>
 
             <ListItem>
@@ -786,40 +677,6 @@ const Settings = ({
                   label="Read whole utterance as it's built"
                 />
                 <Tooltip title="Automatically speak the entire message when the message bar is updated in build mode">
-                  <IconButton size="small" sx={{ ml: 1 }}>
-                    <HelpOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={clearMessageAfterPlay}
-                      onChange={(e) => onClearMessageAfterPlayChange(e.target.checked)}
-                    />
-                  }
-                  label="Clear message bar after playing"
-                />
-                <Tooltip title="After speaking a message in build mode, clear the message bar and show an undo option">
-                  <IconButton size="small" sx={{ ml: 1 }}>
-                    <HelpOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showBabbleButton}
-                      onChange={(e) => onShowBabbleButtonChange(e.target.checked)}
-                    />
-                  }
-                  label="Show babble button in build mode"
-                />
-                <Tooltip title="Show a babble button in build mode for practicing phoneme sounds without adding to message">
                   <IconButton size="small" sx={{ ml: 1 }}>
                     <HelpOutlineIcon fontSize="small" />
                   </IconButton>
@@ -938,6 +795,16 @@ const Settings = ({
                   <FormControlLabel
                     control={
                       <Switch
+                        checked={toolbarConfig?.showBabble !== false}
+                        onChange={(e) => handleToolbarConfigChange('showBabble', e.target.checked)}
+                      />
+                    }
+                    label="Babble Mode"
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Switch
                         checked={toolbarConfig?.showEdit !== false}
                         onChange={(e) => handleToolbarConfigChange('showEdit', e.target.checked)}
                       />
@@ -986,23 +853,6 @@ const Settings = ({
           </List>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={handleResetAll}
-            size="small"
-            color="inherit"
-            sx={{
-              fontSize: '0.75rem',
-              color: 'text.secondary',
-              textTransform: 'none',
-              '&:hover': {
-                color: 'warning.main',
-                backgroundColor: 'transparent'
-              }
-            }}
-          >
-            Reset All
-          </Button>
-          <Box sx={{ flexGrow: 1 }} />
           <Button onClick={onClose}>Close</Button>
         </DialogActions>
       </Dialog>

@@ -58,7 +58,13 @@
     }
   ],
   "shortcuts": [
-
+    {
+      "name": "Babble Mode",
+      "short_name": "Babble",
+      "description": "Start in babble mode for immediate phoneme playback",
+      "url": "/?mode=babble",
+      "icons": [{ "src": "AppImages/android/android-launchericon-96-96.png", "sizes": "96x96" }]
+    },
     {
       "name": "Build Mode",
       "short_name": "Build",
