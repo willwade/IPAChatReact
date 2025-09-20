@@ -61,6 +61,7 @@ const App = () => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
   const [phonemes, setPhonemes] = useState([]); // Array of complete phonemes ["a", "tʃ", "b"]
   const [partialPhoneme, setPartialPhoneme] = useState(''); // Current incomplete phoneme "/tʃ"
+  const [babblePartial, setBabblePartial] = useState(''); // Track partial phoneme in babble mode
   const [hasEverTyped, setHasEverTyped] = useState(false); // Track if user has ever typed anything
   const [isOverflowing, setIsOverflowing] = useState(false); // Track if text is overflowing
   const textContainerRef = useRef(null);
@@ -271,28 +272,93 @@ const App = () => {
 
   // Handle text changes with phoneme array processing
   const handleMessageChange = (newText) => {
-    console.log('📝 Input changed to:', `"${newText}"`);
-    console.log('📝 Current displayText:', `"${displayText}"`);
+    // In babble mode, we need to handle the full text replacement differently
+    if (babbleMode) {
+      // Mark that user has typed something (removes placeholder permanently)
+      if (!hasEverTyped) {
+        setHasEverTyped(true);
+      }
 
+      // Start with any existing partial from babble mode
+      let currentPartial = '';
+      let currentPhonemes = [];
+
+      // If we had a partial phoneme and the new text doesn't start with '/',
+      // then this is likely a paste operation that should continue the partial
+      if (babblePartial.startsWith('/') && !newText.startsWith('/')) {
+        currentPartial = babblePartial;
+        // Process the new text as if it's being added to the partial
+        for (const char of newText) {
+          currentPartial += char;
+        }
+        setBabblePartial(currentPartial);
+        return;
+      }
+
+      // If we had a partial phoneme and the new text is just "/",
+      // then this is likely completing the phoneme
+      if (babblePartial.startsWith('/') && newText === '/') {
+        const newPhoneme = babblePartial.slice(1); // Remove leading /
+        if (newPhoneme) {
+          playPhoneme(newPhoneme).catch(() => {
+            // Error is already handled in playPhoneme, just prevent unhandled rejection
+          });
+        }
+        setBabblePartial(''); // Clear the partial
+        return;
+      }
+
+      // Otherwise, process the entire text from scratch
+      for (const char of newText) {
+        if (char === '/') {
+          if (currentPartial.startsWith('/')) {
+            // Closing slash - complete the phoneme
+            const newPhoneme = currentPartial.slice(1); // Remove leading /
+            if (newPhoneme) {
+              currentPhonemes.push(newPhoneme);
+              playPhoneme(newPhoneme).catch(() => {
+                // Error is already handled in playPhoneme, just prevent unhandled rejection
+              });
+            }
+            currentPartial = '';
+          } else {
+            // Opening slash - start new phoneme
+            currentPartial = '/';
+          }
+        } else {
+          if (currentPartial.startsWith('/')) {
+            // Inside a multi-character phoneme - just accumulate characters, don't play them
+            currentPartial += char;
+          } else {
+            // Single character phoneme - add to completed phonemes and play
+            currentPhonemes.push(char);
+            playPhoneme(char).catch(() => {
+              // Error is already handled in playPhoneme, just prevent unhandled rejection
+            });
+          }
+        }
+      }
+
+      setBabblePartial(currentPartial); // Update babble partial state
+      return;
+    }
+
+    // Normal mode processing (not babble mode)
     // Detect if text was added or if we should ignore this change
     if (newText.length < displayText.length) {
       // Text was deleted - ignore this change, backspace handler will deal with it
-      console.log('🚫 Ignoring deletion, will be handled by backspace');
       return;
     }
 
     // Check if this is just a re-render of current state
     if (newText === displayText) {
-      console.log('🚫 No actual change detected');
       return;
     }
 
     // Detect what was actually added
     const addedText = newText.slice(displayText.length);
-    console.log('➕ Added text:', `"${addedText}"`);
 
     if (!addedText) {
-      console.log('🚫 No new text added');
       return;
     }
 
@@ -318,16 +384,15 @@ const App = () => {
           const newPhoneme = currentPartial.slice(1); // Remove leading /
           if (newPhoneme) {
             currentPhonemes.push(newPhoneme);
-            console.log('✅ Completed phoneme:', newPhoneme);
-            // Play phoneme if settings allow
-            if (speakOnButtonPress && !babbleMode) {
+            // Play phoneme if settings allow (babble mode handled above)
+            if (speakOnButtonPress) {
               playPhoneme(newPhoneme).catch(() => {
                 // Error is already handled in playPhoneme, just prevent unhandled rejection
               });
             }
 
             // Create undo action for the entire multi-phoneme sequence
-            if (!babbleMode && multiPhonemeStartState) {
+            if (multiPhonemeStartState) {
               const currentState = {
                 phonemes: [...currentPhonemes],
                 partialPhoneme: ''
@@ -339,56 +404,43 @@ const App = () => {
           currentPartial = '';
         } else {
           // Opening slash - start new phoneme, record the starting state
-          if (!babbleMode) {
-            setMultiPhonemeStartState({
-              phonemes: [...currentPhonemes],
-              partialPhoneme: currentPartial
-            });
-          }
+          setMultiPhonemeStartState({
+            phonemes: [...currentPhonemes],
+            partialPhoneme: currentPartial
+          });
           currentPartial = '/';
         }
       } else {
         if (currentPartial.startsWith('/')) {
-          // Inside a multi-character phoneme
+          // Inside a multi-character phoneme - just accumulate characters, don't play them
           currentPartial += char;
         } else {
-          // Single character phoneme - create immediate undo action
+          // Single character phoneme - add to completed phonemes and play
           currentPhonemes.push(char);
-          console.log('✅ Added single phoneme:', char);
-          // Play phoneme if settings allow
-          if (speakOnButtonPress && !babbleMode) {
+          // Play phoneme if settings allow (babble mode handled above)
+          if (speakOnButtonPress) {
             playPhoneme(char).catch(() => {
               // Error is already handled in playPhoneme, just prevent unhandled rejection
             });
           }
 
           // Create undo action for single character
-          if (!babbleMode) {
-            const previousState = {
-              phonemes: [...phonemes],
-              partialPhoneme: partialPhoneme
-            };
-            const currentState = {
-              phonemes: [...currentPhonemes],
-              partialPhoneme: currentPartial
-            };
-            addToUndoStack(UNDO_ACTION_TYPES.ADD_PHONEME, previousState, currentState);
-          }
+          const previousState = {
+            phonemes: [...phonemes],
+            partialPhoneme: partialPhoneme
+          };
+          const currentState = {
+            phonemes: [...currentPhonemes],
+            partialPhoneme: currentPartial
+          };
+          addToUndoStack(UNDO_ACTION_TYPES.ADD_PHONEME, previousState, currentState);
         }
       }
     }
 
-    // In babble mode, don't update state
-    if (babbleMode) {
-      return;
-    }
-
-    // Update state
+    // Update state (not babble mode)
     setPhonemes(currentPhonemes);
     setPartialPhoneme(currentPartial);
-
-    console.log('✅ Updated phonemes:', currentPhonemes);
-    console.log('✅ Updated partial:', currentPartial);
   };
 
   // Add effect to speak whole utterance when completed text changes
@@ -459,15 +511,12 @@ const App = () => {
 
   // Handle special key presses (Enter and Backspace)
   const handleKeyDown = (event) => {
-    console.log('🎹 Key pressed:', event.key);
-
     if (event.key === 'Enter' && !isLoading) {
       speak();
       return;
     }
 
     if (event.key === 'Backspace') {
-      console.log('⬅️ Backspace detected, preventing default and using custom logic');
       event.preventDefault(); // Override default backspace behavior
       handlePhonemeBackspace();
     }
@@ -481,15 +530,9 @@ const App = () => {
 
   // Handle phoneme-aware backspace
   const handlePhonemeBackspace = () => {
-    console.log('🔄 handlePhonemeBackspace called');
-
     if (babbleMode) {
-      console.log('🚫 Babble mode - ignoring backspace');
       return; // Don't handle backspace in babble mode
     }
-
-    console.log('📝 Current phonemes:', phonemes);
-    console.log('📝 Current partial:', partialPhoneme);
 
     // Store previous state for undo
     const previousState = {
@@ -499,7 +542,6 @@ const App = () => {
 
     // If we have a partial phoneme, remove that first
     if (partialPhoneme) {
-      console.log('✂️ Removing partial phoneme:', partialPhoneme);
       setPartialPhoneme('');
 
       // Add to undo stack
@@ -513,10 +555,7 @@ const App = () => {
 
     // If we have completed phonemes, remove the last one
     if (phonemes.length > 0) {
-      const removedPhoneme = phonemes[phonemes.length - 1];
       const newPhonemes = phonemes.slice(0, -1);
-      console.log('✂️ Removing last phoneme:', removedPhoneme);
-      console.log('✂️ New phonemes array:', newPhonemes);
       setPhonemes(newPhonemes);
 
       // Add to undo stack
@@ -527,8 +566,6 @@ const App = () => {
       addToUndoStack(UNDO_ACTION_TYPES.REMOVE_PHONEME, previousState, currentState);
       return;
     }
-
-    console.log('🚫 Nothing to remove');
   };
 
   // Effect to show undo feedback
@@ -574,6 +611,7 @@ const App = () => {
     if (newValue) {
       setPhonemes([]);
       setPartialPhoneme('');
+      setBabblePartial('');
     }
   }, [babbleMode, showOverlay]);
 
