@@ -72,7 +72,20 @@ The app supports different interface modes for various use cases:
 - Progressive phoneme matching
 - Visual progress indicators
 
-### 3. Edit Mode
+### 3. Babble Mode
+**Purpose**: Immediate phoneme playback for exploration
+
+**How to Use**:
+1. Simply click any phoneme button
+2. Hear immediate pronunciation
+3. No sequence building - each click plays instantly
+
+**Features**:
+- Instant audio feedback
+- Perfect for phoneme exploration
+- No message composition
+
+### 4. Edit Mode
 **Purpose**: Customize the interface and phoneme buttons
 
 **How to Use**:
@@ -87,7 +100,7 @@ The app supports different interface modes for various use cases:
 - Layout modifications
 - Export/import configurations
 
-### 4. Game Mode
+### 5. Game Mode
 **Purpose**: Interactive learning games and exercises
 
 **How to Use**:
@@ -137,6 +150,7 @@ Configurations are JSON files that can include:
   "toolbarConfig": {
     "showBuild": true,
     "showSearch": true,
+    "showBabble": false,
     "showEdit": false,
     "showGame": true,
     "showSettings": true
