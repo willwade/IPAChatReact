@@ -14,7 +14,7 @@ const SlideTransition = (props) => {
   return <Slide {...props} direction="up" />;
 };
 
-const NotificationDisplay = () => {
+const NotificationDisplay = ({ minimal = false }) => {
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
@@ -65,6 +65,51 @@ const NotificationDisplay = () => {
         return 'Information';
     }
   };
+
+  if (minimal) {
+    return (
+      <Stack
+        spacing={0.5}
+        sx={{
+          position: 'fixed',
+          top: 8,
+          left: 8,
+          right: 8,
+          zIndex: 9999,
+          maxWidth: '100%'
+        }}
+      >
+        {notifications.map((notification) => (
+          <Alert
+            key={notification.id}
+            severity={getSeverity(notification.type)}
+            variant="filled"
+            onClose={() => handleClose(notification.id)}
+            sx={{
+              fontSize: 12,
+              minHeight: 'auto',
+              padding: '4px 8px',
+              '& .MuiAlert-message': {
+                padding: 0,
+                fontSize: 12
+              },
+              '& .MuiAlert-action': {
+                padding: 0,
+                marginRight: 0
+              },
+              '& .MuiAlert-icon': {
+                fontSize: 16,
+                padding: 0,
+                marginRight: '4px'
+              }
+            }}
+          >
+            {notification.message}
+          </Alert>
+        ))}
+      </Stack>
+    );
+  }
 
   return (
     <Stack
