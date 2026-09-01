@@ -45,7 +45,8 @@ class TTSService {
       }
     } catch (error) {
       console.error(`TTS synthesis failed for single phoneme "${phoneme}":`, error.message);
-      notificationService.showTTSError(error, 'single phoneme synthesis');
+      // Error handling is now done in App.js with overlay system
+      throw error;
     }
   }
 
@@ -99,7 +100,7 @@ class TTSService {
         
         // Final attempt failed
         console.error(`TTS synthesis failed for phoneme sequence after ${maxRetries} attempts:`, error.message);
-        notificationService.showTTSError(error, 'phoneme sequence synthesis');
+        // Error handling is now done in App.js with overlay system
         throw error;
         
       } finally {
@@ -110,11 +111,51 @@ class TTSService {
 
   /**
    * Determine if an error is retryable (network/timeout issues)
+   * Don't retry client errors like invalid phonemes
    */
   isRetryableError(error) {
-    return error.code === 'ECONNABORTED' || 
-           error.code === 'ERR_NETWORK' || 
-           (error.response?.status >= 500 && error.response?.status < 600);
+    // Check if it's specifically an invalid phoneme error (not a server/network issue)
+    if (error.code === 'ERR_BAD_REQUEST') {
+      const errorData = error.response?.data;
+
+      // Only don't retry if it's clearly a phoneme/content error
+      if (errorData?.error === 'Speech synthesis failed' ||
+          errorData?.statusCode === 400 ||
+          (typeof errorData === 'string' && errorData.toLowerCase().includes('phoneme'))) {
+        console.log('🚫 Not retrying - confirmed invalid phonemes/content error');
+        return false;
+      } else {
+        // ERR_BAD_REQUEST but no clear phoneme error - might be server issue, so retry
+        console.log('🔄 Will retry - ERR_BAD_REQUEST but unclear cause (possible server issue)');
+        return true;
+      }
+    }
+
+    // Don't retry if it's a 4xx client error (bad request, invalid phonemes, etc.)
+    if (error.response?.status >= 400 && error.response?.status < 500) {
+      console.log('🚫 Not retrying - client error (4xx):', error.response.status);
+      return false;
+    }
+
+    // Don't retry if the error data indicates invalid phonemes/synthesis failure with 400 status
+    const errorData = error.response?.data;
+    if (errorData?.statusCode === 400) {
+      console.log('🚫 Not retrying - statusCode 400 in response data');
+      return false;
+    }
+
+    // Only retry on network/timeout issues and 5xx server errors
+    const shouldRetry = error.code === 'ECONNABORTED' ||
+                       error.code === 'ERR_NETWORK' ||
+                       (error.response?.status >= 500 && error.response?.status < 600);
+
+    if (shouldRetry) {
+      console.log('🔄 Will retry - network/server error');
+    } else {
+      console.log('🚫 Not retrying - unrecoverable error');
+    }
+
+    return shouldRetry;
   }
 
   /**

@@ -89,19 +89,19 @@ export const gamePhases = {
           word: 'bath',
           ipa: 'bɑːθ',
           alternatives: ['bæθ'],
-          validPhonemes: ['b', 'æ', 'ɑː', 'θ']
+          validPhonemes: ['b', 'æ',  'θ']
         },
         'en-GB-manchester': {
           word: 'bath',
           ipa: 'bæθ',
           alternatives: ['bæθ'],
-          validPhonemes: ['b', 'a','ɑː', 'æ', 'θ']
+          validPhonemes: ['b', 'a', 'æ', 'θ']
         },
         'en-US-general': {
           word: 'bath',
           ipa: 'bæθ',
           alternatives: ['bɛθ'],
-          validPhonemes: ['b', 'æ','ɑː', 'ɛ', 'θ']
+          validPhonemes: ['b', 'æ', 'ɛ', 'θ']
         }
       },
       "grass": {
